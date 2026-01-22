@@ -22,5 +22,11 @@
         <a href="/videos/<?= $video['id'] ?>" class="btn-action" title="Просмотр">👁</a>
         <a href="/schedules/create?video_id=<?= $video['id'] ?>" class="btn-action" title="Запланировать">📅</a>
         <button type="button" class="btn-action" onclick="showAddToGroupModal(<?= $video['id'] ?>)" title="В группу">📁</button>
+        <button type="button" class="btn-action <?= ($video['status'] === 'active' || $video['status'] === 'uploaded' || $video['status'] === 'ready') ? 'btn-pause' : 'btn-play' ?>" 
+                onclick="toggleVideoStatus(<?= $video['id'] ?>)" 
+                title="<?= ($video['status'] === 'active' || $video['status'] === 'uploaded' || $video['status'] === 'ready') ? 'Выключить' : 'Включить' ?>">
+            <?= ($video['status'] === 'active' || $video['status'] === 'uploaded' || $video['status'] === 'ready') ? '⏸' : '▶' ?>
+        </button>
+        <button type="button" class="btn-action btn-delete" onclick="deleteVideo(<?= $video['id'] ?>)" title="Удалить">🗑</button>
     </div>
 </div>

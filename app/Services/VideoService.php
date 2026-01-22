@@ -303,4 +303,36 @@ class VideoService extends Service
 
         return ['success' => true, 'message' => 'Video deleted successfully'];
     }
+
+    /**
+     * Переключить статус видео
+     */
+    public function toggleVideoStatus(int $id, int $userId): array
+    {
+        $video = $this->getVideo($id, $userId);
+        
+        if (!$video) {
+            return ['success' => false, 'message' => 'Video not found'];
+        }
+
+        // Определяем новый статус
+        $currentStatus = $video['status'];
+        $newStatus = null;
+
+        // Если видео активно (uploaded, ready, active) - делаем неактивным (inactive)
+        if (in_array($currentStatus, ['uploaded', 'ready', 'active'])) {
+            $newStatus = 'inactive';
+        } else {
+            // Если неактивно - делаем активным (ready)
+            $newStatus = 'ready';
+        }
+
+        $this->videoRepo->update($id, ['status' => $newStatus]);
+
+        return [
+            'success' => true,
+            'message' => 'Video status updated successfully',
+            'data' => ['status' => $newStatus]
+        ];
+    }
 }

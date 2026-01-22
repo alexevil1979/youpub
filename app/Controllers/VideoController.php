@@ -189,4 +189,19 @@ class VideoController extends Controller
             $this->error($result['message'], 400);
         }
     }
+
+    /**
+     * Переключить статус видео
+     */
+    public function toggleStatus(int $id): void
+    {
+        $userId = $_SESSION['user_id'];
+        $result = $this->videoService->toggleVideoStatus($id, $userId);
+
+        if ($result['success']) {
+            $this->success(['status' => $result['data']['status'] ?? null], $result['message']);
+        } else {
+            $this->error($result['message'], 400);
+        }
+    }
 }

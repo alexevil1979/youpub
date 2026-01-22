@@ -113,6 +113,12 @@ foreach ($allGroups as $group) {
                                         <a href="/videos/<?= $video['id'] ?>" class="btn-action" title="Просмотр">👁</a>
                                         <a href="/schedules/create?video_id=<?= $video['id'] ?>" class="btn-action" title="Запланировать">📅</a>
                                         <button type="button" class="btn-action" onclick="showAddToGroupModal(<?= $video['id'] ?>)" title="В группу">📁</button>
+                                        <button type="button" class="btn-action <?= ($video['status'] === 'active' || $video['status'] === 'uploaded' || $video['status'] === 'ready') ? 'btn-pause' : 'btn-play' ?>" 
+                                                onclick="toggleVideoStatus(<?= $video['id'] ?>)" 
+                                                title="<?= ($video['status'] === 'active' || $video['status'] === 'uploaded' || $video['status'] === 'ready') ? 'Выключить' : 'Включить' ?>">
+                                            <?= ($video['status'] === 'active' || $video['status'] === 'uploaded' || $video['status'] === 'ready') ? '⏸' : '▶' ?>
+                                        </button>
+                                        <button type="button" class="btn-action btn-delete" onclick="deleteVideo(<?= $video['id'] ?>)" title="Удалить">🗑</button>
                                     </div>
                                 </div>
                             <?php endforeach; ?>
@@ -244,6 +250,11 @@ foreach ($allGroups as $group) {
                         <a href="/videos/<?= $video['id'] ?>" class="btn btn-sm btn-primary">Просмотр</a>
                         <a href="/schedules/create?video_id=<?= $video['id'] ?>" class="btn btn-sm btn-success">Запланировать</a>
                         <button type="button" class="btn btn-sm btn-info" onclick="showAddToGroupModal(<?= $video['id'] ?>)">В группу</button>
+                        <button type="button" class="btn btn-sm <?= ($video['status'] === 'active' || $video['status'] === 'uploaded' || $video['status'] === 'ready') ? 'btn-warning' : 'btn-success' ?>" 
+                                onclick="toggleVideoStatus(<?= $video['id'] ?>)">
+                            <?= ($video['status'] === 'active' || $video['status'] === 'uploaded' || $video['status'] === 'ready') ? '⏸ Выкл' : '▶ Вкл' ?>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="deleteVideo(<?= $video['id'] ?>)">🗑 Удалить</button>
                     </td>
                 </tr>
                 <?php endforeach; ?>
@@ -375,6 +386,66 @@ document.getElementById('addToGroupForm')?.addEventListener('submit', function(e
         alert('Произошла ошибка');
     });
 });
+
+function toggleVideoStatus(id) {
+    fetch('/videos/' + id + '/toggle-status', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Статус видео изменен', 'success');
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showToast('Ошибка: ' + (data.message || 'Не удалось изменить статус'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Произошла ошибка', 'error');
+    });
+}
+
+function deleteVideo(id) {
+    if (!confirm('Удалить это видео?')) return;
+    if (!confirm('Вы уверены? Это действие нельзя отменить.')) return;
+    
+    fetch('/videos/' + id, {
+        method: 'DELETE',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Видео удалено', 'success');
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showToast('Ошибка: ' + (data.message || 'Не удалось удалить'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Произошла ошибка', 'error');
+    });
+}
+
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = 'toast toast-' + type;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => toast.classList.add('show'), 100);
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
 </script>
 
 <?php

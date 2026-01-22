@@ -112,7 +112,11 @@ ob_start();
                         </td>
                         <td style="padding: 0.75rem;">
                             <a href="/videos/<?= $file['video_id'] ?>" class="btn btn-sm btn-primary">Просмотр</a>
-                            <button type="button" class="btn btn-sm btn-danger" onclick="removeFromGroup(<?= $group['id'] ?>, <?= $file['video_id'] ?>)">Удалить</button>
+                            <button type="button" class="btn btn-sm <?= ($file['status'] === 'new' || $file['status'] === 'queued') ? 'btn-warning' : 'btn-success' ?>" 
+                                    onclick="toggleFileStatus(<?= $group['id'] ?>, <?= $file['id'] ?>, '<?= $file['status'] ?>')">
+                                <?= ($file['status'] === 'new' || $file['status'] === 'queued') ? '⏸ Выкл' : '▶ Вкл' ?>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-danger" onclick="removeFromGroup(<?= $group['id'] ?>, <?= $file['video_id'] ?>)">🗑 Удалить</button>
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -162,16 +166,55 @@ function removeFromGroup(groupId, videoId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Видео удалено из группы');
-            window.location.reload();
+            showToast('Видео удалено из группы', 'success');
+            setTimeout(() => window.location.reload(), 1000);
         } else {
-            alert('Ошибка: ' + (data.message || 'Не удалось удалить видео из группы'));
+            showToast('Ошибка: ' + (data.message || 'Не удалось удалить видео из группы'), 'error');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Произошла ошибка');
+        showToast('Произошла ошибка', 'error');
     });
+}
+
+function toggleFileStatus(groupId, fileId, currentStatus) {
+    const newStatus = (currentStatus === 'new' || currentStatus === 'queued') ? 'paused' : 'new';
+    
+    fetch('/content-groups/' + groupId + '/files/' + fileId + '/toggle-status', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({status: newStatus})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Статус файла изменен', 'success');
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showToast('Ошибка: ' + (data.message || 'Не удалось изменить статус'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Произошла ошибка', 'error');
+    });
+}
+
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = 'toast toast-' + type;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => toast.classList.add('show'), 100);
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
 }
 </script>
 
