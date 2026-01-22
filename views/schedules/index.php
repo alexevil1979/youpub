@@ -245,12 +245,19 @@ $groupRepo = new \App\Modules\ContentGroups\Repositories\ContentGroupRepository(
                         <div class="schedule-actions">
                             <a href="/schedules/<?= $schedule['id'] ?>" class="btn-action btn-view" title="Просмотр">👁</a>
                             
-                            <?php if ($schedule['status'] === 'pending' || $schedule['status'] === 'paused'): ?>
-                                <?php if ($schedule['status'] === 'pending'): ?>
+                            <?php 
+                            // Кнопка включения/выключения - показываем для всех статусов, кроме processing
+                            if ($schedule['status'] !== 'processing'): 
+                                if ($schedule['status'] === 'pending'): ?>
                                     <button type="button" class="btn-action btn-pause" onclick="pauseSchedule(<?= $schedule['id'] ?>)" title="Приостановить">⏸</button>
-                                <?php else: ?>
+                                <?php elseif ($schedule['status'] === 'paused'): ?>
                                     <button type="button" class="btn-action btn-play" onclick="resumeSchedule(<?= $schedule['id'] ?>)" title="Возобновить">▶</button>
-                                <?php endif; ?>
+                                <?php elseif (in_array($schedule['status'], ['published', 'failed', 'cancelled'])): ?>
+                                    <button type="button" class="btn-action btn-play" onclick="resumeSchedule(<?= $schedule['id'] ?>)" title="Включить">▶</button>
+                                <?php endif; 
+                            endif; ?>
+                            
+                            <?php if ($schedule['status'] === 'pending' || $schedule['status'] === 'paused'): ?>
                                 <button type="button" class="btn-action btn-copy" onclick="duplicateSchedule(<?= $schedule['id'] ?>)" title="Копировать">📋</button>
                                 <button type="button" class="btn-action btn-edit" onclick="editSchedule(<?= $schedule['id'] ?>)" title="Редактировать">✏️</button>
                             <?php endif; ?>
@@ -332,7 +339,7 @@ function pauseSchedule(id) {
 }
 
 function resumeSchedule(id) {
-    if (!confirm('Возобновить это расписание?')) return;
+    if (!confirm('Возобновить/Включить это расписание?')) return;
     
     fetch('/schedules/' + id + '/resume', {
         method: 'POST',
@@ -400,6 +407,19 @@ function deleteSchedule(id) {
         console.error('Error:', e);
         showToast('Произошла ошибка', 'error');
     });
+}
+
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = 'toast toast-' + type;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => toast.classList.add('show'), 100);
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
 }
 
 function bulkPause() {

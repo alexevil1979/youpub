@@ -210,6 +210,7 @@ class ScheduleService extends Service
             return ['success' => false, 'message' => 'Schedule not found'];
         }
 
+        // Можно приостановить только pending расписания
         if ($schedule['status'] !== 'pending') {
             return ['success' => false, 'message' => 'Can only pause pending schedules'];
         }
@@ -230,11 +231,34 @@ class ScheduleService extends Service
             return ['success' => false, 'message' => 'Schedule not found'];
         }
 
-        if ($schedule['status'] !== 'paused') {
-            return ['success' => false, 'message' => 'Can only resume paused schedules'];
+        // Можно возобновить paused, published, failed, cancelled расписания
+        if (!in_array($schedule['status'], ['paused', 'published', 'failed', 'cancelled'])) {
+            return ['success' => false, 'message' => 'Cannot resume schedule with status: ' . $schedule['status']];
         }
 
-        $this->scheduleRepo->update($id, ['status' => 'pending']);
+        // Если расписание уже опубликовано или завершено, создаем новое на основе старого
+        if (in_array($schedule['status'], ['published', 'failed', 'cancelled'])) {
+            // Проверяем, не прошла ли дата публикации
+            $publishAt = strtotime($schedule['publish_at']);
+            $now = time();
+            
+            if ($publishAt <= $now) {
+                // Дата прошла, создаем новое расписание на завтра
+                $newPublishAt = date('Y-m-d H:i:s', strtotime('+1 day', $publishAt));
+            } else {
+                // Дата еще не прошла, используем старую
+                $newPublishAt = $schedule['publish_at'];
+            }
+            
+            // Обновляем существующее расписание
+            $this->scheduleRepo->update($id, [
+                'status' => 'pending',
+                'publish_at' => $newPublishAt
+            ]);
+        } else {
+            // Просто меняем статус с paused на pending
+            $this->scheduleRepo->update($id, ['status' => 'pending']);
+        }
 
         return ['success' => true, 'message' => 'Schedule resumed successfully'];
     }
