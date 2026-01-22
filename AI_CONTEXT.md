@@ -250,6 +250,16 @@ youpub/
 
 ## Последнее обновление
 
+**2026-01-22**: Добавлен модуль управления группами контента:
+- Группировка видео по темам
+- Шаблоны оформления публикаций
+- Гибкие расписания (5 типов)
+- Smart Queue для автоматической публикации
+- Обратная совместимость со старыми расписаниями
+- Документация: `CONTENT_GROUPS_GUIDE.md`, `ARCHITECTURE_CONTENT_GROUPS.md`
+
+## Последнее обновление (старое)
+
 **Дата**: 2024
 **Статус**: ✅ Проект полностью реализован и готов к развертыванию
 **Версия**: 1.1 - Добавлена поддержка TikTok, Instagram Reels и Pinterest
@@ -273,6 +283,30 @@ youpub/
 - Код готов к production использованию
 
 ## Следующий шаг
+
+1. **Применить миграцию БД** на сервере:
+   ```bash
+   mysql -u youpub_user -pqweasd333123 youpub_db < database/migrations/002_content_groups_module.sql
+   ```
+
+2. **Обновить код** на сервере:
+   ```bash
+   cd /ssd/www/youpub
+   sudo git pull origin main
+   ```
+
+3. **Настроить cron** для Smart Worker:
+   ```bash
+   sudo crontab -e
+   # Добавить: * * * * * /usr/bin/php /ssd/www/youpub/workers/smart_publish_worker.php >> /ssd/www/youpub/storage/logs/smart_publish.log 2>&1
+   ```
+
+4. **Доработать Web UI** (опционально):
+   - Формы создания/редактирования групп
+   - Формы создания шаблонов
+   - Форма создания умных расписаний
+
+## Следующий шаг (старое)
 
 1. **✅ Git репозиторий опубликован на GitHub**
    - URL: https://github.com/alexevil1979/youpub.git
