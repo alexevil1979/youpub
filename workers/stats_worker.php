@@ -36,7 +36,8 @@ try {
     $statsRepo = new StatisticsRepository();
 
     // Найти все успешные публикации за последние 7 дней
-    $stmt = $publicationRepo->db->prepare(
+    $db = Database::getInstance();
+    $stmt = $db->prepare(
         "SELECT * FROM publications 
          WHERE status = 'success' 
          AND published_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)

@@ -110,4 +110,12 @@ abstract class Repository
         $stmt = $this->db->prepare("DELETE FROM {$this->table} WHERE id = ?");
         return $stmt->execute([$id]);
     }
+
+    /**
+     * Получить PDO для прямых запросов
+     */
+    public function getDb(): PDO
+    {
+        return $this->db;
+    }
 }
