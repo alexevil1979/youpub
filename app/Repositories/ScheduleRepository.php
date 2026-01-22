@@ -38,6 +38,16 @@ class ScheduleRepository extends Repository
     }
 
     /**
+     * Найти по пользователю и статусу
+     */
+    public function findByUserIdAndStatus(int $userId, string $status): array
+    {
+        $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE user_id = ? AND status = ? ORDER BY publish_at ASC");
+        $stmt->execute([$userId, $status]);
+        return $stmt->fetchAll();
+    }
+
+    /**
      * Найти расписания, готовые к публикации
      */
     public function findDueForPublishing(): array
