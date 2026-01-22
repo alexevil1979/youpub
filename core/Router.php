@@ -152,12 +152,20 @@ class Router
 
         // Обработка callable (функции, замыкания)
         if (is_callable($handler)) {
-            if (empty($params)) {
-                call_user_func($handler);
-            } else {
-                call_user_func_array($handler, array_values($params));
+            try {
+                if (empty($params)) {
+                    $result = call_user_func($handler);
+                } else {
+                    $result = call_user_func_array($handler, array_values($params));
+                }
+                // Если функция ничего не вернула и не сделала редирект, это нормально
+                return;
+            } catch (\Throwable $e) {
+                error_log('Handler error: ' . $e->getMessage());
+                http_response_code(500);
+                echo json_encode(['error' => 'Handler execution failed', 'message' => $e->getMessage()]);
+                return;
             }
-            return;
         }
 
         http_response_code(500);

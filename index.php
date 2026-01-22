@@ -8,32 +8,60 @@ error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 
-require_once __DIR__ . '/vendor/autoload.php';
+// Включить буферизацию вывода
+ob_start();
 
-use Core\Database;
-use Core\Router;
-use Core\Auth;
+try {
+    require_once __DIR__ . '/vendor/autoload.php';
 
-// Загрузка конфигурации
-$config = require __DIR__ . '/config/env.php';
+    use Core\Database;
+    use Core\Router;
+    use Core\Auth;
 
-// Инициализация БД
-Database::init($config);
+    // Загрузка конфигурации
+    $config = require __DIR__ . '/config/env.php';
 
-// Инициализация сессий
-$auth = new Auth();
-$auth->startSession();
+    // Инициализация БД
+    Database::init($config);
 
-// Создание роутера
-$router = new Router();
+    // Инициализация сессий
+    $auth = new Auth();
+    $auth->startSession();
 
-// Загрузка маршрутов
-require __DIR__ . '/routes/web.php';
-require __DIR__ . '/routes/api.php';
-require __DIR__ . '/routes/admin.php';
+    // Создание роутера
+    $router = new Router();
 
-// Обработка запроса
-$method = $_SERVER['REQUEST_METHOD'];
-$uri = $_SERVER['REQUEST_URI'];
+    // Загрузка маршрутов
+    require __DIR__ . '/routes/web.php';
+    require __DIR__ . '/routes/api.php';
+    require __DIR__ . '/routes/admin.php';
 
-$router->dispatch($method, $uri);
+    // Обработка запроса
+    $method = $_SERVER['REQUEST_METHOD'];
+    $uri = $_SERVER['REQUEST_URI'];
+
+    $router->dispatch($method, $uri);
+    
+} catch (\Throwable $e) {
+    // Очистить буфер при ошибке
+    ob_clean();
+    
+    // Логирование ошибки
+    error_log('Fatal error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+    
+    // Вывод ошибки (в production лучше показывать общее сообщение)
+    http_response_code(500);
+    if ($config['APP_DEBUG'] ?? false) {
+        echo json_encode([
+            'error' => 'Internal Server Error',
+            'message' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    } else {
+        echo json_encode(['error' => 'Internal Server Error'], JSON_UNESCAPED_UNICODE);
+    }
+}
+
+// Отправить буфер
+ob_end_flush();

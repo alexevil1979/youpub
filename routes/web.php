@@ -12,9 +12,9 @@ use App\Middlewares\AuthMiddleware;
 // Публичные маршруты
 $router->get('/', function() {
     if (isset($_SESSION['user_id'])) {
-        header('Location: /dashboard');
+        header('Location: /dashboard', true, 302);
     } else {
-        header('Location: /login');
+        header('Location: /login', true, 302);
     }
     exit;
 });
