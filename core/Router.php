@@ -125,6 +125,7 @@ class Router
      */
     private function callHandler($handler, array $params): void
     {
+        // Обработка строки вида "Controller@method"
         if (is_string($handler) && strpos($handler, '@') !== false) {
             [$controller, $method] = explode('@', $handler);
             $controllerClass = "App\\Controllers\\{$controller}";
@@ -137,12 +138,29 @@ class Router
             }
         }
 
+        // Обработка массива [ClassName::class, 'method']
+        if (is_array($handler) && count($handler) === 2) {
+            [$class, $method] = $handler;
+            if (is_string($class) && class_exists($class)) {
+                $instance = new $class();
+                if (method_exists($instance, $method)) {
+                    call_user_func_array([$instance, $method], array_values($params));
+                    return;
+                }
+            }
+        }
+
+        // Обработка callable (функции, замыкания)
         if (is_callable($handler)) {
-            call_user_func_array($handler, array_values($params));
+            if (empty($params)) {
+                call_user_func($handler);
+            } else {
+                call_user_func_array($handler, array_values($params));
+            }
             return;
         }
 
         http_response_code(500);
-        echo json_encode(['error' => 'Invalid handler']);
+        echo json_encode(['error' => 'Invalid handler', 'handler_type' => gettype($handler)]);
     }
 }
