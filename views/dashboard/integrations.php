@@ -39,7 +39,7 @@ ob_start();
                                         <h3 class="account-title"><?= htmlspecialchars($account['account_name'] ?? $account['channel_name'] ?? 'YouTube канал') ?></h3>
                                         <div class="account-badges-row">
                                             <?php if ($account['is_default']): ?>
-                                                <span class="badge badge-default">⭐ По умолчанию</span>
+                                                <span class="badge badge-default"><?= \App\Helpers\IconHelper::render('star', 16, 'icon-inline') ?> По умолчанию</span>
                                             <?php endif; ?>
                                             <span class="account-status-badge status-<?= $account['status'] === 'connected' ? 'connected' : ($account['status'] === 'error' ? 'error' : 'disconnected') ?>">
                                                 <?php if ($account['status'] === 'connected'): ?>
@@ -103,7 +103,7 @@ ob_start();
                                         <h3 class="account-title"><?= htmlspecialchars($account['account_name'] ?? $account['channel_username'] ?? 'Telegram канал') ?></h3>
                                         <div class="account-badges-row">
                                             <?php if ($account['is_default']): ?>
-                                                <span class="badge badge-default">⭐ По умолчанию</span>
+                                                <span class="badge badge-default"><?= \App\Helpers\IconHelper::render('star', 16, 'icon-inline') ?> По умолчанию</span>
                                             <?php endif; ?>
                                             <span class="account-status-badge status-<?= $account['status'] === 'connected' ? 'connected' : ($account['status'] === 'error' ? 'error' : 'disconnected') ?>">
                                                 <?php if ($account['status'] === 'connected'): ?>
@@ -164,7 +164,7 @@ ob_start();
                                         <h3 class="account-title"><?= htmlspecialchars($account['account_name'] ?? $account['username'] ?? 'TikTok аккаунт') ?></h3>
                                         <div class="account-badges-row">
                                             <?php if ($account['is_default']): ?>
-                                                <span class="badge badge-default">⭐ По умолчанию</span>
+                                                <span class="badge badge-default"><?= \App\Helpers\IconHelper::render('star', 16, 'icon-inline') ?> По умолчанию</span>
                                             <?php endif; ?>
                                             <span class="account-status-badge status-<?= $account['status'] === 'connected' ? 'connected' : ($account['status'] === 'error' ? 'error' : 'disconnected') ?>">
                                                 <?php if ($account['status'] === 'connected'): ?>
@@ -225,7 +225,7 @@ ob_start();
                                         <h3 class="account-title"><?= htmlspecialchars($account['account_name'] ?? $account['username'] ?? 'Instagram аккаунт') ?></h3>
                                         <div class="account-badges-row">
                                             <?php if ($account['is_default']): ?>
-                                                <span class="badge badge-default">⭐ По умолчанию</span>
+                                                <span class="badge badge-default"><?= \App\Helpers\IconHelper::render('star', 16, 'icon-inline') ?> По умолчанию</span>
                                             <?php endif; ?>
                                             <span class="account-status-badge status-<?= $account['status'] === 'connected' ? 'connected' : ($account['status'] === 'error' ? 'error' : 'disconnected') ?>">
                                                 <?php if ($account['status'] === 'connected'): ?>
@@ -286,7 +286,7 @@ ob_start();
                                         <h3 class="account-title"><?= htmlspecialchars($account['account_name'] ?? $account['username'] ?? 'Pinterest аккаунт') ?></h3>
                                         <div class="account-badges-row">
                                             <?php if ($account['is_default']): ?>
-                                                <span class="badge badge-default">⭐ По умолчанию</span>
+                                                <span class="badge badge-default"><?= \App\Helpers\IconHelper::render('star', 16, 'icon-inline') ?> По умолчанию</span>
                                             <?php endif; ?>
                                             <span class="account-status-badge status-<?= $account['status'] === 'connected' ? 'connected' : ($account['status'] === 'error' ? 'error' : 'disconnected') ?>">
                                                 <?php if ($account['status'] === 'connected'): ?>

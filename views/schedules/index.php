@@ -69,8 +69,8 @@ $groupRepo = new \App\Modules\ContentGroups\Repositories\ContentGroupRepository(
 
 <div class="schedules-header">
     <div class="header-actions">
-        <a href="/schedules/create" class="btn btn-primary">➕ Создать расписание</a>
-        <a href="/content-groups/schedules/create" class="btn btn-success">📅 Умное расписание</a>
+        <a href="/schedules/create" class="btn btn-primary"><?= \App\Helpers\IconHelper::render('add', 20, 'icon-inline') ?> Создать расписание</a>
+        <a href="/content-groups/schedules/create" class="btn btn-success"><?= \App\Helpers\IconHelper::render('calendar', 20, 'icon-inline') ?> Умное расписание</a>
     </div>
     
     <!-- Статистика -->
@@ -149,7 +149,7 @@ $groupRepo = new \App\Modules\ContentGroups\Repositories\ContentGroupRepository(
 
 <?php if (empty($filteredSchedules)): ?>
     <div class="empty-state">
-        <div class="empty-icon">📅</div>
+        <div class="empty-icon"><?= \App\Helpers\IconHelper::render('calendar', 64) ?></div>
         <h3>Нет расписаний</h3>
         <p><?= count($schedules) > 0 ? 'Попробуйте изменить фильтры' : 'Создайте ваше первое расписание' ?></p>
         <?php if (count($schedules) === 0): ?>
@@ -191,13 +191,13 @@ $groupRepo = new \App\Modules\ContentGroups\Repositories\ContentGroupRepository(
                         <?php if ($video): ?>
                             <div class="video-info">
                                 <a href="/videos/<?= $video['id'] ?>" class="video-link">
-                                    🎬 <?= htmlspecialchars($video['title'] ?? $video['file_name']) ?>
+                                    <?= \App\Helpers\IconHelper::render('video', 16, 'icon-inline') ?> <?= htmlspecialchars($video['title'] ?? $video['file_name']) ?>
                                 </a>
                             </div>
                         <?php elseif ($group): ?>
                             <div class="group-info">
                                 <a href="/content-groups/<?= $group['id'] ?>" class="group-link">
-                                    📁 <?= htmlspecialchars($group['name']) ?>
+                                    <?= \App\Helpers\IconHelper::render('folder', 16, 'icon-inline') ?> <?= htmlspecialchars($group['name']) ?>
                                 </a>
                             </div>
                         <?php else: ?>
@@ -208,14 +208,14 @@ $groupRepo = new \App\Modules\ContentGroups\Repositories\ContentGroupRepository(
                         <span class="platform-badge platform-<?= $schedule['platform'] ?>">
                             <?php
                             $platformIcons = [
-                                'youtube' => '📺',
-                                'telegram' => '💬',
-                                'tiktok' => '🎵',
-                                'instagram' => '📷',
-                                'pinterest' => '📌',
-                                'both' => '📺💬'
+                                'youtube' => \App\Helpers\IconHelper::render('youtube', 16, 'icon-inline'),
+                                'telegram' => \App\Helpers\IconHelper::render('telegram', 16, 'icon-inline'),
+                                'tiktok' => \App\Helpers\IconHelper::render('tiktok', 16, 'icon-inline'),
+                                'instagram' => \App\Helpers\IconHelper::render('instagram', 16, 'icon-inline'),
+                                'pinterest' => \App\Helpers\IconHelper::render('pinterest', 16, 'icon-inline'),
+                                'both' => \App\Helpers\IconHelper::render('youtube', 16, 'icon-inline') . \App\Helpers\IconHelper::render('telegram', 16, 'icon-inline')
                             ];
-                            echo $platformIcons[$schedule['platform']] ?? '📤';
+                            echo $platformIcons[$schedule['platform']] ?? \App\Helpers\IconHelper::render('upload', 16, 'icon-inline');
                             ?>
                             <?= ucfirst($schedule['platform']) ?>
                         </span>
@@ -230,11 +230,11 @@ $groupRepo = new \App\Modules\ContentGroups\Repositories\ContentGroupRepository(
                         <span class="status-badge status-<?= $schedule['status'] ?>">
                             <?php
                             $statusIcons = [
-                                'pending' => '⏳',
-                                'processing' => '⚙️',
-                                'published' => '✅',
-                                'failed' => '❌',
-                                'paused' => '⏸️'
+                                'pending' => \App\Helpers\IconHelper::render('wait', 16, 'icon-inline'),
+                                'processing' => \App\Helpers\IconHelper::render('settings', 16, 'icon-inline'),
+                                'published' => \App\Helpers\IconHelper::render('success', 16, 'icon-inline'),
+                                'failed' => \App\Helpers\IconHelper::render('error', 16, 'icon-inline'),
+                                'paused' => \App\Helpers\IconHelper::render('pause', 16, 'icon-inline')
                             ];
                             echo $statusIcons[$schedule['status']] ?? '';
                             ?>
@@ -243,22 +243,22 @@ $groupRepo = new \App\Modules\ContentGroups\Repositories\ContentGroupRepository(
                     </td>
                     <td>
                         <div class="schedule-actions">
-                            <a href="/schedules/<?= $schedule['id'] ?>" class="btn-action btn-view" title="Просмотр">👁</a>
+                            <a href="/schedules/<?= $schedule['id'] ?>" class="btn-action btn-view" title="Просмотр"><?= \App\Helpers\IconHelper::render('view', 20) ?></a>
                             
                             <?php 
                             // Кнопка включения/выключения - показываем для всех статусов, кроме processing
                             if ($schedule['status'] !== 'processing'): 
                                 if ($schedule['status'] === 'pending'): ?>
-                                    <button type="button" class="btn-action btn-pause" onclick="pauseSchedule(<?= $schedule['id'] ?>)" title="Приостановить">⏸</button>
+                                    <button type="button" class="btn-action btn-pause" onclick="pauseSchedule(<?= $schedule['id'] ?>)" title="Приостановить"><?= \App\Helpers\IconHelper::render('pause', 20) ?></button>
                                 <?php elseif ($schedule['status'] === 'paused'): ?>
-                                    <button type="button" class="btn-action btn-play" onclick="resumeSchedule(<?= $schedule['id'] ?>)" title="Возобновить">▶</button>
+                                    <button type="button" class="btn-action btn-play" onclick="resumeSchedule(<?= $schedule['id'] ?>)" title="Возобновить"><?= \App\Helpers\IconHelper::render('play', 20) ?></button>
                                 <?php elseif (in_array($schedule['status'], ['published', 'failed', 'cancelled'])): ?>
-                                    <button type="button" class="btn-action btn-play" onclick="resumeSchedule(<?= $schedule['id'] ?>)" title="Включить">▶</button>
+                                    <button type="button" class="btn-action btn-play" onclick="resumeSchedule(<?= $schedule['id'] ?>)" title="Включить"><?= \App\Helpers\IconHelper::render('play', 20) ?></button>
                                 <?php endif; 
                             endif; ?>
                             
                             <?php if ($schedule['status'] === 'pending' || $schedule['status'] === 'paused'): ?>
-                                <button type="button" class="btn-action btn-copy" onclick="duplicateSchedule(<?= $schedule['id'] ?>)" title="Копировать">📋</button>
+                                <button type="button" class="btn-action btn-copy" onclick="duplicateSchedule(<?= $schedule['id'] ?>)" title="Копировать"><?= \App\Helpers\IconHelper::render('copy', 20) ?></button>
                                 <button type="button" class="btn-action btn-edit" onclick="editSchedule(<?= $schedule['id'] ?>)" title="Редактировать">✏️</button>
                             <?php endif; ?>
                             
