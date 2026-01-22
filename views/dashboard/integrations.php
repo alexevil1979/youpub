@@ -15,8 +15,11 @@ ob_start();
         </div>
         
         <?php if (empty($youtubeAccounts)): ?>
-            <p class="integration-status">Не подключено</p>
-            <p class="integration-description">Подключите свой YouTube канал для автоматической публикации видео</p>
+            <div class="integration-empty-state">
+                <div class="empty-state-icon">📺</div>
+                <p class="integration-status">Нет подключенных каналов</p>
+                <p class="integration-description">Подключите свой YouTube канал для автоматической публикации видео</p>
+            </div>
         <?php else: ?>
             <div class="accounts-list">
                 <?php foreach ($youtubeAccounts as $account): ?>
@@ -60,8 +63,11 @@ ob_start();
         </div>
         
         <?php if (empty($telegramAccounts)): ?>
-            <p class="integration-status">Не подключено</p>
-            <p class="integration-description">Подключите Telegram бота для публикации в каналы</p>
+            <div class="integration-empty-state">
+                <div class="empty-state-icon">💬</div>
+                <p class="integration-status">Нет подключенных каналов</p>
+                <p class="integration-description">Подключите Telegram бота для публикации в каналы</p>
+            </div>
         <?php else: ?>
             <div class="accounts-list">
                 <?php foreach ($telegramAccounts as $account): ?>
@@ -102,7 +108,11 @@ ob_start();
         </div>
         
         <?php if (empty($tiktokAccounts)): ?>
-            <p class="integration-status">Не подключено</p>
+            <div class="integration-empty-state">
+                <div class="empty-state-icon">🎵</div>
+                <p class="integration-status">Нет подключенных аккаунтов</p>
+                <p class="integration-description">Подключите TikTok аккаунт для публикации видео</p>
+            </div>
         <?php else: ?>
             <div class="accounts-list">
                 <?php foreach ($tiktokAccounts as $account): ?>
@@ -133,7 +143,11 @@ ob_start();
         </div>
         
         <?php if (empty($instagramAccounts)): ?>
-            <p class="integration-status">Не подключено</p>
+            <div class="integration-empty-state">
+                <div class="empty-state-icon">📷</div>
+                <p class="integration-status">Нет подключенных аккаунтов</p>
+                <p class="integration-description">Подключите Instagram аккаунт для публикации Reels</p>
+            </div>
         <?php else: ?>
             <div class="accounts-list">
                 <?php foreach ($instagramAccounts as $account): ?>
@@ -164,7 +178,11 @@ ob_start();
         </div>
         
         <?php if (empty($pinterestAccounts)): ?>
-            <p class="integration-status">Не подключено</p>
+            <div class="integration-empty-state">
+                <div class="empty-state-icon">📌</div>
+                <p class="integration-status">Нет подключенных аккаунтов</p>
+                <p class="integration-description">Подключите Pinterest аккаунт для публикации Idea Pins и Video Pins</p>
+            </div>
         <?php else: ?>
             <div class="accounts-list">
                 <?php foreach ($pinterestAccounts as $account): ?>
@@ -327,16 +345,33 @@ function showTelegramForm() {
     font-size: 1.25rem;
 }
 
+.integration-empty-state {
+    text-align: center;
+    padding: 2rem 1rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 8px;
+    border: 2px dashed #dee2e6;
+    margin: 1rem 0;
+}
+
+.empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.6;
+}
+
 .integration-status {
-    color: #95a5a6;
-    font-weight: 500;
+    color: #6c757d;
+    font-weight: 600;
+    font-size: 1rem;
     margin: 0.5rem 0;
 }
 
 .integration-description {
-    color: #666;
+    color: #868e96;
     font-size: 0.9rem;
-    margin: 0.5rem 0;
+    margin: 0.5rem 0 0 0;
+    line-height: 1.5;
 }
 
 .accounts-list {
