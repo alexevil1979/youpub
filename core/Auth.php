@@ -105,8 +105,24 @@ class Auth
         $this->startSession();
         
         if (isset($_SESSION['session_id'])) {
-            $stmt = $this->db->prepare("DELETE FROM sessions WHERE id = ?");
-            $stmt->execute([$_SESSION['session_id']]);
+            try {
+                $stmt = $this->db->prepare("DELETE FROM sessions WHERE id = ?");
+                $stmt->execute([$_SESSION['session_id']]);
+            } catch (\Exception $e) {
+                error_log('Logout error: ' . $e->getMessage());
+            }
+        }
+
+        // Очищаем все данные сессии
+        $_SESSION = [];
+        
+        // Удаляем cookie сессии
+        if (ini_get("session.use_cookies")) {
+            $params = session_get_cookie_params();
+            setcookie(session_name(), '', time() - 42000,
+                $params["path"], $params["domain"],
+                $params["secure"], $params["httponly"]
+            );
         }
 
         session_destroy();
