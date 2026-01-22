@@ -142,7 +142,7 @@ ob_start();
                                     onclick="toggleFileStatus(<?= $group['id'] ?>, <?= $file['id'] ?>, '<?= $file['status'] ?>')">
                                 <?= ($file['status'] === 'new' || $file['status'] === 'queued') ? '⏸ Выкл' : '▶ Вкл' ?>
                             </button>
-                            <button type="button" class="btn btn-sm btn-danger" onclick="removeFromGroup(<?= $group['id'] ?>, <?= $file['video_id'] ?>)">🗑 Удалить</button>
+                            <button type="button" class="btn btn-sm btn-danger" onclick="removeFromGroup(<?= $group['id'] ?>, <?= $file['video_id'] ?>)"><?= \App\Helpers\IconHelper::render('delete', 16, 'icon-inline') ?> Удалить</button>
                         </td>
                     </tr>
                 <?php endforeach; ?>

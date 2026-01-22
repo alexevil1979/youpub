@@ -25,7 +25,7 @@ ob_start();
                 <div class="group-card-header">
                     <h3 class="group-title"><?= htmlspecialchars($group['name']) ?></h3>
                     <span class="group-status-badge badge-<?= $group['status'] === 'active' ? 'success' : ($group['status'] === 'paused' ? 'warning' : 'secondary') ?>">
-                        <?= $group['status'] === 'active' ? '● Активна' : '⏸ На паузе' ?>
+                        <?= $group['status'] === 'active' ? '● Активна' : \App\Helpers\IconHelper::render('pause', 16, 'icon-inline') . ' На паузе' ?>
                     </span>
                 </div>
                 
@@ -37,7 +37,7 @@ ob_start();
                     <div class="group-info-item">
                         <span class="info-label">Шаблон:</span>
                         <?php if ($group['template_id'] && isset($templatesMap[$group['template_id']])): ?>
-                            <span class="info-value info-value-success">✓ <?= htmlspecialchars($templatesMap[$group['template_id']]['name']) ?></span>
+                            <span class="info-value info-value-success"><?= \App\Helpers\IconHelper::render('check', 16, 'icon-inline') ?> <?= htmlspecialchars($templatesMap[$group['template_id']]['name']) ?></span>
                         <?php else: ?>
                             <span class="info-value info-value-muted">Без шаблона</span>
                         <?php endif; ?>
@@ -66,16 +66,16 @@ ob_start();
                 </div>
 
                 <div class="group-actions">
-                    <a href="/content-groups/<?= $group['id'] ?>" class="btn-action-icon btn-action-primary" title="Открыть группу">👁</a>
-                    <a href="/content-groups/<?= $group['id'] ?>/edit" class="btn-action-icon btn-action-info" title="Редактировать">✏️</a>
+                    <a href="/content-groups/<?= $group['id'] ?>" class="btn-action-icon btn-action-primary" title="Открыть группу"><?= \App\Helpers\IconHelper::render('view', 20) ?></a>
+                    <a href="/content-groups/<?= $group['id'] ?>/edit" class="btn-action-icon btn-action-info" title="Редактировать"><?= \App\Helpers\IconHelper::render('edit', 20) ?></a>
                     <button type="button" class="btn-action-icon btn-action-<?= $group['status'] === 'active' ? 'warning' : 'success' ?>" 
                             onclick="toggleGroupStatus(<?= $group['id'] ?>, '<?= $group['status'] ?>')" 
                             title="<?= $group['status'] === 'active' ? 'Приостановить' : 'Включить' ?>">
-                        <?= $group['status'] === 'active' ? '⏸' : '▶' ?>
+                        <?= $group['status'] === 'active' ? \App\Helpers\IconHelper::render('pause', 20) : \App\Helpers\IconHelper::render('play', 20) ?>
                     </button>
-                    <button type="button" class="btn-action-icon btn-action-secondary" onclick="duplicateGroup(<?= $group['id'] ?>)" title="Копировать">📋</button>
-                    <button type="button" class="btn-action-icon btn-action-secondary" onclick="shuffleGroup(<?= $group['id'] ?>)" title="Перемешать">🔀</button>
-                    <button type="button" class="btn-action-icon btn-action-danger" onclick="deleteGroup(<?= $group['id'] ?>)" title="Удалить">🗑</button>
+                    <button type="button" class="btn-action-icon btn-action-secondary" onclick="duplicateGroup(<?= $group['id'] ?>)" title="Копировать"><?= \App\Helpers\IconHelper::render('copy', 20) ?></button>
+                    <button type="button" class="btn-action-icon btn-action-secondary" onclick="shuffleGroup(<?= $group['id'] ?>)" title="Перемешать"><?= \App\Helpers\IconHelper::render('shuffle', 20) ?></button>
+                    <button type="button" class="btn-action-icon btn-action-danger" onclick="deleteGroup(<?= $group['id'] ?>)" title="Удалить"><?= \App\Helpers\IconHelper::render('delete', 20) ?></button>
                 </div>
             </div>
         <?php endforeach; ?>

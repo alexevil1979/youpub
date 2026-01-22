@@ -78,8 +78,8 @@ foreach ($allGroups as $group) {
 
 <h1>Мои видео</h1>
 <div style="margin-bottom: 1rem;">
-    <a href="/videos/upload" class="btn btn-primary">📤 Загрузить видео</a>
-    <button type="button" class="btn btn-secondary" onclick="toggleViewMode()" id="viewModeBtn">📋 Вид: Каталог</button>
+    <a href="/videos/upload" class="btn btn-primary"><?= \App\Helpers\IconHelper::render('upload', 20, 'icon-inline') ?> Загрузить видео</a>
+    <button type="button" class="btn btn-secondary" onclick="toggleViewMode()" id="viewModeBtn"><?= \App\Helpers\IconHelper::render('copy', 20, 'icon-inline') ?> Вид: Каталог</button>
 </div>
 
 <div id="catalog-view" class="catalog-view">
@@ -88,11 +88,11 @@ foreach ($allGroups as $group) {
         <!-- Группы контента -->
         <?php if (!empty($groupedByContentGroup)): ?>
             <div class="catalog-section">
-                <h2 class="catalog-section-title">📁 Группы контента</h2>
+                <h2 class="catalog-section-title"><?= \App\Helpers\IconHelper::render('folder', 24, 'icon-inline') ?> Группы контента</h2>
                 <?php foreach ($groupedByContentGroup as $item): ?>
                     <div class="catalog-folder">
                         <div class="folder-header" onclick="toggleFolder(this)">
-                            <span class="folder-icon">📁</span>
+                            <span class="folder-icon"><?= \App\Helpers\IconHelper::render('folder', 20) ?></span>
                             <span class="folder-name"><?= htmlspecialchars($item['group']['name']) ?></span>
                             <span class="folder-count"><?= count($item['videos']) ?> видео</span>
                             <span class="folder-toggle">▼</span>
@@ -100,7 +100,7 @@ foreach ($allGroups as $group) {
                         <div class="folder-content">
                             <?php foreach ($item['videos'] as $video): ?>
                                 <div class="catalog-item">
-                                    <span class="item-icon">🎬</span>
+                                    <span class="item-icon"><?= \App\Helpers\IconHelper::render('video', 20) ?></span>
                                     <div class="item-info">
                                         <div class="item-title"><?= htmlspecialchars($video['title'] ?? $video['file_name']) ?></div>
                                         <div class="item-meta">
@@ -112,7 +112,7 @@ foreach ($allGroups as $group) {
                                         </div>
                                     </div>
                                     <div class="item-actions">
-                                        <a href="/videos/<?= $video['id'] ?>" class="btn-action" title="Просмотр">👁</a>
+                                        <a href="/videos/<?= $video['id'] ?>" class="btn-action" title="Просмотр"><?= \App\Helpers\IconHelper::render('view', 20) ?></a>
                                         <?php if (isset($videoPublications[$video['id']])): 
                                             $pub = $videoPublications[$video['id']];
                                             $pubUrl = $pub['platform_url'] ?? '';
@@ -139,14 +139,14 @@ foreach ($allGroups as $group) {
                                         ?>
                                             <a href="<?= htmlspecialchars($pubUrl) ?>" target="_blank" class="btn-action btn-action-publish" title="Перейти к публикации на <?= ucfirst($pub['platform']) ?>">🚀</a>
                                         <?php endif; endif; ?>
-                                        <a href="/schedules/create?video_id=<?= $video['id'] ?>" class="btn-action" title="Запланировать">📅</a>
-                                        <button type="button" class="btn-action" onclick="showAddToGroupModal(<?= $video['id'] ?>)" title="В группу">📁</button>
+                                        <a href="/schedules/create?video_id=<?= $video['id'] ?>" class="btn-action" title="Запланировать"><?= \App\Helpers\IconHelper::render('calendar', 20) ?></a>
+                                        <button type="button" class="btn-action" onclick="showAddToGroupModal(<?= $video['id'] ?>)" title="В группу"><?= \App\Helpers\IconHelper::render('folder', 20) ?></button>
                                         <button type="button" class="btn-action <?= ($video['status'] === 'active' || $video['status'] === 'uploaded' || $video['status'] === 'ready') ? 'btn-pause' : 'btn-play' ?>" 
                                                 onclick="toggleVideoStatus(<?= $video['id'] ?>)" 
                                                 title="<?= ($video['status'] === 'active' || $video['status'] === 'uploaded' || $video['status'] === 'ready') ? 'Выключить' : 'Включить' ?>">
-                                            <?= ($video['status'] === 'active' || $video['status'] === 'uploaded' || $video['status'] === 'ready') ? '⏸' : '▶' ?>
+                                            <?= ($video['status'] === 'active' || $video['status'] === 'uploaded' || $video['status'] === 'ready') ? \App\Helpers\IconHelper::render('pause', 20) : \App\Helpers\IconHelper::render('play', 20) ?>
                                         </button>
-                                        <button type="button" class="btn-action btn-delete" onclick="deleteVideo(<?= $video['id'] ?>)" title="Удалить">🗑</button>
+                                        <button type="button" class="btn-action btn-delete" onclick="deleteVideo(<?= $video['id'] ?>)" title="Удалить"><?= \App\Helpers\IconHelper::render('delete', 20) ?></button>
                                     </div>
                                 </div>
                             <?php endforeach; ?>
@@ -158,12 +158,12 @@ foreach ($allGroups as $group) {
 
         <!-- По дате -->
         <div class="catalog-section">
-            <h2 class="catalog-section-title">📅 По дате загрузки</h2>
+            <h2 class="catalog-section-title"><?= \App\Helpers\IconHelper::render('calendar', 24, 'icon-inline') ?> По дате загрузки</h2>
             
             <?php if (!empty($groupedByDate['today'])): ?>
                 <div class="catalog-folder">
                     <div class="folder-header" onclick="toggleFolder(this)">
-                        <span class="folder-icon">📅</span>
+                        <span class="folder-icon"><?= \App\Helpers\IconHelper::render('calendar', 20) ?></span>
                         <span class="folder-name">Сегодня</span>
                         <span class="folder-count"><?= count($groupedByDate['today']) ?> видео</span>
                         <span class="folder-toggle">▼</span>
@@ -179,7 +179,7 @@ foreach ($allGroups as $group) {
             <?php if (!empty($groupedByDate['yesterday'])): ?>
                 <div class="catalog-folder">
                     <div class="folder-header" onclick="toggleFolder(this)">
-                        <span class="folder-icon">📅</span>
+                        <span class="folder-icon"><?= \App\Helpers\IconHelper::render('calendar', 20) ?></span>
                         <span class="folder-name">Вчера</span>
                         <span class="folder-count"><?= count($groupedByDate['yesterday']) ?> видео</span>
                         <span class="folder-toggle">▼</span>
@@ -195,7 +195,7 @@ foreach ($allGroups as $group) {
             <?php if (!empty($groupedByDate['this_week'])): ?>
                 <div class="catalog-folder">
                     <div class="folder-header" onclick="toggleFolder(this)">
-                        <span class="folder-icon">📅</span>
+                        <span class="folder-icon"><?= \App\Helpers\IconHelper::render('calendar', 20) ?></span>
                         <span class="folder-name">На этой неделе</span>
                         <span class="folder-count"><?= count($groupedByDate['this_week']) ?> видео</span>
                         <span class="folder-toggle">▼</span>
@@ -211,7 +211,7 @@ foreach ($allGroups as $group) {
             <?php if (!empty($groupedByDate['this_month'])): ?>
                 <div class="catalog-folder">
                     <div class="folder-header" onclick="toggleFolder(this)">
-                        <span class="folder-icon">📅</span>
+                        <span class="folder-icon"><?= \App\Helpers\IconHelper::render('calendar', 20) ?></span>
                         <span class="folder-name">В этом месяце</span>
                         <span class="folder-count"><?= count($groupedByDate['this_month']) ?> видео</span>
                         <span class="folder-toggle">▼</span>
@@ -227,7 +227,7 @@ foreach ($allGroups as $group) {
             <?php if (!empty($groupedByDate['older'])): ?>
                 <div class="catalog-folder">
                     <div class="folder-header" onclick="toggleFolder(this)">
-                        <span class="folder-icon">📅</span>
+                        <span class="folder-icon"><?= \App\Helpers\IconHelper::render('calendar', 20) ?></span>
                         <span class="folder-name">Ранее</span>
                         <span class="folder-count"><?= count($groupedByDate['older']) ?> видео</span>
                         <span class="folder-toggle">▼</span>
@@ -243,7 +243,7 @@ foreach ($allGroups as $group) {
 
         <?php if (empty($videos)): ?>
             <div class="empty-state">
-                <div class="empty-icon">📹</div>
+                <div class="empty-icon"><?= \App\Helpers\IconHelper::render('video', 64) ?></div>
                 <h3>Нет загруженных видео</h3>
                 <p>Начните с загрузки вашего первого видео</p>
                 <a href="/videos/upload" class="btn btn-primary">Загрузить видео</a>
@@ -300,15 +300,15 @@ foreach ($allGroups as $group) {
                             }
                             if ($pubUrl):
                         ?>
-                            <a href="<?= htmlspecialchars($pubUrl) ?>" target="_blank" class="btn btn-sm btn-success" title="Перейти к публикации на <?= ucfirst($pub['platform']) ?>">🚀 Публикация</a>
+                            <a href="<?= htmlspecialchars($pubUrl) ?>" target="_blank" class="btn btn-sm btn-success" title="Перейти к публикации на <?= ucfirst($pub['platform']) ?>"><?= \App\Helpers\IconHelper::render('publish', 16, 'icon-inline') ?> Публикация</a>
                         <?php endif; endif; ?>
                         <a href="/schedules/create?video_id=<?= $video['id'] ?>" class="btn btn-sm btn-success">Запланировать</a>
                         <button type="button" class="btn btn-sm btn-info" onclick="showAddToGroupModal(<?= $video['id'] ?>)">В группу</button>
                         <button type="button" class="btn btn-sm <?= ($video['status'] === 'active' || $video['status'] === 'uploaded' || $video['status'] === 'ready') ? 'btn-warning' : 'btn-success' ?>" 
                                 onclick="toggleVideoStatus(<?= $video['id'] ?>)">
-                            <?= ($video['status'] === 'active' || $video['status'] === 'uploaded' || $video['status'] === 'ready') ? '⏸ Выкл' : '▶ Вкл' ?>
+                            <?= ($video['status'] === 'active' || $video['status'] === 'uploaded' || $video['status'] === 'ready') ? \App\Helpers\IconHelper::render('pause', 16, 'icon-inline') . ' Выкл' : \App\Helpers\IconHelper::render('play', 16, 'icon-inline') . ' Вкл' ?>
                         </button>
-                        <button type="button" class="btn btn-sm btn-danger" onclick="deleteVideo(<?= $video['id'] ?>)">🗑 Удалить</button>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="deleteVideo(<?= $video['id'] ?>)"><?= \App\Helpers\IconHelper::render('delete', 16, 'icon-inline') ?> Удалить</button>
                     </td>
                 </tr>
                 <?php endforeach; ?>
@@ -357,11 +357,11 @@ function toggleViewMode() {
     if (viewMode === 'catalog') {
         catalogView.style.display = 'block';
         tableView.style.display = 'none';
-        btn.textContent = '📋 Вид: Каталог';
+        btn.innerHTML = '<?= \App\Helpers\IconHelper::render('copy', 20, 'icon-inline') ?> Вид: Каталог';
     } else {
         catalogView.style.display = 'none';
         tableView.style.display = 'block';
-        btn.textContent = '📁 Вид: Таблица';
+        btn.innerHTML = '<?= \App\Helpers\IconHelper::render('folder', 20, 'icon-inline') ?> Вид: Таблица';
     }
 }
 
@@ -376,7 +376,7 @@ function toggleFolder(header) {
         folder.classList.add('expanded');
     } else {
         content.style.display = 'none';
-        toggle.textContent = '▶';
+        toggle.innerHTML = '<?= \App\Helpers\IconHelper::render('play', 20) ?>';
         folder.classList.remove('expanded');
     }
 }
