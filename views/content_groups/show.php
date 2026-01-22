@@ -140,7 +140,7 @@ ob_start();
                             <?php endif; endif; ?>
                             <button type="button" class="btn btn-sm <?= ($file['status'] === 'new' || $file['status'] === 'queued') ? 'btn-warning' : 'btn-success' ?>" 
                                     onclick="toggleFileStatus(<?= $group['id'] ?>, <?= $file['id'] ?>, '<?= $file['status'] ?>')">
-                                <?= ($file['status'] === 'new' || $file['status'] === 'queued') ? '⏸ Выкл' : '▶ Вкл' ?>
+                                <?= ($file['status'] === 'new' || $file['status'] === 'queued') ? \App\Helpers\IconHelper::render('pause', 16, 'icon-inline') . ' Выкл' : \App\Helpers\IconHelper::render('play', 16, 'icon-inline') . ' Вкл' ?>
                             </button>
                             <button type="button" class="btn btn-sm btn-danger" onclick="removeFromGroup(<?= $group['id'] ?>, <?= $file['video_id'] ?>)"><?= \App\Helpers\IconHelper::render('delete', 16, 'icon-inline') ?> Удалить</button>
                         </td>
