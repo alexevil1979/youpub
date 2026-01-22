@@ -284,7 +284,36 @@ CREATE TABLE IF NOT EXISTS `publication_logs` (
   CONSTRAINT `publication_logs_ibfk_4` FOREIGN KEY (`video_id`) REFERENCES `videos` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Индексы для оптимизации
-CREATE INDEX IF NOT EXISTS `idx_schedules_group_status` ON `schedules` (`content_group_id`, `status`);
-CREATE INDEX IF NOT EXISTS `idx_group_files_status` ON `content_group_files` (`group_id`, `status`);
-CREATE INDEX IF NOT EXISTS `idx_group_files_order` ON `content_group_files` (`group_id`, `order_index`, `status`);
+-- Индексы для оптимизации (с проверкой существования)
+SET @index_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS 
+                     WHERE TABLE_SCHEMA = DATABASE() 
+                     AND TABLE_NAME = 'schedules' 
+                     AND INDEX_NAME = 'idx_schedules_group_status');
+SET @sql = IF(@index_exists = 0, 
+    'CREATE INDEX `idx_schedules_group_status` ON `schedules` (`content_group_id`, `status`)', 
+    'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @index_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS 
+                     WHERE TABLE_SCHEMA = DATABASE() 
+                     AND TABLE_NAME = 'content_group_files' 
+                     AND INDEX_NAME = 'idx_group_files_status');
+SET @sql = IF(@index_exists = 0, 
+    'CREATE INDEX `idx_group_files_status` ON `content_group_files` (`group_id`, `status`)', 
+    'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @index_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS 
+                     WHERE TABLE_SCHEMA = DATABASE() 
+                     AND TABLE_NAME = 'content_group_files' 
+                     AND INDEX_NAME = 'idx_group_files_order');
+SET @sql = IF(@index_exists = 0, 
+    'CREATE INDEX `idx_group_files_order` ON `content_group_files` (`group_id`, `order_index`, `status`)', 
+    'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
