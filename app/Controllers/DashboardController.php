@@ -58,25 +58,67 @@ class DashboardController extends Controller
      */
     public function integrations(): void
     {
-        $userId = $_SESSION['user_id'];
-        
-        // Загружаем все интеграции для каждой платформы
-        $youtubeRepo = new YoutubeIntegrationRepository();
-        $youtubeAccounts = $youtubeRepo->findByUserId($userId);
-        
-        $telegramRepo = new \App\Repositories\TelegramIntegrationRepository();
-        $telegramAccounts = $telegramRepo->findByUserId($userId);
-        
-        $tiktokRepo = new \App\Repositories\TiktokIntegrationRepository();
-        $tiktokAccounts = $tiktokRepo->findByUserId($userId);
-        
-        $instagramRepo = new \App\Repositories\InstagramIntegrationRepository();
-        $instagramAccounts = $instagramRepo->findByUserId($userId);
-        
-        $pinterestRepo = new \App\Repositories\PinterestIntegrationRepository();
-        $pinterestAccounts = $pinterestRepo->findByUserId($userId);
-        
-        include __DIR__ . '/../../views/dashboard/integrations.php';
+        try {
+            $userId = $_SESSION['user_id'] ?? null;
+            
+            if (!$userId) {
+                error_log('Integrations: User not authenticated');
+                header('Location: /login');
+                exit;
+            }
+            
+            // Загружаем все интеграции для каждой платформы
+            $youtubeAccounts = [];
+            $telegramAccounts = [];
+            $tiktokAccounts = [];
+            $instagramAccounts = [];
+            $pinterestAccounts = [];
+            
+            try {
+                $youtubeRepo = new YoutubeIntegrationRepository();
+                $youtubeAccounts = $youtubeRepo->findByUserId($userId);
+            } catch (\Exception $e) {
+                error_log('Integrations: Error loading YouTube accounts: ' . $e->getMessage());
+            }
+            
+            try {
+                $telegramRepo = new \App\Repositories\TelegramIntegrationRepository();
+                $telegramAccounts = $telegramRepo->findByUserId($userId);
+            } catch (\Exception $e) {
+                error_log('Integrations: Error loading Telegram accounts: ' . $e->getMessage());
+            }
+            
+            try {
+                $tiktokRepo = new \App\Repositories\TiktokIntegrationRepository();
+                $tiktokAccounts = $tiktokRepo->findByUserId($userId);
+            } catch (\Exception $e) {
+                error_log('Integrations: Error loading TikTok accounts: ' . $e->getMessage());
+            }
+            
+            try {
+                $instagramRepo = new \App\Repositories\InstagramIntegrationRepository();
+                $instagramAccounts = $instagramRepo->findByUserId($userId);
+            } catch (\Exception $e) {
+                error_log('Integrations: Error loading Instagram accounts: ' . $e->getMessage());
+            }
+            
+            try {
+                $pinterestRepo = new \App\Repositories\PinterestIntegrationRepository();
+                $pinterestAccounts = $pinterestRepo->findByUserId($userId);
+            } catch (\Exception $e) {
+                error_log('Integrations: Error loading Pinterest accounts: ' . $e->getMessage());
+            }
+            
+            include __DIR__ . '/../../views/dashboard/integrations.php';
+            
+        } catch (\Throwable $e) {
+            error_log('Integrations: Fatal error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+            error_log('Integrations: Stack trace: ' . $e->getTraceAsString());
+            
+            $_SESSION['error'] = 'Произошла ошибка при загрузке страницы интеграций.';
+            header('Location: /dashboard');
+            exit;
+        }
     }
 
     /**
