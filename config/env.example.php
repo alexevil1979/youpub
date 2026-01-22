@@ -12,7 +12,7 @@ return [
     'APP_DEBUG' => false,
     
     // База данных
-    'DB_HOST' => 'localhost',
+    'DB_HOST' => '127.0.0.1', // Используйте 127.0.0.1 вместо localhost для TCP/IP
     'DB_NAME' => 'youpub',
     'DB_USER' => 'youpub_user',
     'DB_PASS' => 'qweasd333123',

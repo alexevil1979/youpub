@@ -28,9 +28,15 @@ class Database
     {
         if (self::$instance === null) {
             try {
+                // Используем 127.0.0.1 вместо localhost для TCP/IP соединения
+                $host = self::$config['DB_HOST'];
+                if ($host === 'localhost') {
+                    $host = '127.0.0.1';
+                }
+                
                 $dsn = sprintf(
                     'mysql:host=%s;dbname=%s;charset=%s',
-                    self::$config['DB_HOST'],
+                    $host,
                     self::$config['DB_NAME'],
                     self::$config['DB_CHARSET']
                 );
