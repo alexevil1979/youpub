@@ -413,3 +413,48 @@ footer {
     gap: 1rem;
     flex-wrap: wrap;
 }
+
+/* Публикации */
+.video-publications {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.video-publications h3 {
+    margin-bottom: 1rem;
+    color: #2c3e50;
+}
+
+.publications-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.publication-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: white;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.publication-platform {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.publication-date {
+    font-size: 0.875rem;
+    color: #666;
+}
+
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}

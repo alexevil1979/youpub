@@ -62,6 +62,49 @@ ob_start();
             <p><strong>Загружено:</strong> <?= date('d.m.Y H:i', strtotime($video['created_at'])) ?></p>
         </div>
 
+        <?php if (!empty($publications)): ?>
+        <div class="video-publications">
+            <h3>Опубликовано на платформах:</h3>
+            <div class="publications-list">
+                <?php foreach ($publications as $publication): ?>
+                    <div class="publication-item">
+                        <div class="publication-platform">
+                            <strong><?= ucfirst($publication['platform']) ?></strong>
+                            <?php if ($publication['published_at']): ?>
+                                <span class="publication-date"><?= date('d.m.Y H:i', strtotime($publication['published_at'])) ?></span>
+                            <?php endif; ?>
+                        </div>
+                        <?php if ($publication['platform_url']): ?>
+                            <a href="<?= htmlspecialchars($publication['platform_url']) ?>" target="_blank" class="btn btn-primary btn-sm">
+                                Открыть на <?= ucfirst($publication['platform']) ?>
+                            </a>
+                        <?php elseif ($publication['platform_id']): ?>
+                            <?php
+                            // Формируем URL в зависимости от платформы
+                            $url = '';
+                            switch ($publication['platform']) {
+                                case 'youtube':
+                                    $url = 'https://youtube.com/watch?v=' . $publication['platform_id'];
+                                    break;
+                                case 'telegram':
+                                    $url = 'https://t.me/' . $publication['platform_id'];
+                                    break;
+                                default:
+                                    $url = '#';
+                            }
+                            ?>
+                            <?php if ($url !== '#'): ?>
+                                <a href="<?= htmlspecialchars($url) ?>" target="_blank" class="btn btn-primary btn-sm">
+                                    Открыть на <?= ucfirst($publication['platform']) ?>
+                                </a>
+                            <?php endif; ?>
+                        <?php endif; ?>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <div class="video-actions">
             <a href="/videos" class="btn btn-secondary">Назад к списку</a>
             <button type="button" class="btn btn-success" onclick="publishNow(<?= $video['id'] ?>)">Опубликовать сейчас</button>

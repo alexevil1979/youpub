@@ -92,6 +92,10 @@ class VideoController extends Controller
             error_log('Video file not found: ' . $video['file_path']);
         }
 
+        // Получаем публикации для этого видео
+        $publicationRepo = new \App\Repositories\PublicationRepository();
+        $publications = $publicationRepo->findSuccessfulByVideoId($id);
+
         include __DIR__ . '/../../views/videos/show.php';
     }
 
