@@ -9,7 +9,7 @@
 ssh user@your-vps-ip
 
 # Перейдите в директорию веб-сервера
-cd /var/www
+cd /ssd/www
 
 # Клонируйте репозиторий
 sudo git clone https://github.com/alexevil1979/youpub.git youpub
@@ -41,10 +41,10 @@ EXIT;
 sudo mysql -u youpub_user -p youpub < database/schema.sql
 
 # Настройте права доступа
-sudo chown -R www-data:www-data /var/www/youpub
-sudo chmod -R 755 /var/www/youpub
-sudo chmod -R 775 /var/www/youpub/storage
-sudo chmod +x /var/www/youpub/cron/*.sh
+sudo chown -R www-data:www-data /ssd/www/youpub
+sudo chmod -R 755 /ssd/www/youpub
+sudo chmod -R 775 /ssd/www/youpub/storage
+sudo chmod +x /ssd/www/youpub/cron/*.sh
 
 # Настройте Apache (см. DEPLOY.md)
 # Настройте SSL через certbot
@@ -60,7 +60,7 @@ sudo chmod +x /var/www/youpub/cron/*.sh
 ssh user@your-vps-ip
 
 # Перейдите в директорию проекта
-cd /var/www/youpub
+cd /ssd/www/youpub
 
 # Получите последние изменения
 sudo git pull origin main
@@ -77,9 +77,9 @@ sudo systemctl reload apache2
 sudo php -r "opcache_reset();"
 
 # Проверьте права доступа
-sudo chown -R www-data:www-data /var/www/youpub
-sudo chmod -R 755 /var/www/youpub
-sudo chmod -R 775 /var/www/youpub/storage
+sudo chown -R www-data:www-data /ssd/www/youpub
+sudo chmod -R 755 /ssd/www/youpub
+sudo chmod -R 775 /ssd/www/youpub/storage
 ```
 
 ## Автоматическое обновление (опционально)
@@ -93,12 +93,12 @@ sudo nano /usr/local/bin/youpub-update.sh
 Содержимое:
 ```bash
 #!/bin/bash
-cd /var/www/youpub
+cd /ssd/www/youpub
 git pull origin main
 composer install --no-dev --optimize-autoloader
-chown -R www-data:www-data /var/www/youpub
-chmod -R 755 /var/www/youpub
-chmod -R 775 /var/www/youpub/storage
+chown -R www-data:www-data /ssd/www/youpub
+chmod -R 755 /ssd/www/youpub
+chmod -R 775 /ssd/www/youpub/storage
 systemctl reload apache2
 echo "YouPub updated successfully"
 ```
@@ -119,14 +119,14 @@ sudo /usr/local/bin/youpub-update.sh
 2. Проверьте логи:
 ```bash
 tail -f /var/log/apache2/youpub_error.log
-tail -f /var/www/youpub/storage/logs/workers/publish_*.log
+tail -f /ssd/www/youpub/storage/logs/workers/publish_*.log
 ```
 3. Проверьте статус workers (cron должен работать)
 
 ## Откат изменений (если что-то пошло не так)
 
 ```bash
-cd /var/www/youpub
+cd /ssd/www/youpub
 sudo git log --oneline  # посмотрите историю коммитов
 sudo git reset --hard <commit-hash>  # откатитесь к нужному коммиту
 sudo composer install --no-dev --optimize-autoloader

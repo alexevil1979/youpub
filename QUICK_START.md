@@ -42,7 +42,7 @@ git push -u origin main
 Следуйте инструкции в `DEPLOY.md`:
 
 1. Установите PHP 8.1, MySQL, Apache
-2. Клонируйте репозиторий в `/var/www/youpub`
+2. Клонируйте репозиторий в `/ssd/www/youpub`
 3. Настройте БД (пароль: `qweasd333123`)
 4. Настройте виртуальный хост для `you.1tlt.ru`
 5. Настройте SSL через certbot
@@ -119,7 +119,7 @@ youpub/
 tail -f /var/log/apache2/youpub_error.log
 
 # Логи workers
-tail -f /var/www/youpub/storage/logs/workers/publish_*.log
+tail -f /ssd/www/youpub/storage/logs/workers/publish_*.log
 ```
 
 ## 🆘 Поддержка

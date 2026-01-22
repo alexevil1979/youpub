@@ -50,7 +50,7 @@ git checkout dev     # переключиться на dev
 После изменений в репозитории, на VPS выполните:
 
 ```bash
-cd /var/www/youpub
+cd /ssd/www/youpub
 git pull origin main
 composer install --no-dev --optimize-autoloader
 ```

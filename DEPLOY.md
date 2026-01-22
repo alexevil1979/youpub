@@ -51,8 +51,8 @@ EXIT;
 ### 4. Клонирование проекта
 
 ```bash
-cd /var/www
-sudo git clone <repository-url> youpub
+cd /ssd/www
+sudo git clone https://github.com/alexevil1979/youpub.git youpub
 cd youpub
 sudo composer install --no-dev --optimize-autoloader
 ```
@@ -60,16 +60,16 @@ sudo composer install --no-dev --optimize-autoloader
 ### 5. Настройка прав доступа
 
 ```bash
-sudo chown -R www-data:www-data /var/www/youpub
-sudo chmod -R 755 /var/www/youpub
-sudo chmod -R 775 /var/www/youpub/storage
-sudo chmod +x /var/www/youpub/cron/*.sh
+sudo chown -R www-data:www-data /ssd/www/youpub
+sudo chmod -R 755 /ssd/www/youpub
+sudo chmod -R 775 /ssd/www/youpub/storage
+sudo chmod +x /ssd/www/youpub/cron/*.sh
 ```
 
 ### 6. Настройка конфигурации
 
 ```bash
-cd /var/www/youpub
+cd /ssd/www/youpub
 sudo cp config/env.example.php config/env.php
 sudo nano config/env.php
 ```
@@ -87,7 +87,7 @@ openssl rand -hex 32
 ### 7. Импорт базы данных
 
 ```bash
-mysql -u youpub_user -p youpub < /var/www/youpub/database/schema.sql
+mysql -u youpub_user -p youpub < /ssd/www/youpub/database/schema.sql
 ```
 
 ### 8. Настройка Apache
@@ -104,9 +104,9 @@ sudo nano /etc/apache2/sites-available/you.1tlt.ru.conf
 <VirtualHost *:80>
     ServerName you.1tlt.ru
     ServerAlias www.you.1tlt.ru
-    DocumentRoot /var/www/youpub
+    DocumentRoot /ssd/www/youpub
 
-    <Directory /var/www/youpub>
+    <Directory /ssd/www/youpub>
         Options -Indexes +FollowSymLinks
         AllowOverride All
         Require all granted
@@ -146,10 +146,10 @@ sudo crontab -e
 
 ```
 # Публикация видео (каждую минуту)
-* * * * * /var/www/youpub/cron/publish.sh >> /var/log/youpub_publish.log 2>&1
+* * * * * /ssd/www/youpub/cron/publish.sh >> /var/log/youpub_publish.log 2>&1
 
 # Сбор статистики (каждый час)
-0 * * * * /var/www/youpub/cron/stats.sh >> /var/log/youpub_stats.log 2>&1
+0 * * * * /ssd/www/youpub/cron/stats.sh >> /var/log/youpub_stats.log 2>&1
 ```
 
 ### 11. Настройка PHP
@@ -179,7 +179,7 @@ sudo systemctl restart apache2
 Для обновления проекта на сервере:
 
 ```bash
-cd /var/www/youpub
+cd /ssd/www/youpub
 sudo git pull origin main
 sudo composer install --no-dev --optimize-autoloader
 
@@ -207,8 +207,8 @@ sudo systemctl reload apache2
 sudo tail -f /var/log/apache2/youpub_error.log
 
 # Логи workers
-tail -f /var/www/youpub/storage/logs/workers/publish_*.log
-tail -f /var/www/youpub/storage/logs/workers/stats_*.log
+tail -f /ssd/www/youpub/storage/logs/workers/publish_*.log
+tail -f /ssd/www/youpub/storage/logs/workers/stats_*.log
 
 # Логи cron
 tail -f /var/log/youpub_publish.log
@@ -251,7 +251,7 @@ mkdir -p $BACKUP_DIR
 mysqldump -u youpub_user -p'qweasd333123' youpub > $BACKUP_DIR/db_$DATE.sql
 
 # Бэкап файлов
-tar -czf $BACKUP_DIR/files_$DATE.tar.gz /var/www/youpub/storage
+tar -czf $BACKUP_DIR/files_$DATE.tar.gz /ssd/www/youpub/storage
 
 # Удаление старых бэкапов (старше 7 дней)
 find $BACKUP_DIR -type f -mtime +7 -delete
