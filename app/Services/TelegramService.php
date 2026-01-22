@@ -37,7 +37,16 @@ class TelegramService extends Service
             return ['success' => false, 'message' => 'Schedule not found'];
         }
 
-        $integration = $this->integrationRepo->findByUserId($schedule['user_id']);
+        // Поддержка мультиаккаунтов: используем integration_id из расписания или аккаунт по умолчанию
+        $integration = null;
+        if (!empty($schedule['integration_id']) && !empty($schedule['integration_type']) && $schedule['integration_type'] === 'telegram') {
+            $integration = $this->integrationRepo->findByIdAndUserId($schedule['integration_id'], $schedule['user_id']);
+        }
+        
+        if (!$integration) {
+            $integration = $this->integrationRepo->findDefaultByUserId($schedule['user_id']);
+        }
+        
         if (!$integration || $integration['status'] !== 'connected') {
             return ['success' => false, 'message' => 'Telegram integration not connected'];
         }

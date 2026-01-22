@@ -54,13 +54,24 @@ $router->get('/integrations', [DashboardController::class, 'integrations'], [Aut
 $router->get('/integrations/youtube', [DashboardController::class, 'youtubeConnect'], [AuthMiddleware::class]);
 $router->get('/integrations/youtube/callback', [DashboardController::class, 'youtubeCallback'], [AuthMiddleware::class]);
 $router->get('/integrations/youtube/disconnect', [DashboardController::class, 'youtubeDisconnect'], [AuthMiddleware::class]);
+$router->post('/integrations/youtube/set-default', [DashboardController::class, 'youtubeSetDefault'], [AuthMiddleware::class]);
+$router->post('/integrations/youtube/disconnect', [DashboardController::class, 'youtubeDisconnectAccount'], [AuthMiddleware::class]);
+$router->delete('/integrations/youtube/delete', [DashboardController::class, 'youtubeDelete'], [AuthMiddleware::class]);
 $router->post('/integrations/telegram', [DashboardController::class, 'telegramConnect'], [AuthMiddleware::class]);
+$router->post('/integrations/telegram/set-default', [DashboardController::class, 'telegramSetDefault'], [AuthMiddleware::class]);
+$router->delete('/integrations/telegram/delete', [DashboardController::class, 'telegramDelete'], [AuthMiddleware::class]);
 $router->get('/integrations/tiktok', [DashboardController::class, 'tiktokConnect'], [AuthMiddleware::class]);
 $router->get('/integrations/tiktok/callback', [DashboardController::class, 'tiktokCallback'], [AuthMiddleware::class]);
+$router->post('/integrations/tiktok/set-default', [DashboardController::class, 'tiktokSetDefault'], [AuthMiddleware::class]);
+$router->delete('/integrations/tiktok/delete', [DashboardController::class, 'tiktokDelete'], [AuthMiddleware::class]);
 $router->get('/integrations/instagram', [DashboardController::class, 'instagramConnect'], [AuthMiddleware::class]);
 $router->get('/integrations/instagram/callback', [DashboardController::class, 'instagramCallback'], [AuthMiddleware::class]);
+$router->post('/integrations/instagram/set-default', [DashboardController::class, 'instagramSetDefault'], [AuthMiddleware::class]);
+$router->delete('/integrations/instagram/delete', [DashboardController::class, 'instagramDelete'], [AuthMiddleware::class]);
 $router->get('/integrations/pinterest', [DashboardController::class, 'pinterestConnect'], [AuthMiddleware::class]);
 $router->get('/integrations/pinterest/callback', [DashboardController::class, 'pinterestCallback'], [AuthMiddleware::class]);
+$router->post('/integrations/pinterest/set-default', [DashboardController::class, 'pinterestSetDefault'], [AuthMiddleware::class]);
+$router->delete('/integrations/pinterest/delete', [DashboardController::class, 'pinterestDelete'], [AuthMiddleware::class]);
 
 // Статистика
 $router->get('/statistics', [DashboardController::class, 'statistics'], [AuthMiddleware::class]);

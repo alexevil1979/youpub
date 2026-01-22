@@ -169,14 +169,15 @@ class VideoService extends Service
             return ['success' => false, 'message' => 'Video file not found'];
         }
 
-        // Проверяем подключенные интеграции
+        // Проверяем подключенные интеграции (поддержка мультиаккаунтов)
         $youtubeRepo = new \App\Repositories\YoutubeIntegrationRepository();
         $telegramRepo = new \App\Repositories\TelegramIntegrationRepository();
         $scheduleRepo = new \App\Repositories\ScheduleRepository();
         $publicationRepo = new \App\Repositories\PublicationRepository();
 
-        $youtubeIntegration = $youtubeRepo->findByUserId($userId);
-        $telegramIntegration = $telegramRepo->findByUserId($userId);
+        // Используем аккаунты по умолчанию
+        $youtubeIntegration = $youtubeRepo->findDefaultByUserId($userId);
+        $telegramIntegration = $telegramRepo->findDefaultByUserId($userId);
 
         $results = [];
         $hasIntegration = false;

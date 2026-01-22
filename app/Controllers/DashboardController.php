@@ -192,9 +192,22 @@ class DashboardController extends Controller
         // Получение информации о канале
         $channelInfo = $this->getYouTubeChannelInfo($tokenData['access_token']);
 
-        // Сохранение интеграции
+        // Сохранение интеграции (поддержка мультиаккаунтов)
         $integrationRepo = new YoutubeIntegrationRepository();
-        $existing = $integrationRepo->findByUserId($userId);
+        $accountName = $this->getParam('account_name', '');
+        
+        // Проверяем, есть ли уже такой канал
+        $channelId = $channelInfo['channel_id'] ?? null;
+        $existing = null;
+        if ($channelId) {
+            $allIntegrations = $integrationRepo->findByUserId($userId);
+            foreach ($allIntegrations as $integration) {
+                if ($integration['channel_id'] === $channelId) {
+                    $existing = $integration;
+                    break;
+                }
+            }
+        }
 
         $integrationData = [
             'user_id' => $userId,
@@ -203,10 +216,18 @@ class DashboardController extends Controller
             'token_expires_at' => isset($tokenData['expires_in']) 
                 ? date('Y-m-d H:i:s', time() + $tokenData['expires_in']) 
                 : null,
-            'channel_id' => $channelInfo['channel_id'] ?? null,
+            'channel_id' => $channelId,
             'channel_name' => $channelInfo['channel_name'] ?? null,
+            'account_name' => !empty($accountName) ? $accountName : ($channelInfo['channel_name'] ?? 'YouTube канал'),
             'status' => 'connected',
+            'is_default' => 0, // По умолчанию не устанавливаем, если есть другие аккаунты
         ];
+
+        // Если это первый аккаунт, делаем его по умолчанию
+        $allIntegrations = $integrationRepo->findByUserId($userId);
+        if (empty($allIntegrations) || (count($allIntegrations) === 1 && $existing)) {
+            $integrationData['is_default'] = 1;
+        }
 
         if ($existing) {
             $integrationRepo->update($existing['id'], $integrationData);
@@ -272,38 +293,349 @@ class DashboardController extends Controller
     }
 
     /**
-     * Отключение YouTube
+     * Отключение YouTube (старый метод для совместимости)
      */
     public function youtubeDisconnect(): void
     {
         $userId = $_SESSION['user_id'];
         $integrationRepo = new YoutubeIntegrationRepository();
-        $existing = $integrationRepo->findByUserId($userId);
-
-        if ($existing) {
-            $integrationRepo->update($existing['id'], [
-                'status' => 'disconnected',
-                'access_token' => null,
-                'refresh_token' => null,
-                'token_expires_at' => null,
-            ]);
-            $_SESSION['success'] = 'YouTube успешно отключен.';
-        } else {
-            $_SESSION['error'] = 'YouTube интеграция не найдена.';
+        $accounts = $integrationRepo->findByUserId($userId);
+        
+        // Отключаем все аккаунты
+        foreach ($accounts as $account) {
+            if ($account['status'] === 'connected') {
+                $integrationRepo->update($account['id'], [
+                    'status' => 'disconnected',
+                    'access_token' => null,
+                    'refresh_token' => null,
+                    'token_expires_at' => null,
+                ]);
+            }
         }
 
+        $_SESSION['success'] = 'YouTube успешно отключен.';
         header('Location: /integrations');
         exit;
     }
 
     /**
-     * Подключение Telegram
+     * Установить аккаунт YouTube по умолчанию
+     */
+    public function youtubeSetDefault(): void
+    {
+        $userId = $_SESSION['user_id'];
+        $accountId = (int)($this->getParam('account_id', 0) ?: $_POST['account_id'] ?? 0);
+        
+        if (!$accountId) {
+            $this->error('Account ID is required', 400);
+            return;
+        }
+
+        $integrationRepo = new YoutubeIntegrationRepository();
+        $account = $integrationRepo->findByIdAndUserId($accountId, $userId);
+        
+        if (!$account) {
+            $this->error('Account not found', 404);
+            return;
+        }
+
+        if ($integrationRepo->setDefault($accountId, $userId)) {
+            $this->success([], 'Аккаунт установлен по умолчанию');
+        } else {
+            $this->error('Failed to set default account', 400);
+        }
+    }
+
+    /**
+     * Отключить конкретный аккаунт YouTube
+     */
+    public function youtubeDisconnectAccount(): void
+    {
+        $userId = $_SESSION['user_id'];
+        $accountId = (int)($this->getParam('account_id', 0) ?: $_POST['account_id'] ?? 0);
+        
+        if (!$accountId) {
+            $this->error('Account ID is required', 400);
+            return;
+        }
+
+        $integrationRepo = new YoutubeIntegrationRepository();
+        $account = $integrationRepo->findByIdAndUserId($accountId, $userId);
+        
+        if (!$account) {
+            $this->error('Account not found', 404);
+            return;
+        }
+
+        $integrationRepo->update($accountId, [
+            'status' => 'disconnected',
+            'access_token' => null,
+            'refresh_token' => null,
+            'token_expires_at' => null,
+        ]);
+        $this->success([], 'Аккаунт отключен');
+    }
+
+    /**
+     * Удалить аккаунт YouTube
+     */
+    public function youtubeDelete(): void
+    {
+        $userId = $_SESSION['user_id'];
+        $accountId = (int)($this->getParam('account_id', 0) ?: $_POST['account_id'] ?? 0);
+        
+        if (!$accountId) {
+            $this->error('Account ID is required', 400);
+            return;
+        }
+
+        $integrationRepo = new YoutubeIntegrationRepository();
+        $account = $integrationRepo->findByIdAndUserId($accountId, $userId);
+        
+        if (!$account) {
+            $this->error('Account not found', 404);
+            return;
+        }
+
+        $integrationRepo->delete($accountId);
+        $this->success([], 'Аккаунт удален');
+    }
+
+    /**
+     * Подключение Telegram (поддержка мультиаккаунтов)
      */
     public function telegramConnect(): void
     {
-        // TODO: Реализовать подключение Telegram бота
+        $userId = $_SESSION['user_id'];
+        $botToken = $this->getParam('bot_token', '');
+        $channelId = $this->getParam('channel_id', '');
+        $accountName = $this->getParam('account_name', '');
+
+        if (empty($botToken) || empty($channelId)) {
+            $_SESSION['error'] = 'Bot token and channel ID are required';
+            header('Location: /integrations');
+            exit;
+        }
+
+        $integrationRepo = new \App\Repositories\TelegramIntegrationRepository();
+        
+        // Проверяем, есть ли уже такой канал
+        $allIntegrations = $integrationRepo->findByUserId($userId);
+        $existing = null;
+        foreach ($allIntegrations as $integration) {
+            if ($integration['channel_id'] === $channelId) {
+                $existing = $integration;
+                break;
+            }
+        }
+
+        $integrationData = [
+            'user_id' => $userId,
+            'bot_token' => $botToken,
+            'channel_id' => $channelId,
+            'account_name' => !empty($accountName) ? $accountName : ('Telegram: ' . $channelId),
+            'status' => 'connected',
+            'is_default' => 0,
+        ];
+
+        // Если это первый аккаунт, делаем его по умолчанию
+        if (empty($allIntegrations) || (count($allIntegrations) === 1 && $existing)) {
+            $integrationData['is_default'] = 1;
+        }
+
+        if ($existing) {
+            $integrationRepo->update($existing['id'], $integrationData);
+        } else {
+            $integrationRepo->create($integrationData);
+        }
+
+        $_SESSION['success'] = 'Telegram подключен успешно!';
         header('Location: /integrations');
         exit;
+    }
+
+    /**
+     * Установить аккаунт Telegram по умолчанию
+     */
+    public function telegramSetDefault(): void
+    {
+        $userId = $_SESSION['user_id'];
+        $accountId = (int)($this->getParam('account_id', 0) ?: $_POST['account_id'] ?? 0);
+        
+        if (!$accountId) {
+            $this->error('Account ID is required', 400);
+            return;
+        }
+
+        $integrationRepo = new \App\Repositories\TelegramIntegrationRepository();
+        if ($integrationRepo->setDefault($accountId, $userId)) {
+            $this->success([], 'Аккаунт установлен по умолчанию');
+        } else {
+            $this->error('Failed to set default account', 400);
+        }
+    }
+
+    /**
+     * Удалить аккаунт Telegram
+     */
+    public function telegramDelete(): void
+    {
+        $userId = $_SESSION['user_id'];
+        $accountId = (int)($this->getParam('account_id', 0) ?: $_POST['account_id'] ?? 0);
+        
+        if (!$accountId) {
+            $this->error('Account ID is required', 400);
+            return;
+        }
+
+        $integrationRepo = new \App\Repositories\TelegramIntegrationRepository();
+        $account = $integrationRepo->findByIdAndUserId($accountId, $userId);
+        
+        if (!$account) {
+            $this->error('Account not found', 404);
+            return;
+        }
+
+        $integrationRepo->delete($accountId);
+        $this->success([], 'Аккаунт удален');
+    }
+
+    /**
+     * Установить аккаунт TikTok по умолчанию
+     */
+    public function tiktokSetDefault(): void
+    {
+        $userId = $_SESSION['user_id'];
+        $accountId = (int)($this->getParam('account_id', 0) ?: $_POST['account_id'] ?? 0);
+        
+        if (!$accountId) {
+            $this->error('Account ID is required', 400);
+            return;
+        }
+
+        $integrationRepo = new \App\Repositories\TiktokIntegrationRepository();
+        if ($integrationRepo->setDefault($accountId, $userId)) {
+            $this->success([], 'Аккаунт установлен по умолчанию');
+        } else {
+            $this->error('Failed to set default account', 400);
+        }
+    }
+
+    /**
+     * Удалить аккаунт TikTok
+     */
+    public function tiktokDelete(): void
+    {
+        $userId = $_SESSION['user_id'];
+        $accountId = (int)($this->getParam('account_id', 0) ?: $_POST['account_id'] ?? 0);
+        
+        if (!$accountId) {
+            $this->error('Account ID is required', 400);
+            return;
+        }
+
+        $integrationRepo = new \App\Repositories\TiktokIntegrationRepository();
+        $account = $integrationRepo->findByIdAndUserId($accountId, $userId);
+        
+        if (!$account) {
+            $this->error('Account not found', 404);
+            return;
+        }
+
+        $integrationRepo->delete($accountId);
+        $this->success([], 'Аккаунт удален');
+    }
+
+    /**
+     * Установить аккаунт Instagram по умолчанию
+     */
+    public function instagramSetDefault(): void
+    {
+        $userId = $_SESSION['user_id'];
+        $accountId = (int)($this->getParam('account_id', 0) ?: $_POST['account_id'] ?? 0);
+        
+        if (!$accountId) {
+            $this->error('Account ID is required', 400);
+            return;
+        }
+
+        $integrationRepo = new \App\Repositories\InstagramIntegrationRepository();
+        if ($integrationRepo->setDefault($accountId, $userId)) {
+            $this->success([], 'Аккаунт установлен по умолчанию');
+        } else {
+            $this->error('Failed to set default account', 400);
+        }
+    }
+
+    /**
+     * Удалить аккаунт Instagram
+     */
+    public function instagramDelete(): void
+    {
+        $userId = $_SESSION['user_id'];
+        $accountId = (int)($this->getParam('account_id', 0) ?: $_POST['account_id'] ?? 0);
+        
+        if (!$accountId) {
+            $this->error('Account ID is required', 400);
+            return;
+        }
+
+        $integrationRepo = new \App\Repositories\InstagramIntegrationRepository();
+        $account = $integrationRepo->findByIdAndUserId($accountId, $userId);
+        
+        if (!$account) {
+            $this->error('Account not found', 404);
+            return;
+        }
+
+        $integrationRepo->delete($accountId);
+        $this->success([], 'Аккаунт удален');
+    }
+
+    /**
+     * Установить аккаунт Pinterest по умолчанию
+     */
+    public function pinterestSetDefault(): void
+    {
+        $userId = $_SESSION['user_id'];
+        $accountId = (int)($this->getParam('account_id', 0) ?: $_POST['account_id'] ?? 0);
+        
+        if (!$accountId) {
+            $this->error('Account ID is required', 400);
+            return;
+        }
+
+        $integrationRepo = new \App\Repositories\PinterestIntegrationRepository();
+        if ($integrationRepo->setDefault($accountId, $userId)) {
+            $this->success([], 'Аккаунт установлен по умолчанию');
+        } else {
+            $this->error('Failed to set default account', 400);
+        }
+    }
+
+    /**
+     * Удалить аккаунт Pinterest
+     */
+    public function pinterestDelete(): void
+    {
+        $userId = $_SESSION['user_id'];
+        $accountId = (int)($this->getParam('account_id', 0) ?: $_POST['account_id'] ?? 0);
+        
+        if (!$accountId) {
+            $this->error('Account ID is required', 400);
+            return;
+        }
+
+        $integrationRepo = new \App\Repositories\PinterestIntegrationRepository();
+        $account = $integrationRepo->findByIdAndUserId($accountId, $userId);
+        
+        if (!$account) {
+            $this->error('Account not found', 404);
+            return;
+        }
+
+        $integrationRepo->delete($accountId);
+        $this->success([], 'Аккаунт удален');
     }
 
     /**
