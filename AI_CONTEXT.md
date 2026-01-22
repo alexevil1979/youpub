@@ -91,7 +91,10 @@ youpub/
 6. **statistics** - Статистика публикаций
 7. **youtube_integrations** - Интеграции YouTube
 8. **telegram_integrations** - Интеграции Telegram
-9. **logs** - Логи системы
+9. **tiktok_integrations** - Интеграции TikTok
+10. **instagram_integrations** - Интеграции Instagram
+11. **pinterest_integrations** - Интеграции Pinterest
+12. **logs** - Логи системы
 
 ### Администратор по умолчанию
 
@@ -105,8 +108,12 @@ youpub/
 - ✅ Регистрация и авторизация
 - ✅ Загрузка видео (файл, название, описание, теги)
 - ✅ Планировщик публикаций (дата, время, платформа, повтор)
-- ✅ Подключение YouTube (OAuth) - структура готова
-- ✅ Подключение Telegram (бот + токен) - структура готова
+- ✅ Подключение платформ:
+  - YouTube (OAuth) - структура готова
+  - Telegram (бот + токен) - структура готова
+  - TikTok (OAuth) - структура готова
+  - Instagram Reels (OAuth) - структура готова
+  - Pinterest (Idea Pins / Video Pins) (OAuth) - структура готова
 - ✅ История публикаций
 - ✅ Статистика (просмотры, лайки, комментарии)
 - ✅ Экспорт статистики (CSV, JSON)
@@ -207,6 +214,24 @@ youpub/
    - Базовая структура готова
    - Нужно доработать отправку больших файлов
 
+3. **TikTok API интеграция**
+   - Файл: `app/Services/TiktokService.php`
+   - Нужно зарегистрировать приложение в TikTok for Developers
+   - Реализовать OAuth flow
+   - Реализовать загрузку видео через TikTok Content API
+
+4. **Instagram API интеграция**
+   - Файл: `app/Services/InstagramService.php`
+   - Нужно зарегистрировать приложение в Facebook Developers
+   - Реализовать OAuth flow для Instagram Graph API
+   - Реализовать загрузку Reels через Instagram Graph API
+
+5. **Pinterest API интеграция**
+   - Файл: `app/Services/PinterestService.php`
+   - Нужно зарегистрировать приложение в Pinterest Developers
+   - Реализовать OAuth flow
+   - Реализовать создание Idea Pins / Video Pins через Pinterest API v5
+
 3. **JWT токены**
    - Структура в `ApiAuthMiddleware.php`
    - Нужно реализовать генерацию и проверку JWT
@@ -227,6 +252,7 @@ youpub/
 
 **Дата**: 2024
 **Статус**: ✅ Проект полностью реализован и готов к развертыванию
+**Версия**: 1.1 - Добавлена поддержка TikTok, Instagram Reels и Pinterest
 
 ### Реализовано
 - ✅ Структура БД (9 таблиц с индексами и внешними ключами)
