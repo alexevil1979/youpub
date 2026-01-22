@@ -40,9 +40,9 @@ class SmartQueueService extends Service
             return ['success' => false, 'message' => 'No content group specified'];
         }
 
-        // Проверяем, готово ли расписание
+        // Проверяем, готово ли расписание (проверка времени и лимитов)
         if (!$this->scheduleEngine->isScheduleReady($schedule)) {
-            return ['success' => false, 'message' => 'Schedule not ready'];
+            return ['success' => false, 'message' => 'Schedule not ready (limits or timing)'];
         }
 
         // Получаем группу
