@@ -11,12 +11,13 @@ ini_set('log_errors', 1);
 // Включить буферизацию вывода
 ob_start();
 
-try {
-    require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/vendor/autoload.php';
 
-    use Core\Database;
-    use Core\Router;
-    use Core\Auth;
+use Core\Database;
+use Core\Router;
+use Core\Auth;
+
+try {
 
     // Загрузка конфигурации
     $config = require __DIR__ . '/config/env.php';
