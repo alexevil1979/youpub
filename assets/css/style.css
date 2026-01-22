@@ -1030,6 +1030,238 @@ footer {
 }
 
 /* Адаптивность */
+/* Каталог видео */
+.catalog-view {
+    margin-top: 1.5rem;
+}
+
+.catalog-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.catalog-section {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.catalog-section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #2c3e50;
+    margin: 0 0 1rem 0;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.catalog-folder {
+    margin-bottom: 0.75rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+.catalog-folder:hover {
+    border-color: #3498db;
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.1);
+}
+
+.folder-header {
+    display: flex;
+    align-items: center;
+    padding: 0.875rem 1rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s ease;
+    gap: 0.75rem;
+}
+
+.folder-header:hover {
+    background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+}
+
+.folder-icon {
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.folder-name {
+    flex: 1;
+    font-weight: 500;
+    color: #2c3e50;
+    font-size: 0.95rem;
+}
+
+.folder-count {
+    color: #666;
+    font-size: 0.875rem;
+    background: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+}
+
+.folder-toggle {
+    color: #95a5a6;
+    font-size: 0.75rem;
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+}
+
+.catalog-folder.expanded .folder-toggle {
+    transform: rotate(0deg);
+}
+
+.catalog-folder:not(.expanded) .folder-toggle {
+    transform: rotate(-90deg);
+}
+
+.folder-content {
+    display: none;
+    padding: 0.5rem;
+    background: white;
+}
+
+.catalog-folder.expanded .folder-content {
+    display: block;
+}
+
+.catalog-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    margin: 0.25rem 0;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    gap: 0.75rem;
+}
+
+.catalog-item:hover {
+    background: #f8f9fa;
+    transform: translateX(4px);
+}
+
+.item-icon {
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.item-title {
+    font-weight: 500;
+    color: #2c3e50;
+    margin-bottom: 0.25rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.item-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: #666;
+    flex-wrap: wrap;
+}
+
+.status-badge {
+    padding: 0.125rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.status-uploaded {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+.status-processing {
+    background: #fff3e0;
+    color: #f57c00;
+}
+
+.status-ready {
+    background: #e8f5e9;
+    color: #388e3c;
+}
+
+.status-error {
+    background: #ffebee;
+    color: #d32f2f;
+}
+
+.groups-badge {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+}
+
+.group-tag {
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 0.125rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+}
+
+.item-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.item-actions .btn-action {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    font-size: 1rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.item-actions .btn-action:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+    color: #666;
+    margin-bottom: 1.5rem;
+}
+
 @media (max-width: 768px) {
     .groups-grid {
         grid-template-columns: 1fr;
@@ -1059,5 +1291,25 @@ footer {
 
     .breadcrumb-separator {
         margin: 0 0.25rem;
+    }
+
+    .catalog-item {
+        flex-wrap: wrap;
+    }
+
+    .item-actions {
+        width: 100%;
+        justify-content: flex-start;
+        margin-top: 0.5rem;
+    }
+
+    .folder-header {
+        flex-wrap: wrap;
+    }
+
+    .folder-count {
+        order: 3;
+        width: 100%;
+        margin-top: 0.25rem;
     }
 }

@@ -1,41 +1,256 @@
 <?php
 $title = 'Мои видео';
 ob_start();
+
+// Группировка видео по дате и группам
+function groupVideosByDate($videos) {
+    $grouped = [
+        'today' => [],
+        'yesterday' => [],
+        'this_week' => [],
+        'this_month' => [],
+        'older' => []
+    ];
+    
+    $now = new DateTime();
+    $today = new DateTime('today');
+    $yesterday = new DateTime('yesterday');
+    $weekAgo = new DateTime('-7 days');
+    $monthAgo = new DateTime('-30 days');
+    
+    foreach ($videos as $video) {
+        $videoDate = new DateTime($video['created_at']);
+        
+        if ($videoDate >= $today) {
+            $grouped['today'][] = $video;
+        } elseif ($videoDate >= $yesterday) {
+            $grouped['yesterday'][] = $video;
+        } elseif ($videoDate >= $weekAgo) {
+            $grouped['this_week'][] = $video;
+        } elseif ($videoDate >= $monthAgo) {
+            $grouped['this_month'][] = $video;
+        } else {
+            $grouped['older'][] = $video;
+        }
+    }
+    
+    return $grouped;
+}
+
+// Получаем группы для каждого видео
+$groupFileRepo = new \App\Modules\ContentGroups\Repositories\ContentGroupFileRepository();
+$videoGroups = [];
+foreach ($videos as $video) {
+    $groups = $groupFileRepo->findGroupsByVideoId($video['id']);
+    $videoGroups[$video['id']] = $groups;
+}
+
+// Группируем по дате
+$groupedByDate = groupVideosByDate($videos);
+
+// Группируем по группам контента
+$groupedByContentGroup = [];
+$groupRepo = new \App\Modules\ContentGroups\Repositories\ContentGroupRepository();
+$allGroups = $groupRepo->findByUserId($_SESSION['user_id']);
+
+foreach ($allGroups as $group) {
+    $groupVideos = [];
+    foreach ($videos as $video) {
+        if (isset($videoGroups[$video['id']])) {
+            foreach ($videoGroups[$video['id']] as $vg) {
+                if ($vg['group_id'] == $group['id']) {
+                    $groupVideos[] = $video;
+                    break;
+                }
+            }
+        }
+    }
+    if (!empty($groupVideos)) {
+        $groupedByContentGroup[$group['id']] = [
+            'group' => $group,
+            'videos' => $groupVideos
+        ];
+    }
+}
 ?>
 
 <h1>Мои видео</h1>
-<a href="/videos/upload" class="btn btn-primary">Загрузить видео</a>
+<div style="margin-bottom: 1rem;">
+    <a href="/videos/upload" class="btn btn-primary">📤 Загрузить видео</a>
+    <button type="button" class="btn btn-secondary" onclick="toggleViewMode()" id="viewModeBtn">📋 Вид: Каталог</button>
+</div>
 
-<?php if (empty($videos)): ?>
-    <p>Нет загруженных видео</p>
-<?php else: ?>
-    <table>
-        <thead>
-            <tr>
-                <th>Название</th>
-                <th>Размер</th>
-                <th>Статус</th>
-                <th>Дата загрузки</th>
-                <th>Действия</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php foreach ($videos as $video): ?>
-            <tr>
-                <td><?= htmlspecialchars($video['title'] ?? $video['file_name']) ?></td>
-                <td><?= number_format($video['file_size'] / 1024 / 1024, 2) ?> MB</td>
-                <td><?= ucfirst($video['status']) ?></td>
-                <td><?= date('d.m.Y H:i', strtotime($video['created_at'])) ?></td>
-                <td>
-                    <a href="/videos/<?= $video['id'] ?>" class="btn btn-sm btn-primary">Просмотр</a>
-                    <a href="/schedules/create?video_id=<?= $video['id'] ?>" class="btn btn-sm btn-success">Запланировать</a>
-                    <button type="button" class="btn btn-sm btn-info" onclick="showAddToGroupModal(<?= $video['id'] ?>)">В группу</button>
-                </td>
-            </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
-<?php endif; ?>
+<div id="catalog-view" class="catalog-view">
+    <div class="catalog-container">
+        
+        <!-- Группы контента -->
+        <?php if (!empty($groupedByContentGroup)): ?>
+            <div class="catalog-section">
+                <h2 class="catalog-section-title">📁 Группы контента</h2>
+                <?php foreach ($groupedByContentGroup as $item): ?>
+                    <div class="catalog-folder">
+                        <div class="folder-header" onclick="toggleFolder(this)">
+                            <span class="folder-icon">📁</span>
+                            <span class="folder-name"><?= htmlspecialchars($item['group']['name']) ?></span>
+                            <span class="folder-count"><?= count($item['videos']) ?> видео</span>
+                            <span class="folder-toggle">▼</span>
+                        </div>
+                        <div class="folder-content">
+                            <?php foreach ($item['videos'] as $video): ?>
+                                <div class="catalog-item">
+                                    <span class="item-icon">🎬</span>
+                                    <div class="item-info">
+                                        <div class="item-title"><?= htmlspecialchars($video['title'] ?? $video['file_name']) ?></div>
+                                        <div class="item-meta">
+                                            <span><?= number_format($video['file_size'] / 1024 / 1024, 2) ?> MB</span>
+                                            <span>•</span>
+                                            <span><?= date('d.m.Y H:i', strtotime($video['created_at'])) ?></span>
+                                            <span>•</span>
+                                            <span class="status-badge status-<?= $video['status'] ?>"><?= ucfirst($video['status']) ?></span>
+                                        </div>
+                                    </div>
+                                    <div class="item-actions">
+                                        <a href="/videos/<?= $video['id'] ?>" class="btn-action" title="Просмотр">👁</a>
+                                        <a href="/schedules/create?video_id=<?= $video['id'] ?>" class="btn-action" title="Запланировать">📅</a>
+                                        <button type="button" class="btn-action" onclick="showAddToGroupModal(<?= $video['id'] ?>)" title="В группу">📁</button>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+
+        <!-- По дате -->
+        <div class="catalog-section">
+            <h2 class="catalog-section-title">📅 По дате загрузки</h2>
+            
+            <?php if (!empty($groupedByDate['today'])): ?>
+                <div class="catalog-folder">
+                    <div class="folder-header" onclick="toggleFolder(this)">
+                        <span class="folder-icon">📅</span>
+                        <span class="folder-name">Сегодня</span>
+                        <span class="folder-count"><?= count($groupedByDate['today']) ?> видео</span>
+                        <span class="folder-toggle">▼</span>
+                    </div>
+                    <div class="folder-content">
+                        <?php foreach ($groupedByDate['today'] as $video): ?>
+                            <?php include __DIR__ . '/_video_item.php'; ?>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <?php if (!empty($groupedByDate['yesterday'])): ?>
+                <div class="catalog-folder">
+                    <div class="folder-header" onclick="toggleFolder(this)">
+                        <span class="folder-icon">📅</span>
+                        <span class="folder-name">Вчера</span>
+                        <span class="folder-count"><?= count($groupedByDate['yesterday']) ?> видео</span>
+                        <span class="folder-toggle">▼</span>
+                    </div>
+                    <div class="folder-content">
+                        <?php foreach ($groupedByDate['yesterday'] as $video): ?>
+                            <?php include __DIR__ . '/_video_item.php'; ?>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <?php if (!empty($groupedByDate['this_week'])): ?>
+                <div class="catalog-folder">
+                    <div class="folder-header" onclick="toggleFolder(this)">
+                        <span class="folder-icon">📅</span>
+                        <span class="folder-name">На этой неделе</span>
+                        <span class="folder-count"><?= count($groupedByDate['this_week']) ?> видео</span>
+                        <span class="folder-toggle">▼</span>
+                    </div>
+                    <div class="folder-content">
+                        <?php foreach ($groupedByDate['this_week'] as $video): ?>
+                            <?php include __DIR__ . '/_video_item.php'; ?>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <?php if (!empty($groupedByDate['this_month'])): ?>
+                <div class="catalog-folder">
+                    <div class="folder-header" onclick="toggleFolder(this)">
+                        <span class="folder-icon">📅</span>
+                        <span class="folder-name">В этом месяце</span>
+                        <span class="folder-count"><?= count($groupedByDate['this_month']) ?> видео</span>
+                        <span class="folder-toggle">▼</span>
+                    </div>
+                    <div class="folder-content">
+                        <?php foreach ($groupedByDate['this_month'] as $video): ?>
+                            <?php include __DIR__ . '/_video_item.php'; ?>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <?php if (!empty($groupedByDate['older'])): ?>
+                <div class="catalog-folder">
+                    <div class="folder-header" onclick="toggleFolder(this)">
+                        <span class="folder-icon">📅</span>
+                        <span class="folder-name">Ранее</span>
+                        <span class="folder-count"><?= count($groupedByDate['older']) ?> видео</span>
+                        <span class="folder-toggle">▼</span>
+                    </div>
+                    <div class="folder-content">
+                        <?php foreach ($groupedByDate['older'] as $video): ?>
+                            <?php include __DIR__ . '/_video_item.php'; ?>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <?php if (empty($videos)): ?>
+            <div class="empty-state">
+                <div class="empty-icon">📹</div>
+                <h3>Нет загруженных видео</h3>
+                <p>Начните с загрузки вашего первого видео</p>
+                <a href="/videos/upload" class="btn btn-primary">Загрузить видео</a>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
+
+<!-- Табличный вид (скрыт по умолчанию) -->
+<div id="table-view" class="table-view" style="display: none;">
+    <?php if (empty($videos)): ?>
+        <p>Нет загруженных видео</p>
+    <?php else: ?>
+        <table>
+            <thead>
+                <tr>
+                    <th>Название</th>
+                    <th>Размер</th>
+                    <th>Статус</th>
+                    <th>Дата загрузки</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($videos as $video): ?>
+                <tr>
+                    <td><?= htmlspecialchars($video['title'] ?? $video['file_name']) ?></td>
+                    <td><?= number_format($video['file_size'] / 1024 / 1024, 2) ?> MB</td>
+                    <td><?= ucfirst($video['status']) ?></td>
+                    <td><?= date('d.m.Y H:i', strtotime($video['created_at'])) ?></td>
+                    <td>
+                        <a href="/videos/<?= $video['id'] ?>" class="btn btn-sm btn-primary">Просмотр</a>
+                        <a href="/schedules/create?video_id=<?= $video['id'] ?>" class="btn btn-sm btn-success">Запланировать</a>
+                        <button type="button" class="btn btn-sm btn-info" onclick="showAddToGroupModal(<?= $video['id'] ?>)">В группу</button>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    <?php endif; ?>
+</div>
 
 <!-- Модальное окно для добавления в группу -->
 <div id="addToGroupModal" class="modal" style="display: none;">
@@ -66,6 +281,50 @@ ob_start();
 
 <script>
 let currentVideoId = null;
+let viewMode = 'catalog';
+
+function toggleViewMode() {
+    viewMode = viewMode === 'catalog' ? 'table' : 'catalog';
+    const catalogView = document.getElementById('catalog-view');
+    const tableView = document.getElementById('table-view');
+    const btn = document.getElementById('viewModeBtn');
+    
+    if (viewMode === 'catalog') {
+        catalogView.style.display = 'block';
+        tableView.style.display = 'none';
+        btn.textContent = '📋 Вид: Каталог';
+    } else {
+        catalogView.style.display = 'none';
+        tableView.style.display = 'block';
+        btn.textContent = '📁 Вид: Таблица';
+    }
+}
+
+function toggleFolder(header) {
+    const folder = header.closest('.catalog-folder');
+    const content = folder.querySelector('.folder-content');
+    const toggle = header.querySelector('.folder-toggle');
+    
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        toggle.textContent = '▼';
+        folder.classList.add('expanded');
+    } else {
+        content.style.display = 'none';
+        toggle.textContent = '▶';
+        folder.classList.remove('expanded');
+    }
+}
+
+// Раскрыть все папки по умолчанию
+document.addEventListener('DOMContentLoaded', function() {
+    const folders = document.querySelectorAll('.catalog-folder');
+    folders.forEach(folder => {
+        const content = folder.querySelector('.folder-content');
+        content.style.display = 'block';
+        folder.classList.add('expanded');
+    });
+});
 
 function showAddToGroupModal(videoId) {
     currentVideoId = videoId;
@@ -106,6 +365,7 @@ document.getElementById('addToGroupForm')?.addEventListener('submit', function(e
         if (data.success) {
             alert('Видео добавлено в группу!');
             closeAddToGroupModal();
+            window.location.reload();
         } else {
             alert('Ошибка: ' + (data.message || 'Не удалось добавить видео в группу'));
         }

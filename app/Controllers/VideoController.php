@@ -26,6 +26,10 @@ class VideoController extends Controller
         $userId = $_SESSION['user_id'];
         $videos = $this->videoService->getUserVideos($userId);
         
+        // Получаем группы для отображения в модальном окне
+        $groupService = new \App\Modules\ContentGroups\Services\GroupService();
+        $groups = $groupService->getUserGroups($userId);
+        
         include __DIR__ . '/../../views/videos/index.php';
     }
 
