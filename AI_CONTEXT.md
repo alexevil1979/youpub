@@ -248,8 +248,10 @@ youpub/
 
 ## Следующий шаг
 
-1. **✅ Git репозиторий инициализирован** - готов к публикации на GitHub/GitLab
-   - См. GIT_INSTRUCTIONS.md для инструкций
+1. **✅ Git репозиторий опубликован на GitHub**
+   - URL: https://github.com/alexevil1979/youpub.git
+   - Ветка: main
+   - Все коммиты отправлены
 
 2. **Развернуть на VPS** по инструкции из DEPLOY.md:
    - Установить PHP 8.1, MySQL, Apache
