@@ -104,4 +104,103 @@ class ScheduleController extends Controller
             $this->error($result['message'], 400);
         }
     }
+
+    /**
+     * Приостановить расписание
+     */
+    public function pause(int $id): void
+    {
+        $userId = $_SESSION['user_id'];
+        $result = $this->scheduleService->pauseSchedule($id, $userId);
+
+        if ($result['success']) {
+            $this->success([], $result['message']);
+        } else {
+            $this->error($result['message'], 400);
+        }
+    }
+
+    /**
+     * Возобновить расписание
+     */
+    public function resume(int $id): void
+    {
+        $userId = $_SESSION['user_id'];
+        $result = $this->scheduleService->resumeSchedule($id, $userId);
+
+        if ($result['success']) {
+            $this->success([], $result['message']);
+        } else {
+            $this->error($result['message'], 400);
+        }
+    }
+
+    /**
+     * Копировать расписание
+     */
+    public function duplicate(int $id): void
+    {
+        $userId = $_SESSION['user_id'];
+        $result = $this->scheduleService->duplicateSchedule($id, $userId);
+
+        if ($result['success']) {
+            $this->success($result['data'] ?? [], $result['message']);
+        } else {
+            $this->error($result['message'], 400);
+        }
+    }
+
+    /**
+     * Массовое приостановление
+     */
+    public function bulkPause(): void
+    {
+        $userId = $_SESSION['user_id'];
+        $data = $this->getRequestData();
+        $ids = $data['ids'] ?? [];
+
+        if (empty($ids) || !is_array($ids)) {
+            $this->error('Invalid IDs', 400);
+            return;
+        }
+
+        $result = $this->scheduleService->bulkPause($ids, $userId);
+        $this->success($result['data'] ?? [], $result['message']);
+    }
+
+    /**
+     * Массовое возобновление
+     */
+    public function bulkResume(): void
+    {
+        $userId = $_SESSION['user_id'];
+        $data = $this->getRequestData();
+        $ids = $data['ids'] ?? [];
+
+        if (empty($ids) || !is_array($ids)) {
+            $this->error('Invalid IDs', 400);
+            return;
+        }
+
+        $result = $this->scheduleService->bulkResume($ids, $userId);
+        $this->success($result['data'] ?? [], $result['message']);
+    }
+
+    /**
+     * Массовое удаление
+     */
+    public function bulkDelete(): void
+    {
+        $userId = $_SESSION['user_id'];
+        $data = $this->getRequestData();
+        $ids = $data['ids'] ?? [];
+
+        if (empty($ids) || !is_array($ids)) {
+            $this->error('Invalid IDs', 400);
+            return;
+        }
+
+        $result = $this->scheduleService->bulkDelete($ids, $userId);
+        $this->success($result['data'] ?? [], $result['message']);
+    }
 }

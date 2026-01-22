@@ -117,4 +117,157 @@ class ScheduleService extends Service
 
         return ['success' => true, 'message' => 'Schedule deleted successfully'];
     }
+
+    /**
+     * Приостановить расписание
+     */
+    public function pauseSchedule(int $id, int $userId): array
+    {
+        $schedule = $this->getSchedule($id, $userId);
+        
+        if (!$schedule) {
+            return ['success' => false, 'message' => 'Schedule not found'];
+        }
+
+        if ($schedule['status'] !== 'pending') {
+            return ['success' => false, 'message' => 'Can only pause pending schedules'];
+        }
+
+        $this->scheduleRepo->update($id, ['status' => 'paused']);
+
+        return ['success' => true, 'message' => 'Schedule paused successfully'];
+    }
+
+    /**
+     * Возобновить расписание
+     */
+    public function resumeSchedule(int $id, int $userId): array
+    {
+        $schedule = $this->getSchedule($id, $userId);
+        
+        if (!$schedule) {
+            return ['success' => false, 'message' => 'Schedule not found'];
+        }
+
+        if ($schedule['status'] !== 'paused') {
+            return ['success' => false, 'message' => 'Can only resume paused schedules'];
+        }
+
+        $this->scheduleRepo->update($id, ['status' => 'pending']);
+
+        return ['success' => true, 'message' => 'Schedule resumed successfully'];
+    }
+
+    /**
+     * Копировать расписание
+     */
+    public function duplicateSchedule(int $id, int $userId): array
+    {
+        $schedule = $this->getSchedule($id, $userId);
+        
+        if (!$schedule) {
+            return ['success' => false, 'message' => 'Schedule not found'];
+        }
+
+        // Создаем копию с новой датой (через 1 день)
+        $newPublishAt = date('Y-m-d H:i:s', strtotime($schedule['publish_at'] . ' +1 day'));
+        
+        $newScheduleData = [
+            'user_id' => $userId,
+            'video_id' => $schedule['video_id'],
+            'content_group_id' => $schedule['content_group_id'] ?? null,
+            'platform' => $schedule['platform'],
+            'publish_at' => $newPublishAt,
+            'timezone' => $schedule['timezone'] ?? 'UTC',
+            'repeat_type' => $schedule['repeat_type'] ?? 'once',
+            'repeat_until' => $schedule['repeat_until'] ?? null,
+            'status' => 'pending',
+            'template_id' => $schedule['template_id'] ?? null,
+            'schedule_type' => $schedule['schedule_type'] ?? null,
+            'integration_id' => $schedule['integration_id'] ?? null,
+            'integration_type' => $schedule['integration_type'] ?? null,
+        ];
+
+        // Копируем дополнительные поля для умных расписаний
+        $smartFields = [
+            'interval_minutes', 'batch_count', 'batch_window_hours',
+            'random_window_start', 'random_window_end', 'wave_config',
+            'weekdays', 'active_hours_start', 'active_hours_end',
+            'daily_limit', 'hourly_limit', 'delay_between_posts', 'skip_published'
+        ];
+        
+        foreach ($smartFields as $field) {
+            if (isset($schedule[$field])) {
+                $newScheduleData[$field] = $schedule[$field];
+            }
+        }
+
+        $newScheduleId = $this->scheduleRepo->create($newScheduleData);
+
+        return [
+            'success' => true,
+            'message' => 'Schedule duplicated successfully',
+            'data' => ['id' => $newScheduleId]
+        ];
+    }
+
+    /**
+     * Массовое приостановление
+     */
+    public function bulkPause(array $ids, int $userId): array
+    {
+        $paused = 0;
+        foreach ($ids as $id) {
+            $result = $this->pauseSchedule($id, $userId);
+            if ($result['success']) {
+                $paused++;
+            }
+        }
+
+        return [
+            'success' => true,
+            'message' => "Paused {$paused} of " . count($ids) . " schedules",
+            'data' => ['paused' => $paused, 'total' => count($ids)]
+        ];
+    }
+
+    /**
+     * Массовое возобновление
+     */
+    public function bulkResume(array $ids, int $userId): array
+    {
+        $resumed = 0;
+        foreach ($ids as $id) {
+            $result = $this->resumeSchedule($id, $userId);
+            if ($result['success']) {
+                $resumed++;
+            }
+        }
+
+        return [
+            'success' => true,
+            'message' => "Resumed {$resumed} of " . count($ids) . " schedules",
+            'data' => ['resumed' => $resumed, 'total' => count($ids)]
+        ];
+    }
+
+    /**
+     * Массовое удаление
+     */
+    public function bulkDelete(array $ids, int $userId): array
+    {
+        $deleted = 0;
+        foreach ($ids as $id) {
+            $result = $this->deleteSchedule($id, $userId);
+            if ($result['success']) {
+                $deleted++;
+            }
+        }
+
+        return [
+            'success' => true,
+            'message' => "Deleted {$deleted} of " . count($ids) . " schedules",
+            'data' => ['deleted' => $deleted, 'total' => count($ids)]
+        ];
+    }
 }

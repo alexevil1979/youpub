@@ -48,6 +48,12 @@ $router->get('/schedules/create', [ScheduleController::class, 'showCreate'], [Au
 $router->post('/schedules/create', [ScheduleController::class, 'create'], [AuthMiddleware::class]);
 $router->get('/schedules/{id}', [ScheduleController::class, 'show'], [AuthMiddleware::class]);
 $router->delete('/schedules/{id}', [ScheduleController::class, 'delete'], [AuthMiddleware::class]);
+$router->post('/schedules/{id}/pause', [ScheduleController::class, 'pause'], [AuthMiddleware::class]);
+$router->post('/schedules/{id}/resume', [ScheduleController::class, 'resume'], [AuthMiddleware::class]);
+$router->post('/schedules/{id}/duplicate', [ScheduleController::class, 'duplicate'], [AuthMiddleware::class]);
+$router->post('/schedules/bulk-pause', [ScheduleController::class, 'bulkPause'], [AuthMiddleware::class]);
+$router->post('/schedules/bulk-resume', [ScheduleController::class, 'bulkResume'], [AuthMiddleware::class]);
+$router->post('/schedules/bulk-delete', [ScheduleController::class, 'bulkDelete'], [AuthMiddleware::class]);
 
 // Интеграции
 $router->get('/integrations', [DashboardController::class, 'integrations'], [AuthMiddleware::class]);
