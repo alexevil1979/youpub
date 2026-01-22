@@ -29,7 +29,7 @@
                     <input type="text" 
                            id="global-search-input" 
                            class="search-input" 
-                           placeholder="🔍 Поиск..." 
+                           placeholder="Поиск..." 
                            autocomplete="off">
                     <div id="search-results" class="search-results"></div>
                 </div>
@@ -68,6 +68,7 @@
         </div>
     </footer>
 
+    <script src="/assets/js/icons.js"></script>
     <script src="/assets/js/main.js"></script>
     <?php if (isset($_SESSION['user_id'])): ?>
     <script src="/assets/js/search.js"></script>

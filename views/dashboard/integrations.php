@@ -10,13 +10,13 @@ ob_start();
     <!-- YouTube -->
     <div class="integration-card">
         <div class="integration-header">
-            <h2>📺 YouTube</h2>
+            <h2><?= \App\Helpers\IconHelper::render('youtube', 24, 'icon-inline') ?> YouTube</h2>
             <a href="/integrations/youtube" class="btn">Добавить канал</a>
         </div>
         
         <?php if (empty($youtubeAccounts)): ?>
             <div class="integration-empty-state">
-                <div class="empty-state-icon">📺</div>
+                <div class="empty-state-icon"><?= \App\Helpers\IconHelper::render('youtube', 48) ?></div>
                 <p class="integration-status">Нет подключенных каналов</p>
                 <p class="integration-description">Подключите свой YouTube канал для автоматической публикации видео</p>
             </div>
@@ -27,7 +27,7 @@ ob_start();
                         <div class="account-card-body">
                             <div class="account-left-section">
                                 <div class="account-icon-wrapper">
-                                    <div class="account-platform-icon">📺</div>
+                                    <div class="account-platform-icon"><?= \App\Helpers\IconHelper::render('youtube', 40) ?></div>
                                     <?php if ($account['status'] === 'connected'): ?>
                                         <div class="account-status-indicator connected"></div>
                                     <?php else: ?>
@@ -57,12 +57,12 @@ ob_start();
                             </div>
                             <div class="account-actions-compact">
                                 <?php if ($account['status'] === 'connected' && !$account['is_default']): ?>
-                                    <button type="button" class="btn-action-icon btn-action-success" onclick="setDefaultAccount('youtube', <?= $account['id'] ?>)" title="Сделать по умолчанию">⭐</button>
+                                    <button type="button" class="btn-action-icon btn-action-success" onclick="setDefaultAccount('youtube', <?= $account['id'] ?>)" title="Сделать по умолчанию"><?= \App\Helpers\IconHelper::render('star', 20) ?></button>
                                 <?php endif; ?>
                                 <?php if ($account['status'] === 'connected'): ?>
-                                    <button type="button" class="btn-action-icon btn-action-warning" onclick="disconnectAccount('youtube', <?= $account['id'] ?>)" title="Отключить">⏸</button>
+                                    <button type="button" class="btn-action-icon btn-action-warning" onclick="disconnectAccount('youtube', <?= $account['id'] ?>)" title="Отключить"><?= \App\Helpers\IconHelper::render('pause', 20) ?></button>
                                 <?php endif; ?>
-                                <button type="button" class="btn-action-icon btn-action-danger" onclick="deleteAccount('youtube', <?= $account['id'] ?>)" title="Удалить">🗑</button>
+                                <button type="button" class="btn-action-icon btn-action-danger" onclick="deleteAccount('youtube', <?= $account['id'] ?>)" title="Удалить"><?= \App\Helpers\IconHelper::render('delete', 20) ?></button>
                             </div>
                         </div>
                     </div>
@@ -74,13 +74,13 @@ ob_start();
     <!-- Telegram -->
     <div class="integration-card">
         <div class="integration-header">
-            <h2>💬 Telegram</h2>
+            <h2><?= \App\Helpers\IconHelper::render('telegram', 24, 'icon-inline') ?> Telegram</h2>
             <button type="button" class="btn" onclick="showTelegramForm()">Добавить канал</button>
         </div>
         
         <?php if (empty($telegramAccounts)): ?>
             <div class="integration-empty-state">
-                <div class="empty-state-icon">💬</div>
+                <div class="empty-state-icon"><?= \App\Helpers\IconHelper::render('telegram', 48) ?></div>
                 <p class="integration-status">Нет подключенных каналов</p>
                 <p class="integration-description">Подключите Telegram бота для публикации в каналы</p>
             </div>
@@ -91,7 +91,7 @@ ob_start();
                         <div class="account-card-body">
                             <div class="account-left-section">
                                 <div class="account-icon-wrapper">
-                                    <div class="account-platform-icon">💬</div>
+                                    <div class="account-platform-icon"><?= \App\Helpers\IconHelper::render('telegram', 40) ?></div>
                                     <?php if ($account['status'] === 'connected'): ?>
                                         <div class="account-status-indicator connected"></div>
                                     <?php else: ?>
@@ -135,13 +135,13 @@ ob_start();
     <!-- TikTok -->
     <div class="integration-card">
         <div class="integration-header">
-            <h2>🎵 TikTok</h2>
+            <h2><?= \App\Helpers\IconHelper::render('tiktok', 24, 'icon-inline') ?> TikTok</h2>
             <a href="/integrations/tiktok" class="btn">Добавить аккаунт</a>
         </div>
         
         <?php if (empty($tiktokAccounts)): ?>
             <div class="integration-empty-state">
-                <div class="empty-state-icon">🎵</div>
+                <div class="empty-state-icon"><?= \App\Helpers\IconHelper::render('tiktok', 48) ?></div>
                 <p class="integration-status">Нет подключенных аккаунтов</p>
                 <p class="integration-description">Подключите TikTok аккаунт для публикации видео</p>
             </div>
@@ -152,7 +152,7 @@ ob_start();
                         <div class="account-card-body">
                             <div class="account-left-section">
                                 <div class="account-icon-wrapper">
-                                    <div class="account-platform-icon">🎵</div>
+                                    <div class="account-platform-icon"><?= \App\Helpers\IconHelper::render('tiktok', 40) ?></div>
                                     <?php if ($account['status'] === 'connected'): ?>
                                         <div class="account-status-indicator connected"></div>
                                     <?php else: ?>
@@ -196,13 +196,13 @@ ob_start();
     <!-- Instagram -->
     <div class="integration-card">
         <div class="integration-header">
-            <h2>📷 Instagram</h2>
+            <h2><?= \App\Helpers\IconHelper::render('instagram', 24, 'icon-inline') ?> Instagram</h2>
             <a href="/integrations/instagram" class="btn">Добавить аккаунт</a>
         </div>
         
         <?php if (empty($instagramAccounts)): ?>
             <div class="integration-empty-state">
-                <div class="empty-state-icon">📷</div>
+                <div class="empty-state-icon"><?= \App\Helpers\IconHelper::render('instagram', 48) ?></div>
                 <p class="integration-status">Нет подключенных аккаунтов</p>
                 <p class="integration-description">Подключите Instagram аккаунт для публикации Reels</p>
             </div>
@@ -213,7 +213,7 @@ ob_start();
                         <div class="account-card-body">
                             <div class="account-left-section">
                                 <div class="account-icon-wrapper">
-                                    <div class="account-platform-icon">📷</div>
+                                    <div class="account-platform-icon"><?= \App\Helpers\IconHelper::render('instagram', 40) ?></div>
                                     <?php if ($account['status'] === 'connected'): ?>
                                         <div class="account-status-indicator connected"></div>
                                     <?php else: ?>
@@ -257,13 +257,13 @@ ob_start();
     <!-- Pinterest -->
     <div class="integration-card">
         <div class="integration-header">
-            <h2>📌 Pinterest</h2>
+            <h2><?= \App\Helpers\IconHelper::render('pinterest', 24, 'icon-inline') ?> Pinterest</h2>
             <a href="/integrations/pinterest" class="btn">Добавить аккаунт</a>
         </div>
         
         <?php if (empty($pinterestAccounts)): ?>
             <div class="integration-empty-state">
-                <div class="empty-state-icon">📌</div>
+                <div class="empty-state-icon"><?= \App\Helpers\IconHelper::render('pinterest', 48) ?></div>
                 <p class="integration-status">Нет подключенных аккаунтов</p>
                 <p class="integration-description">Подключите Pinterest аккаунт для публикации Idea Pins и Video Pins</p>
             </div>
@@ -274,7 +274,7 @@ ob_start();
                         <div class="account-card-body">
                             <div class="account-left-section">
                                 <div class="account-icon-wrapper">
-                                    <div class="account-platform-icon">📌</div>
+                                    <div class="account-platform-icon"><?= \App\Helpers\IconHelper::render('pinterest', 40) ?></div>
                                     <?php if ($account['status'] === 'connected'): ?>
                                         <div class="account-status-indicator connected"></div>
                                     <?php else: ?>
