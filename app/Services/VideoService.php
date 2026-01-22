@@ -51,17 +51,35 @@ class VideoService extends Service
         // Создание директории для пользователя
         $uploadDir = $this->config['UPLOAD_DIR'] . '/' . $userId;
         
+        // Нормализация пути (убираем относительные пути)
+        $uploadDir = realpath(dirname($uploadDir)) . '/' . basename($uploadDir);
+        
         // Логирование для отладки
         error_log('Video Upload: Upload dir = ' . $uploadDir);
         error_log('Video Upload: Upload dir exists = ' . (is_dir($uploadDir) ? 'yes' : 'no'));
-        error_log('Video Upload: Upload dir writable = ' . (is_writable(dirname($uploadDir)) ? 'yes' : 'no'));
+        error_log('Video Upload: Base dir = ' . dirname($uploadDir));
+        error_log('Video Upload: Base dir writable = ' . (is_writable(dirname($uploadDir)) ? 'yes' : 'no'));
         
+        // Создаем базовую директорию, если не существует
+        $baseDir = dirname($uploadDir);
+        if (!is_dir($baseDir)) {
+            $created = @mkdir($baseDir, 0755, true);
+            if (!$created) {
+                error_log('Video Upload: Failed to create base directory: ' . $baseDir);
+                $error = error_get_last();
+                error_log('Video Upload: Error: ' . ($error['message'] ?? 'Unknown error'));
+                return ['success' => false, 'message' => 'Failed to create upload directory. Please contact administrator to create: ' . $baseDir];
+            }
+        }
+        
+        // Создаем директорию пользователя
         if (!is_dir($uploadDir)) {
             $created = @mkdir($uploadDir, 0755, true);
             if (!$created) {
-                error_log('Video Upload: Failed to create directory: ' . $uploadDir);
-                error_log('Video Upload: Error: ' . error_get_last()['message'] ?? 'Unknown error');
-                return ['success' => false, 'message' => 'Failed to create upload directory. Check permissions.'];
+                error_log('Video Upload: Failed to create user directory: ' . $uploadDir);
+                $error = error_get_last();
+                error_log('Video Upload: Error: ' . ($error['message'] ?? 'Unknown error'));
+                return ['success' => false, 'message' => 'Failed to create user upload directory. Please contact administrator.'];
             }
         }
 
