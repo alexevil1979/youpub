@@ -5,6 +5,9 @@ use App\Controllers\AuthController;
 use App\Controllers\DashboardController;
 use App\Controllers\VideoController;
 use App\Controllers\ScheduleController;
+use App\Modules\ContentGroups\Controllers\GroupController;
+use App\Modules\ContentGroups\Controllers\TemplateController;
+use App\Modules\ContentGroups\Controllers\SmartScheduleController;
 use App\Middlewares\AuthMiddleware;
 
 /** @var Router $router */
@@ -60,3 +63,25 @@ $router->get('/integrations/pinterest/callback', [DashboardController::class, 'p
 // Статистика
 $router->get('/statistics', [DashboardController::class, 'statistics'], [AuthMiddleware::class]);
 $router->get('/publications', [DashboardController::class, 'publications'], [AuthMiddleware::class]);
+
+// Группы контента
+$router->get('/content-groups', [GroupController::class, 'index'], [AuthMiddleware::class]);
+$router->get('/content-groups/create', [GroupController::class, 'showCreate'], [AuthMiddleware::class]);
+$router->post('/content-groups/create', [GroupController::class, 'create'], [AuthMiddleware::class]);
+$router->get('/content-groups/{id}', [GroupController::class, 'show'], [AuthMiddleware::class]);
+$router->post('/content-groups/{id}/add-video', [GroupController::class, 'addVideo'], [AuthMiddleware::class]);
+$router->post('/content-groups/{id}/add-videos', [GroupController::class, 'addVideos'], [AuthMiddleware::class]);
+$router->delete('/content-groups/{groupId}/videos/{videoId}', [GroupController::class, 'removeVideo'], [AuthMiddleware::class]);
+$router->post('/content-groups/{id}/shuffle', [GroupController::class, 'shuffle'], [AuthMiddleware::class]);
+$router->delete('/content-groups/{id}', [GroupController::class, 'delete'], [AuthMiddleware::class]);
+
+// Шаблоны публикаций
+$router->get('/content-groups/templates', [TemplateController::class, 'index'], [AuthMiddleware::class]);
+$router->get('/content-groups/templates/create', [TemplateController::class, 'showCreate'], [AuthMiddleware::class]);
+$router->post('/content-groups/templates/create', [TemplateController::class, 'create'], [AuthMiddleware::class]);
+$router->post('/content-groups/templates/{id}/preview', [TemplateController::class, 'preview'], [AuthMiddleware::class]);
+$router->delete('/content-groups/templates/{id}', [TemplateController::class, 'delete'], [AuthMiddleware::class]);
+
+// Умные расписания
+$router->get('/content-groups/schedules/create', [SmartScheduleController::class, 'showCreate'], [AuthMiddleware::class]);
+$router->post('/content-groups/schedules/create', [SmartScheduleController::class, 'create'], [AuthMiddleware::class]);
