@@ -111,3 +111,13 @@ https://console.cloud.google.com/apis/credentials/consent
 ```
 APIs & Services → OAuth consent screen
 ```
+
+## ⚠️ Важно: Включите YouTube Data API v3
+
+Если после добавления тестового пользователя все еще видите ошибку 403, убедитесь, что **YouTube Data API v3 включен**:
+
+1. **APIs & Services** → **Library**
+2. Найдите **YouTube Data API v3**
+3. Нажмите **ENABLE**
+
+См. подробную инструкцию в `ENABLE_YOUTUBE_API.md`
