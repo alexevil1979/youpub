@@ -47,6 +47,10 @@ class TelegramService extends Service
             return ['success' => false, 'message' => 'Video file not found'];
         }
 
+        // Используем данные из расписания, если они есть (для шаблонов)
+        $description = $schedule['description'] ?? $video['description'] ?? '';
+        $caption = $description;
+
         // Обновление статуса расписания
         $this->scheduleRepo->update($scheduleId, ['status' => 'processing']);
 
@@ -55,7 +59,7 @@ class TelegramService extends Service
             $channelId = $integration['channel_id'];
             
             // Отправка видео в канал
-            $result = $this->sendVideoToChannel($botToken, $channelId, $video['file_path'], $video['description'] ?? '');
+            $result = $this->sendVideoToChannel($botToken, $channelId, $video['file_path'], $caption);
 
             if ($result['success']) {
                 // Создание записи о публикации

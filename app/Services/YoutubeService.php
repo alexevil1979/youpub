@@ -48,6 +48,11 @@ class YoutubeService extends Service
             return ['success' => false, 'message' => 'Video file not found'];
         }
 
+        // Используем данные из расписания, если они есть (для шаблонов)
+        $title = $schedule['title'] ?? $video['title'] ?? 'Untitled Video';
+        $description = $schedule['description'] ?? $video['description'] ?? '';
+        $tags = $schedule['tags'] ?? $video['tags'] ?? '';
+
         // Обновление статуса расписания
         $this->scheduleRepo->update($scheduleId, ['status' => 'processing']);
 
@@ -62,9 +67,9 @@ class YoutubeService extends Service
             $uploadResult = $this->uploadVideoToYouTube(
                 $accessToken,
                 $video['file_path'],
-                $video['title'] ?? 'Untitled Video',
-                $video['description'] ?? '',
-                $video['tags'] ?? ''
+                $title,
+                $description,
+                $tags
             );
 
             if (!$uploadResult['success']) {
