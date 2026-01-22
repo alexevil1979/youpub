@@ -27,3 +27,6 @@ $router->delete('/api/schedules/{id}', [ScheduleApiController::class, 'delete'],
 
 $router->get('/api/stats', [StatsApiController::class, 'index'], [ApiAuthMiddleware::class]);
 $router->get('/api/stats/export', [StatsApiController::class, 'export'], [ApiAuthMiddleware::class]);
+
+// Глобальный поиск
+$router->get('/api/search', [\App\Controllers\SearchController::class, 'search'], [ApiAuthMiddleware::class]);

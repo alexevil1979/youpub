@@ -29,7 +29,7 @@
                     <input type="text" 
                            id="global-search-input" 
                            class="search-input" 
-                           placeholder="🔍 Поиск по всем разделам..." 
+                           placeholder="🔍 Поиск..." 
                            autocomplete="off">
                     <div id="search-results" class="search-results"></div>
                 </div>
