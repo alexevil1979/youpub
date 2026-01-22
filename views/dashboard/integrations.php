@@ -148,18 +148,44 @@ ob_start();
         <?php else: ?>
             <div class="accounts-list">
                 <?php foreach ($tiktokAccounts as $account): ?>
-                    <div class="account-item">
-                        <div class="account-info">
-                            <strong><?= htmlspecialchars($account['account_name'] ?? $account['username'] ?? 'TikTok аккаунт') ?></strong>
-                            <?php if ($account['is_default']): ?>
-                                <span class="badge badge-success">По умолчанию</span>
-                            <?php endif; ?>
-                        </div>
-                        <div class="account-actions">
-                            <?php if (!$account['is_default']): ?>
-                                <button type="button" class="btn btn-sm btn-success" onclick="setDefaultAccount('tiktok', <?= $account['id'] ?>)">По умолчанию</button>
-                            <?php endif; ?>
-                            <button type="button" class="btn btn-sm btn-danger" onclick="deleteAccount('tiktok', <?= $account['id'] ?>)">Удалить</button>
+                    <div class="account-card <?= $account['status'] === 'connected' ? 'account-connected' : 'account-disconnected' ?>">
+                        <div class="account-card-body">
+                            <div class="account-main-info">
+                                <div class="account-icon-wrapper">
+                                    <div class="account-platform-icon">🎵</div>
+                                    <?php if ($account['status'] === 'connected'): ?>
+                                        <div class="account-status-indicator connected"></div>
+                                    <?php else: ?>
+                                        <div class="account-status-indicator disconnected"></div>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="account-info-content">
+                                    <div class="account-title-row">
+                                        <h3 class="account-title"><?= htmlspecialchars($account['account_name'] ?? $account['username'] ?? 'TikTok аккаунт') ?></h3>
+                                        <?php if ($account['is_default']): ?>
+                                            <span class="badge badge-default">⭐ По умолчанию</span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <?php if ($account['username']): ?>
+                                        <p class="account-subtitle">@<?= htmlspecialchars($account['username']) ?></p>
+                                    <?php endif; ?>
+                                    <div class="account-meta">
+                                        <span class="account-status-badge status-<?= $account['status'] === 'connected' ? 'connected' : ($account['status'] === 'error' ? 'error' : 'disconnected') ?>">
+                                            <?php if ($account['status'] === 'connected'): ?>
+                                                <span class="status-dot"></span> Подключено
+                                            <?php else: ?>
+                                                <span class="status-dot"></span> <?= ucfirst($account['status']) ?>
+                                            <?php endif; ?>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="account-actions-compact">
+                                <?php if ($account['status'] === 'connected' && !$account['is_default']): ?>
+                                    <button type="button" class="btn-action-icon btn-action-success" onclick="setDefaultAccount('tiktok', <?= $account['id'] ?>)" title="Сделать по умолчанию">⭐</button>
+                                <?php endif; ?>
+                                <button type="button" class="btn-action-icon btn-action-danger" onclick="deleteAccount('tiktok', <?= $account['id'] ?>)" title="Удалить">🗑</button>
+                            </div>
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -183,18 +209,44 @@ ob_start();
         <?php else: ?>
             <div class="accounts-list">
                 <?php foreach ($instagramAccounts as $account): ?>
-                    <div class="account-item">
-                        <div class="account-info">
-                            <strong><?= htmlspecialchars($account['account_name'] ?? $account['username'] ?? 'Instagram аккаунт') ?></strong>
-                            <?php if ($account['is_default']): ?>
-                                <span class="badge badge-success">По умолчанию</span>
-                            <?php endif; ?>
-                        </div>
-                        <div class="account-actions">
-                            <?php if (!$account['is_default']): ?>
-                                <button type="button" class="btn btn-sm btn-success" onclick="setDefaultAccount('instagram', <?= $account['id'] ?>)">По умолчанию</button>
-                            <?php endif; ?>
-                            <button type="button" class="btn btn-sm btn-danger" onclick="deleteAccount('instagram', <?= $account['id'] ?>)">Удалить</button>
+                    <div class="account-card <?= $account['status'] === 'connected' ? 'account-connected' : 'account-disconnected' ?>">
+                        <div class="account-card-body">
+                            <div class="account-main-info">
+                                <div class="account-icon-wrapper">
+                                    <div class="account-platform-icon">📷</div>
+                                    <?php if ($account['status'] === 'connected'): ?>
+                                        <div class="account-status-indicator connected"></div>
+                                    <?php else: ?>
+                                        <div class="account-status-indicator disconnected"></div>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="account-info-content">
+                                    <div class="account-title-row">
+                                        <h3 class="account-title"><?= htmlspecialchars($account['account_name'] ?? $account['username'] ?? 'Instagram аккаунт') ?></h3>
+                                        <?php if ($account['is_default']): ?>
+                                            <span class="badge badge-default">⭐ По умолчанию</span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <?php if ($account['username']): ?>
+                                        <p class="account-subtitle">@<?= htmlspecialchars($account['username']) ?></p>
+                                    <?php endif; ?>
+                                    <div class="account-meta">
+                                        <span class="account-status-badge status-<?= $account['status'] === 'connected' ? 'connected' : ($account['status'] === 'error' ? 'error' : 'disconnected') ?>">
+                                            <?php if ($account['status'] === 'connected'): ?>
+                                                <span class="status-dot"></span> Подключено
+                                            <?php else: ?>
+                                                <span class="status-dot"></span> <?= ucfirst($account['status']) ?>
+                                            <?php endif; ?>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="account-actions-compact">
+                                <?php if ($account['status'] === 'connected' && !$account['is_default']): ?>
+                                    <button type="button" class="btn-action-icon btn-action-success" onclick="setDefaultAccount('instagram', <?= $account['id'] ?>)" title="Сделать по умолчанию">⭐</button>
+                                <?php endif; ?>
+                                <button type="button" class="btn-action-icon btn-action-danger" onclick="deleteAccount('instagram', <?= $account['id'] ?>)" title="Удалить">🗑</button>
+                            </div>
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -218,18 +270,44 @@ ob_start();
         <?php else: ?>
             <div class="accounts-list">
                 <?php foreach ($pinterestAccounts as $account): ?>
-                    <div class="account-item">
-                        <div class="account-info">
-                            <strong><?= htmlspecialchars($account['account_name'] ?? $account['username'] ?? 'Pinterest аккаунт') ?></strong>
-                            <?php if ($account['is_default']): ?>
-                                <span class="badge badge-success">По умолчанию</span>
-                            <?php endif; ?>
-                        </div>
-                        <div class="account-actions">
-                            <?php if (!$account['is_default']): ?>
-                                <button type="button" class="btn btn-sm btn-success" onclick="setDefaultAccount('pinterest', <?= $account['id'] ?>)">По умолчанию</button>
-                            <?php endif; ?>
-                            <button type="button" class="btn btn-sm btn-danger" onclick="deleteAccount('pinterest', <?= $account['id'] ?>)">Удалить</button>
+                    <div class="account-card <?= $account['status'] === 'connected' ? 'account-connected' : 'account-disconnected' ?>">
+                        <div class="account-card-body">
+                            <div class="account-main-info">
+                                <div class="account-icon-wrapper">
+                                    <div class="account-platform-icon">📌</div>
+                                    <?php if ($account['status'] === 'connected'): ?>
+                                        <div class="account-status-indicator connected"></div>
+                                    <?php else: ?>
+                                        <div class="account-status-indicator disconnected"></div>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="account-info-content">
+                                    <div class="account-title-row">
+                                        <h3 class="account-title"><?= htmlspecialchars($account['account_name'] ?? $account['username'] ?? 'Pinterest аккаунт') ?></h3>
+                                        <?php if ($account['is_default']): ?>
+                                            <span class="badge badge-default">⭐ По умолчанию</span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <?php if ($account['username']): ?>
+                                        <p class="account-subtitle">@<?= htmlspecialchars($account['username']) ?></p>
+                                    <?php endif; ?>
+                                    <div class="account-meta">
+                                        <span class="account-status-badge status-<?= $account['status'] === 'connected' ? 'connected' : ($account['status'] === 'error' ? 'error' : 'disconnected') ?>">
+                                            <?php if ($account['status'] === 'connected'): ?>
+                                                <span class="status-dot"></span> Подключено
+                                            <?php else: ?>
+                                                <span class="status-dot"></span> <?= ucfirst($account['status']) ?>
+                                            <?php endif; ?>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="account-actions-compact">
+                                <?php if ($account['status'] === 'connected' && !$account['is_default']): ?>
+                                    <button type="button" class="btn-action-icon btn-action-success" onclick="setDefaultAccount('pinterest', <?= $account['id'] ?>)" title="Сделать по умолчанию">⭐</button>
+                                <?php endif; ?>
+                                <button type="button" class="btn-action-icon btn-action-danger" onclick="deleteAccount('pinterest', <?= $account['id'] ?>)" title="Удалить">🗑</button>
+                            </div>
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -251,15 +329,15 @@ function setDefaultAccount(platform, accountId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Аккаунт установлен по умолчанию');
-            window.location.reload();
+            showToast('Аккаунт установлен по умолчанию', 'success');
+            setTimeout(() => window.location.reload(), 1000);
         } else {
-            alert('Ошибка: ' + (data.message || 'Не удалось установить аккаунт по умолчанию'));
+            showToast('Ошибка: ' + (data.message || 'Не удалось установить аккаунт по умолчанию'), 'error');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Произошла ошибка');
+        showToast('Произошла ошибка', 'error');
     });
 }
 
@@ -279,15 +357,15 @@ function disconnectAccount(platform, accountId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Аккаунт отключен');
-            window.location.reload();
+            showToast('Аккаунт отключен', 'success');
+            setTimeout(() => window.location.reload(), 1000);
         } else {
-            alert('Ошибка: ' + (data.message || 'Не удалось отключить аккаунт'));
+            showToast('Ошибка: ' + (data.message || 'Не удалось отключить аккаунт'), 'error');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Произошла ошибка');
+        showToast('Произошла ошибка', 'error');
     });
 }
 
@@ -307,17 +385,52 @@ function deleteAccount(platform, accountId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Аккаунт удален');
-            window.location.reload();
+            showToast('Аккаунт удален', 'success');
+            setTimeout(() => window.location.reload(), 1000);
         } else {
-            alert('Ошибка: ' + (data.message || 'Не удалось удалить аккаунт'));
+            showToast('Ошибка: ' + (data.message || 'Не удалось удалить аккаунт'), 'error');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Произошла ошибка');
+        showToast('Произошла ошибка', 'error');
     });
 }
+
+function showToast(message, type = 'info') {
+    const toastContainer = document.getElementById('toast-container') || document.createElement('div');
+    toastContainer.id = 'toast-container';
+    toastContainer.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 0.5rem;';
+    if (!document.getElementById('toast-container')) {
+        document.body.appendChild(toastContainer);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.style.cssText = 'padding: 1rem 1.5rem; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-left: 4px solid ' + 
+        (type === 'success' ? '#27ae60' : type === 'error' ? '#e74c3c' : '#3498db') + '; min-width: 300px; animation: slideIn 0.3s ease;';
+    toast.textContent = message;
+    toastContainer.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// Добавляем стили для анимации
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+`;
+document.head.appendChild(style);
 
 function showTelegramForm() {
     const form = prompt('Введите токен бота и ID канала через запятую (bot_token,channel_id):');
