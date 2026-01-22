@@ -50,8 +50,25 @@ class VideoService extends Service
 
         // Создание директории для пользователя
         $uploadDir = $this->config['UPLOAD_DIR'] . '/' . $userId;
+        
+        // Логирование для отладки
+        error_log('Video Upload: Upload dir = ' . $uploadDir);
+        error_log('Video Upload: Upload dir exists = ' . (is_dir($uploadDir) ? 'yes' : 'no'));
+        error_log('Video Upload: Upload dir writable = ' . (is_writable(dirname($uploadDir)) ? 'yes' : 'no'));
+        
         if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0755, true);
+            $created = @mkdir($uploadDir, 0755, true);
+            if (!$created) {
+                error_log('Video Upload: Failed to create directory: ' . $uploadDir);
+                error_log('Video Upload: Error: ' . error_get_last()['message'] ?? 'Unknown error');
+                return ['success' => false, 'message' => 'Failed to create upload directory. Check permissions.'];
+            }
+        }
+
+        // Проверка прав на запись
+        if (!is_writable($uploadDir)) {
+            error_log('Video Upload: Directory not writable: ' . $uploadDir);
+            return ['success' => false, 'message' => 'Upload directory is not writable. Check permissions.'];
         }
 
         // Генерация уникального имени файла
@@ -59,10 +76,23 @@ class VideoService extends Service
         $fileName = uniqid('video_', true) . '.' . $extension;
         $filePath = $uploadDir . '/' . $fileName;
 
+        error_log('Video Upload: File path = ' . $filePath);
+        error_log('Video Upload: Temp file = ' . $file['tmp_name']);
+        error_log('Video Upload: Temp file exists = ' . (file_exists($file['tmp_name']) ? 'yes' : 'no'));
+
         // Перемещение файла
-        if (!move_uploaded_file($file['tmp_name'], $filePath)) {
-            return ['success' => false, 'message' => 'Failed to save file'];
+        $moved = @move_uploaded_file($file['tmp_name'], $filePath);
+        if (!$moved) {
+            $error = error_get_last();
+            error_log('Video Upload: Failed to move file');
+            error_log('Video Upload: Error: ' . ($error['message'] ?? 'Unknown error'));
+            error_log('Video Upload: PHP upload_max_filesize = ' . ini_get('upload_max_filesize'));
+            error_log('Video Upload: PHP post_max_size = ' . ini_get('post_max_size'));
+            error_log('Video Upload: File size = ' . $file['size']);
+            return ['success' => false, 'message' => 'Failed to save file. Check server logs for details.'];
         }
+
+        error_log('Video Upload: File saved successfully to ' . $filePath);
 
         // Сохранение в БД
         $videoId = $this->videoRepo->create([
