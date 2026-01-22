@@ -226,3 +226,107 @@ footer {
 .auth-link a:hover {
     text-decoration: underline;
 }
+
+/* Профиль */
+.profile-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.profile-table {
+    width: 100%;
+    max-width: 600px;
+}
+
+.profile-table th {
+    text-align: left;
+    padding: 0.75rem;
+    width: 150px;
+}
+
+.profile-form {
+    max-width: 500px;
+}
+
+/* Интеграции */
+.integrations-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.integration-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.integration-status {
+    margin-top: 1rem;
+}
+
+.integration-status.connected {
+    color: #27ae60;
+}
+
+.integration-status.disconnected {
+    color: #e74c3c;
+}
+
+.telegram-form {
+    margin-top: 1rem;
+}
+
+/* Статистика */
+.stats-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stats-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    margin-top: 2rem;
+}
+
+.export-section {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #ddd;
+}
+
+.export-section .btn {
+    margin-right: 1rem;
+}
+
+.status-success {
+    color: #27ae60;
+    font-weight: 600;
+}
+
+.status-error {
+    color: #e74c3c;
+    font-weight: 600;
+}
+
+.error-message {
+    color: #e74c3c;
+    font-size: 0.875rem;
+}
+
+.btn-danger {
+    background: #e74c3c;
+}
+
+.btn-danger:hover {
+    background: #c0392b;
+}
