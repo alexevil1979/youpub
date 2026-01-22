@@ -316,22 +316,39 @@ class VideoService extends Service
         }
 
         // Определяем новый статус
+        // Допустимые значения: 'uploaded','processing','ready','error'
+        // Используем простое переключение: ready <-> error (error как индикатор неактивности)
         $currentStatus = $video['status'];
         $newStatus = null;
 
-        // Если видео активно (uploaded, ready, active) - делаем неактивным (inactive)
-        if (in_array($currentStatus, ['uploaded', 'ready', 'active'])) {
-            $newStatus = 'inactive';
+        // Если видео активно (uploaded, ready) - делаем неактивным (error)
+        if (in_array($currentStatus, ['uploaded', 'ready'])) {
+            $newStatus = 'error'; // Используем error как индикатор неактивности
+        } elseif ($currentStatus === 'error') {
+            // Если в статусе error - возвращаем в ready
+            $newStatus = 'ready';
+        } elseif ($currentStatus === 'processing') {
+            // Если обрабатывается - не меняем статус
+            return ['success' => false, 'message' => 'Видео обрабатывается, нельзя изменить статус'];
         } else {
-            // Если неактивно - делаем активным (ready)
+            // По умолчанию делаем ready
             $newStatus = 'ready';
         }
 
-        $this->videoRepo->update($id, ['status' => $newStatus]);
+        try {
+            $updated = $this->videoRepo->update($id, ['status' => $newStatus]);
+            if (!$updated) {
+                error_log('Toggle video status: Update returned false for video ID: ' . $id);
+                return ['success' => false, 'message' => 'Не удалось обновить статус видео'];
+            }
+        } catch (\Exception $e) {
+            error_log('Toggle video status error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+            return ['success' => false, 'message' => 'Ошибка при обновлении статуса: ' . $e->getMessage()];
+        }
 
         return [
             'success' => true,
-            'message' => 'Video status updated successfully',
+            'message' => 'Статус видео изменен',
             'data' => ['status' => $newStatus]
         ];
     }
