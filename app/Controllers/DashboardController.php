@@ -108,6 +108,12 @@ class DashboardController extends Controller
 
         $authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query($params);
         
+        // Логирование для отладки (можно убрать в production)
+        error_log('YouTube OAuth Request:');
+        error_log('  Client ID: ' . substr($clientId, 0, 30) . '...');
+        error_log('  Redirect URI: ' . $redirectUri);
+        error_log('  Full Auth URL: ' . $authUrl);
+        
         header('Location: ' . $authUrl);
         exit;
     }
