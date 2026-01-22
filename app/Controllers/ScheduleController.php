@@ -26,6 +26,10 @@ class ScheduleController extends Controller
         $userId = $_SESSION['user_id'];
         $schedules = $this->scheduleService->getUserSchedules($userId);
         
+        // Получаем группы для отображения в модальном окне (если нужно)
+        $groupService = new \App\Modules\ContentGroups\Services\GroupService();
+        $groups = $groupService->getUserGroups($userId);
+        
         include __DIR__ . '/../../views/schedules/index.php';
     }
 
