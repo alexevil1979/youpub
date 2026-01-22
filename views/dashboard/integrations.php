@@ -11,7 +11,7 @@ ob_start();
     <div class="integration-card">
         <div class="integration-header">
             <h2>📺 YouTube</h2>
-            <a href="/integrations/youtube" class="btn btn-primary btn-sm">+ Добавить канал</a>
+            <a href="/integrations/youtube" class="btn">Добавить канал</a>
         </div>
         
         <?php if (empty($youtubeAccounts)): ?>
@@ -98,7 +98,7 @@ ob_start();
     <div class="integration-card">
         <div class="integration-header">
             <h2>🎵 TikTok</h2>
-            <a href="/integrations/tiktok" class="btn btn-primary btn-sm">+ Добавить аккаунт</a>
+            <a href="/integrations/tiktok" class="btn">Добавить аккаунт</a>
         </div>
         
         <?php if (empty($tiktokAccounts)): ?>
@@ -129,7 +129,7 @@ ob_start();
     <div class="integration-card">
         <div class="integration-header">
             <h2>📷 Instagram</h2>
-            <a href="/integrations/instagram" class="btn btn-primary btn-sm">+ Добавить аккаунт</a>
+            <a href="/integrations/instagram" class="btn">Добавить аккаунт</a>
         </div>
         
         <?php if (empty($instagramAccounts)): ?>
@@ -160,7 +160,7 @@ ob_start();
     <div class="integration-card">
         <div class="integration-header">
             <h2>📌 Pinterest</h2>
-            <a href="/integrations/pinterest" class="btn btn-primary btn-sm">+ Добавить аккаунт</a>
+            <a href="/integrations/pinterest" class="btn">Добавить аккаунт</a>
         </div>
         
         <?php if (empty($pinterestAccounts)): ?>
