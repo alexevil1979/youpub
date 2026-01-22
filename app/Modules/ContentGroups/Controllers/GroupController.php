@@ -179,6 +179,63 @@ class GroupController extends Controller
     }
 
     /**
+     * Показать форму редактирования группы
+     */
+    public function showEdit(int $id): void
+    {
+        $userId = $_SESSION['user_id'];
+        $group = $this->groupService->getGroupWithStats($id, $userId);
+
+        if (!$group) {
+            http_response_code(404);
+            echo 'Group not found';
+            return;
+        }
+
+        $templates = $this->templateService->getUserTemplates($userId, true);
+        $csrfToken = (new \Core\Auth())->generateCsrfToken();
+        
+        if (!isset($templates)) {
+            $templates = [];
+        }
+        
+        include __DIR__ . '/../../../../views/content_groups/edit.php';
+    }
+
+    /**
+     * Обновить группу
+     */
+    public function update(int $id): void
+    {
+        $userId = $_SESSION['user_id'];
+        $group = $this->groupService->getGroupWithStats($id, $userId);
+
+        if (!$group) {
+            $_SESSION['error'] = 'Group not found';
+            header('Location: /content-groups');
+            exit;
+        }
+
+        $data = [
+            'name' => $this->getParam('name', ''),
+            'description' => $this->getParam('description', ''),
+            'template_id' => $this->getParam('template_id') ? (int)$this->getParam('template_id') : null,
+            'status' => $this->getParam('status', 'active'),
+        ];
+
+        $result = $this->groupService->updateGroup($id, $userId, $data);
+
+        if ($result['success']) {
+            $_SESSION['success'] = $result['message'];
+            header('Location: /content-groups/' . $id);
+        } else {
+            $_SESSION['error'] = $result['message'];
+            header('Location: /content-groups/' . $id . '/edit');
+        }
+        exit;
+    }
+
+    /**
      * Удалить группу
      */
     public function delete(int $id): void

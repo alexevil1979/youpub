@@ -37,9 +37,41 @@ ob_start();
     <?php endif; ?>
 </div>
 
+<div class="group-info" style="margin: 1.5rem 0; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+    <h3>Информация о группе</h3>
+    <div style="margin-top: 0.5rem;">
+        <strong>Текущий шаблон:</strong>
+        <?php if ($group['template_id']): ?>
+            <?php 
+            $currentTemplate = null;
+            foreach ($templates as $template) {
+                if ($template['id'] == $group['template_id']) {
+                    $currentTemplate = $template;
+                    break;
+                }
+            }
+            ?>
+            <?php if ($currentTemplate): ?>
+                <span style="color: #27ae60;"><?= htmlspecialchars($currentTemplate['name']) ?></span>
+            <?php else: ?>
+                <span style="color: #e74c3c;">Шаблон не найден (ID: <?= $group['template_id'] ?>)</span>
+            <?php endif; ?>
+        <?php else: ?>
+            <span style="color: #95a5a6;">Без шаблона</span>
+        <?php endif; ?>
+    </div>
+    <div style="margin-top: 0.5rem;">
+        <strong>Статус:</strong> 
+        <span class="badge badge-<?= $group['status'] === 'active' ? 'success' : ($group['status'] === 'paused' ? 'warning' : 'secondary') ?>">
+            <?= ucfirst($group['status']) ?>
+        </span>
+    </div>
+</div>
+
 <div class="group-actions" style="margin: 1.5rem 0;">
     <a href="/content-groups" class="btn btn-secondary">Назад к списку</a>
-    <button type="button" class="btn btn-primary" onclick="shuffleGroup(<?= $group['id'] ?>)">Перемешать видео</button>
+    <a href="/content-groups/<?= $group['id'] ?>/edit" class="btn btn-primary">Редактировать группу</a>
+    <button type="button" class="btn btn-info" onclick="shuffleGroup(<?= $group['id'] ?>)">Перемешать видео</button>
     <a href="/content-groups/schedules/create?group_id=<?= $group['id'] ?>" class="btn btn-success">Создать расписание</a>
 </div>
 

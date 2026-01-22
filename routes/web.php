@@ -71,6 +71,8 @@ $router->get('/content-groups', [GroupController::class, 'index'], [AuthMiddlewa
 $router->get('/content-groups/create', [GroupController::class, 'showCreate'], [AuthMiddleware::class]);
 $router->post('/content-groups/create', [GroupController::class, 'create'], [AuthMiddleware::class]);
 $router->get('/content-groups/{id}', [GroupController::class, 'show'], [AuthMiddleware::class]);
+$router->get('/content-groups/{id}/edit', [GroupController::class, 'showEdit'], [AuthMiddleware::class]);
+$router->post('/content-groups/{id}/edit', [GroupController::class, 'update'], [AuthMiddleware::class]);
 $router->post('/content-groups/{id}/add-video', [GroupController::class, 'addVideo'], [AuthMiddleware::class]);
 $router->post('/content-groups/{id}/add-videos', [GroupController::class, 'addVideos'], [AuthMiddleware::class]);
 $router->delete('/content-groups/{groupId}/videos/{videoId}', [GroupController::class, 'removeVideo'], [AuthMiddleware::class]);

@@ -43,6 +43,49 @@ class GroupService extends Service
     }
 
     /**
+     * Обновить группу
+     */
+    public function updateGroup(int $groupId, int $userId, array $data): array
+    {
+        // Проверяем права доступа
+        $group = $this->groupRepo->findById($groupId);
+        if (!$group || $group['user_id'] !== $userId) {
+            return [
+                'success' => false,
+                'message' => 'Group not found or access denied'
+            ];
+        }
+
+        $updateData = [];
+        if (isset($data['name'])) {
+            $updateData['name'] = $data['name'];
+        }
+        if (isset($data['description'])) {
+            $updateData['description'] = $data['description'];
+        }
+        if (isset($data['template_id'])) {
+            $updateData['template_id'] = $data['template_id'];
+        }
+        if (isset($data['status'])) {
+            $updateData['status'] = $data['status'];
+        }
+
+        if (empty($updateData)) {
+            return [
+                'success' => false,
+                'message' => 'No data to update'
+            ];
+        }
+
+        $this->groupRepo->update($groupId, $updateData);
+
+        return [
+            'success' => true,
+            'message' => 'Group updated successfully'
+        ];
+    }
+
+    /**
      * Добавить видео в группу
      */
     public function addVideoToGroup(int $groupId, int $videoId, int $userId): array
