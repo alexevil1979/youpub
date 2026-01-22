@@ -37,6 +37,8 @@ $router->get('/videos', [VideoController::class, 'index'], [AuthMiddleware::clas
 $router->get('/videos/upload', [VideoController::class, 'showUpload'], [AuthMiddleware::class]);
 $router->post('/videos/upload', [VideoController::class, 'upload'], [AuthMiddleware::class]);
 $router->get('/videos/{id}', [VideoController::class, 'show'], [AuthMiddleware::class]);
+$router->get('/videos/{id}/edit', [VideoController::class, 'showEdit'], [AuthMiddleware::class]);
+$router->post('/videos/{id}/edit', [VideoController::class, 'update'], [AuthMiddleware::class]);
 $router->post('/videos/{id}/publish', [VideoController::class, 'publishNow'], [AuthMiddleware::class]);
 $router->delete('/videos/{id}', [VideoController::class, 'delete'], [AuthMiddleware::class]);
 

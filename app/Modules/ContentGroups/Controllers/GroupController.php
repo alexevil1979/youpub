@@ -95,7 +95,9 @@ class GroupController extends Controller
     public function addVideo(int $id): void
     {
         $userId = $_SESSION['user_id'];
-        $videoId = (int)$this->getParam('video_id', 0);
+        
+        // Поддержка как POST form-data, так и JSON
+        $videoId = (int)($this->getParam('video_id', 0) ?: ($_POST['video_id'] ?? 0));
 
         if (!$videoId) {
             $this->error('Video ID is required', 400);

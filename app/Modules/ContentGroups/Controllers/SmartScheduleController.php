@@ -34,6 +34,13 @@ class SmartScheduleController extends Controller
         $templates = $this->templateService->getUserTemplates($userId, true);
         $csrfToken = (new \Core\Auth())->generateCsrfToken();
         
+        if (!isset($groups)) {
+            $groups = [];
+        }
+        if (!isset($templates)) {
+            $templates = [];
+        }
+        
         include __DIR__ . '/../../../../views/content_groups/schedules/create.php';
     }
 
@@ -44,30 +51,45 @@ class SmartScheduleController extends Controller
     {
         $userId = $_SESSION['user_id'];
         
+        // Обработка weekdays из массива
+        $weekdays = $this->getParam('weekdays', []);
+        if (is_array($weekdays)) {
+            $weekdays = implode(',', $weekdays);
+        }
+        
         $data = [
+            'user_id' => $userId,
             'content_group_id' => $this->getParam('content_group_id') ? (int)$this->getParam('content_group_id') : null,
             'video_id' => $this->getParam('video_id') ? (int)$this->getParam('video_id') : null,
             'template_id' => $this->getParam('template_id') ? (int)$this->getParam('template_id') : null,
             'platform' => $this->getParam('platform', 'youtube'),
             'schedule_type' => $this->getParam('schedule_type', 'fixed'),
-            'publish_at' => $this->getParam('publish_at', date('Y-m-d H:i:s')),
+            'publish_at' => $this->getParam('publish_at') ? date('Y-m-d H:i:s', strtotime($this->getParam('publish_at'))) : date('Y-m-d H:i:s'),
             'interval_minutes' => $this->getParam('interval_minutes') ? (int)$this->getParam('interval_minutes') : null,
             'batch_count' => $this->getParam('batch_count') ? (int)$this->getParam('batch_count') : null,
             'batch_window_hours' => $this->getParam('batch_window_hours') ? (int)$this->getParam('batch_window_hours') : null,
-            'random_window_start' => $this->getParam('random_window_start'),
-            'random_window_end' => $this->getParam('random_window_end'),
-            'weekdays' => $this->getParam('weekdays'),
-            'active_hours_start' => $this->getParam('active_hours_start'),
-            'active_hours_end' => $this->getParam('active_hours_end'),
+            'random_window_start' => $this->getParam('random_window_start') ?: null,
+            'random_window_end' => $this->getParam('random_window_end') ?: null,
+            'weekdays' => $weekdays ?: null,
+            'active_hours_start' => $this->getParam('active_hours_start') ?: null,
+            'active_hours_end' => $this->getParam('active_hours_end') ?: null,
             'daily_limit' => $this->getParam('daily_limit') ? (int)$this->getParam('daily_limit') : null,
             'hourly_limit' => $this->getParam('hourly_limit') ? (int)$this->getParam('hourly_limit') : null,
             'delay_between_posts' => $this->getParam('delay_between_posts') ? (int)$this->getParam('delay_between_posts') : null,
             'skip_published' => $this->getParam('skip_published', '1') === '1',
+            'status' => 'pending',
         ];
 
         // Валидация
         if (empty($data['content_group_id']) && empty($data['video_id'])) {
-            $_SESSION['error'] = 'Either group or video must be specified';
+            $_SESSION['error'] = 'Необходимо указать группу или видео';
+            header('Location: /content-groups/schedules/create');
+            exit;
+        }
+
+        // Для fixed типа нужен publish_at
+        if ($data['schedule_type'] === 'fixed' && empty($data['publish_at'])) {
+            $_SESSION['error'] = 'Укажите дату и время публикации';
             header('Location: /content-groups/schedules/create');
             exit;
         }
@@ -75,7 +97,7 @@ class SmartScheduleController extends Controller
         $scheduleRepo = new \App\Repositories\ScheduleRepository();
         $scheduleId = $scheduleRepo->create($data);
 
-        $_SESSION['success'] = 'Smart schedule created successfully';
+        $_SESSION['success'] = 'Умное расписание создано успешно';
         header('Location: /schedules');
         exit;
     }

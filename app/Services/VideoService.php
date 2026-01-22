@@ -248,6 +248,40 @@ class VideoService extends Service
     }
 
     /**
+     * Обновить видео
+     */
+    public function updateVideo(int $id, int $userId, array $data): array
+    {
+        $video = $this->getVideo($id, $userId);
+        
+        if (!$video) {
+            return ['success' => false, 'message' => 'Video not found'];
+        }
+
+        $updateData = [];
+        if (isset($data['title'])) {
+            $updateData['title'] = $data['title'];
+        }
+        if (isset($data['description'])) {
+            $updateData['description'] = $data['description'];
+        }
+        if (isset($data['tags'])) {
+            $updateData['tags'] = $data['tags'];
+        }
+
+        if (empty($updateData)) {
+            return ['success' => false, 'message' => 'No data to update'];
+        }
+
+        $this->videoRepo->update($id, $updateData);
+
+        return [
+            'success' => true,
+            'message' => 'Video updated successfully'
+        ];
+    }
+
+    /**
      * Удалить видео
      */
     public function deleteVideo(int $id, int $userId): array

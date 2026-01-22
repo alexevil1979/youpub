@@ -77,7 +77,35 @@ ob_start();
             <a href="/videos" class="btn btn-secondary">Назад к списку</a>
             <button type="button" class="btn btn-success" onclick="publishNow(<?= $video['id'] ?>)">Опубликовать сейчас</button>
             <a href="/videos/<?= $video['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
+            <button type="button" class="btn btn-info" onclick="showAddToGroupModal(<?= $video['id'] ?>)">Добавить в группу</button>
             <button type="button" class="btn btn-danger" onclick="deleteVideo(<?= $video['id'] ?>)">Удалить</button>
+        </div>
+
+        <!-- Модальное окно для добавления в группу -->
+        <div id="addToGroupModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close" onclick="closeAddToGroupModal()">&times;</span>
+                <h2>Добавить видео в группу</h2>
+                <?php if (empty($groups)): ?>
+                    <p>У вас нет групп. <a href="/content-groups/create">Создать группу</a></p>
+                <?php else: ?>
+                    <form id="addToGroupForm">
+                        <div class="form-group">
+                            <label for="group_id">Выберите группу:</label>
+                            <select id="group_id" name="group_id" required>
+                                <option value="">Выберите группу</option>
+                                <?php foreach ($groups as $group): ?>
+                                    <option value="<?= $group['id'] ?>"><?= htmlspecialchars($group['name']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Добавить</button>
+                            <button type="button" class="btn btn-secondary" onclick="closeAddToGroupModal()">Отмена</button>
+                        </div>
+                    </form>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
 </div>
@@ -264,6 +292,59 @@ function showNotification(message, type) {
         }, 300);
     }, 3000);
 }
+
+let currentVideoId = null;
+
+function showAddToGroupModal(videoId) {
+    currentVideoId = videoId;
+    document.getElementById('addToGroupModal').style.display = 'block';
+}
+
+function closeAddToGroupModal() {
+    document.getElementById('addToGroupModal').style.display = 'none';
+    currentVideoId = null;
+}
+
+// Закрытие модального окна при клике вне его
+window.onclick = function(event) {
+    const modal = document.getElementById('addToGroupModal');
+    if (event.target == modal) {
+        closeAddToGroupModal();
+    }
+}
+
+// Обработка формы добавления в группу
+document.getElementById('addToGroupForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const groupId = document.getElementById('group_id').value;
+    if (!groupId) {
+        alert('Выберите группу');
+        return;
+    }
+    
+    fetch('/content-groups/' + groupId + '/add-video', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: 'video_id=' + currentVideoId
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Видео добавлено в группу!', 'success');
+            closeAddToGroupModal();
+        } else {
+            alert('Ошибка: ' + (data.message || 'Не удалось добавить видео в группу'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Произошла ошибка');
+    });
+});
 </script>
 
 <?php

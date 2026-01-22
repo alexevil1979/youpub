@@ -26,6 +26,10 @@ class TemplateController extends Controller
         $userId = $_SESSION['user_id'];
         $templates = $this->templateService->getUserTemplates($userId);
         
+        if (!isset($templates)) {
+            $templates = [];
+        }
+        
         include __DIR__ . '/../../../../views/content_groups/templates/index.php';
     }
 

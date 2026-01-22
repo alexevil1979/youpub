@@ -96,6 +96,10 @@ class VideoController extends Controller
         $publicationRepo = new \App\Repositories\PublicationRepository();
         $publications = $publicationRepo->findSuccessfulByVideoId($id);
 
+        // Получаем группы пользователя для кнопки "Добавить в группу"
+        $groupService = new \App\Modules\ContentGroups\Services\GroupService();
+        $groups = $groupService->getUserGroups($userId);
+
         include __DIR__ . '/../../views/videos/show.php';
     }
 
@@ -114,6 +118,54 @@ class VideoController extends Controller
             
             $result['data']['publications'] = $publications;
             $this->success($result['data'] ?? [], $result['message']);
+        } else {
+            $this->error($result['message'], 400);
+        }
+    }
+
+    /**
+     * Показать форму редактирования
+     */
+    public function showEdit(int $id): void
+    {
+        $userId = $_SESSION['user_id'];
+        $video = $this->videoService->getVideo($id, $userId);
+
+        if (!$video) {
+            http_response_code(404);
+            echo 'Video not found';
+            return;
+        }
+
+        $csrfToken = (new \Core\Auth())->generateCsrfToken();
+        include __DIR__ . '/../../views/videos/edit.php';
+    }
+
+    /**
+     * Обновить видео
+     */
+    public function update(int $id): void
+    {
+        $userId = $_SESSION['user_id'];
+        $video = $this->videoService->getVideo($id, $userId);
+
+        if (!$video) {
+            $this->error('Video not found', 404);
+            return;
+        }
+
+        $title = $this->getParam('title', '');
+        $description = $this->getParam('description', '');
+        $tags = $this->getParam('tags', '');
+
+        $result = $this->videoService->updateVideo($id, $userId, [
+            'title' => $title,
+            'description' => $description,
+            'tags' => $tags,
+        ]);
+
+        if ($result['success']) {
+            header('Location: /videos/' . $id);
         } else {
             $this->error($result['message'], 400);
         }
