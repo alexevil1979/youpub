@@ -155,6 +155,105 @@ class VideoService extends Service
     }
 
     /**
+     * Опубликовать видео сейчас
+     */
+    public function publishNow(int $videoId, int $userId): array
+    {
+        $video = $this->getVideo($videoId, $userId);
+        
+        if (!$video) {
+            return ['success' => false, 'message' => 'Video not found'];
+        }
+
+        if (!file_exists($video['file_path'])) {
+            return ['success' => false, 'message' => 'Video file not found'];
+        }
+
+        // Проверяем подключенные интеграции
+        $youtubeRepo = new \App\Repositories\YoutubeIntegrationRepository();
+        $telegramRepo = new \App\Repositories\TelegramIntegrationRepository();
+        $scheduleRepo = new \App\Repositories\ScheduleRepository();
+        $publicationRepo = new \App\Repositories\PublicationRepository();
+
+        $youtubeIntegration = $youtubeRepo->findByUserId($userId);
+        $telegramIntegration = $telegramRepo->findByUserId($userId);
+
+        $results = [];
+        $hasIntegration = false;
+
+        // Публикация на YouTube
+        if ($youtubeIntegration && $youtubeIntegration['status'] === 'connected') {
+            $hasIntegration = true;
+            $youtubeService = new \App\Services\YoutubeService();
+            
+            // Создаем временное расписание для публикации
+            $scheduleId = $scheduleRepo->create([
+                'user_id' => $userId,
+                'video_id' => $videoId,
+                'platform' => 'youtube',
+                'scheduled_at' => date('Y-m-d H:i:s'),
+                'status' => 'pending',
+                'title' => $video['title'],
+                'description' => $video['description'] ?? '',
+                'tags' => $video['tags'] ?? '',
+            ]);
+
+            $result = $youtubeService->publishVideo($scheduleId);
+            $results['youtube'] = $result;
+        }
+
+        // Публикация в Telegram
+        if ($telegramIntegration && $telegramIntegration['status'] === 'connected') {
+            $hasIntegration = true;
+            $telegramService = new \App\Services\TelegramService();
+            
+            // Создаем временное расписание для публикации
+            $scheduleId = $scheduleRepo->create([
+                'user_id' => $userId,
+                'video_id' => $videoId,
+                'platform' => 'telegram',
+                'scheduled_at' => date('Y-m-d H:i:s'),
+                'status' => 'pending',
+                'title' => $video['title'],
+                'description' => $video['description'] ?? '',
+                'tags' => $video['tags'] ?? '',
+            ]);
+
+            $result = $telegramService->publishVideo($scheduleId);
+            $results['telegram'] = $result;
+        }
+
+        if (!$hasIntegration) {
+            return ['success' => false, 'message' => 'No integrations connected. Please connect YouTube or Telegram first.'];
+        }
+
+        // Проверяем результаты
+        $allSuccess = true;
+        $messages = [];
+        
+        foreach ($results as $platform => $result) {
+            if (!$result['success']) {
+                $allSuccess = false;
+                $messages[] = ucfirst($platform) . ': ' . $result['message'];
+            }
+        }
+
+        if ($allSuccess) {
+            return [
+                'success' => true,
+                'message' => 'Video published successfully on all connected platforms',
+                'data' => $results
+            ];
+        } else {
+            return [
+                'success' => false,
+                'message' => 'Some publications failed: ' . implode('; ', $messages),
+                'data' => $results
+            ];
+        }
+    }
+
+    /**
      * Удалить видео
      */
     public function deleteVideo(int $id, int $userId): array

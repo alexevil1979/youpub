@@ -64,6 +64,7 @@ ob_start();
 
         <div class="video-actions">
             <a href="/videos" class="btn btn-secondary">Назад к списку</a>
+            <button type="button" class="btn btn-success" onclick="publishNow(<?= $video['id'] ?>)">Опубликовать сейчас</button>
             <a href="/videos/<?= $video['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
             <button type="button" class="btn btn-danger" onclick="deleteVideo(<?= $video['id'] ?>)">Удалить</button>
         </div>
@@ -92,6 +93,43 @@ function deleteVideo(id) {
             alert('Произошла ошибка при удалении видео');
         });
     }
+}
+
+function publishNow(id) {
+    if (!confirm('Опубликовать видео сейчас на все подключенные платформы?')) {
+        return;
+    }
+    
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Публикация...';
+    
+    fetch('/videos/' + id + '/publish', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.textContent = originalText;
+        
+        if (data.success) {
+            alert('Видео успешно опубликовано!');
+            window.location.reload();
+        } else {
+            alert('Ошибка: ' + (data.message || 'Не удалось опубликовать видео'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        btn.disabled = false;
+        btn.textContent = originalText;
+        alert('Произошла ошибка при публикации видео');
+    });
 }
 </script>
 

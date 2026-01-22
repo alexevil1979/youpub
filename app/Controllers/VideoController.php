@@ -96,6 +96,21 @@ class VideoController extends Controller
     }
 
     /**
+     * Опубликовать видео сейчас
+     */
+    public function publishNow(int $id): void
+    {
+        $userId = $_SESSION['user_id'];
+        $result = $this->videoService->publishNow($id, $userId);
+
+        if ($result['success']) {
+            $this->success($result['data'] ?? [], $result['message']);
+        } else {
+            $this->error($result['message'], 400);
+        }
+    }
+
+    /**
      * Удалить видео
      */
     public function delete(int $id): void
