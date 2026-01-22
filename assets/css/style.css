@@ -1693,6 +1693,16 @@ footer {
     transform: scale(1.1);
 }
 
+.btn-action-publish {
+    background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+    color: white;
+}
+
+.btn-action-publish:hover {
+    background: linear-gradient(135deg, #229954 0%, #1e8449 100%);
+    transform: scale(1.1);
+}
+
 /* Массовые действия */
 .bulk-actions {
     position: fixed;

@@ -112,6 +112,32 @@ ob_start();
                         </td>
                         <td style="padding: 0.75rem;">
                             <a href="/videos/<?= $file['video_id'] ?>" class="btn btn-sm btn-primary">Просмотр</a>
+                            <?php if (isset($filePublications[$file['video_id']])): 
+                                $pub = $filePublications[$file['video_id']];
+                                $pubUrl = $pub['platform_url'] ?? '';
+                                if (!$pubUrl && $pub['platform_id']) {
+                                    switch ($pub['platform']) {
+                                        case 'youtube':
+                                            $pubUrl = 'https://youtube.com/watch?v=' . $pub['platform_id'];
+                                            break;
+                                        case 'telegram':
+                                            $pubUrl = 'https://t.me/' . $pub['platform_id'];
+                                            break;
+                                        case 'tiktok':
+                                            $pubUrl = 'https://www.tiktok.com/@' . $pub['platform_id'];
+                                            break;
+                                        case 'instagram':
+                                            $pubUrl = 'https://www.instagram.com/p/' . $pub['platform_id'];
+                                            break;
+                                        case 'pinterest':
+                                            $pubUrl = 'https://www.pinterest.com/pin/' . $pub['platform_id'];
+                                            break;
+                                    }
+                                }
+                                if ($pubUrl):
+                            ?>
+                                <a href="<?= htmlspecialchars($pubUrl) ?>" target="_blank" class="btn btn-sm btn-success" title="Перейти к публикации на <?= ucfirst($pub['platform']) ?>">🚀</a>
+                            <?php endif; endif; ?>
                             <button type="button" class="btn btn-sm <?= ($file['status'] === 'new' || $file['status'] === 'queued') ? 'btn-warning' : 'btn-success' ?>" 
                                     onclick="toggleFileStatus(<?= $group['id'] ?>, <?= $file['id'] ?>, '<?= $file['status'] ?>')">
                                 <?= ($file['status'] === 'new' || $file['status'] === 'queued') ? '⏸ Выкл' : '▶ Вкл' ?>

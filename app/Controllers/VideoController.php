@@ -30,6 +30,17 @@ class VideoController extends Controller
         $groupService = new \App\Modules\ContentGroups\Services\GroupService();
         $groups = $groupService->getUserGroups($userId);
         
+        // Получаем публикации для всех видео
+        $publicationRepo = new \App\Repositories\PublicationRepository();
+        $videoPublications = [];
+        foreach ($videos as $video) {
+            $publications = $publicationRepo->findSuccessfulByVideoId($video['id']);
+            if (!empty($publications)) {
+                // Берем первую (последнюю по дате) успешную публикацию
+                $videoPublications[$video['id']] = $publications[0];
+            }
+        }
+        
         include __DIR__ . '/../../views/videos/index.php';
     }
 

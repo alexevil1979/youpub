@@ -20,6 +20,32 @@
     </div>
     <div class="item-actions">
         <a href="/videos/<?= $video['id'] ?>" class="btn-action" title="Просмотр">👁</a>
+        <?php if (isset($videoPublications[$video['id']])): 
+            $pub = $videoPublications[$video['id']];
+            $pubUrl = $pub['platform_url'] ?? '';
+            if (!$pubUrl && $pub['platform_id']) {
+                switch ($pub['platform']) {
+                    case 'youtube':
+                        $pubUrl = 'https://youtube.com/watch?v=' . $pub['platform_id'];
+                        break;
+                    case 'telegram':
+                        $pubUrl = 'https://t.me/' . $pub['platform_id'];
+                        break;
+                    case 'tiktok':
+                        $pubUrl = 'https://www.tiktok.com/@' . $pub['platform_id'];
+                        break;
+                    case 'instagram':
+                        $pubUrl = 'https://www.instagram.com/p/' . $pub['platform_id'];
+                        break;
+                    case 'pinterest':
+                        $pubUrl = 'https://www.pinterest.com/pin/' . $pub['platform_id'];
+                        break;
+                }
+            }
+            if ($pubUrl):
+        ?>
+            <a href="<?= htmlspecialchars($pubUrl) ?>" target="_blank" class="btn-action btn-action-publish" title="Перейти к публикации на <?= ucfirst($pub['platform']) ?>">🚀</a>
+        <?php endif; endif; ?>
         <a href="/schedules/create?video_id=<?= $video['id'] ?>" class="btn-action" title="Запланировать">📅</a>
         <button type="button" class="btn-action" onclick="showAddToGroupModal(<?= $video['id'] ?>)" title="В группу">📁</button>
         <button type="button" class="btn-action <?= ($video['status'] === 'active' || $video['status'] === 'uploaded' || $video['status'] === 'ready') ? 'btn-pause' : 'btn-play' ?>" 
