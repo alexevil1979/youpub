@@ -552,12 +552,13 @@ function showTelegramForm() {
 }
 
 .account-card {
-    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-    border-radius: 12px;
-    border: 2px solid #e9ecef;
-    transition: all 0.3s ease;
+    background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+    border-radius: 16px;
+    border: 1px solid #e1e8ed;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
     position: relative;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
 
 .account-card::before {
@@ -565,33 +566,54 @@ function showTelegramForm() {
     position: absolute;
     top: 0;
     left: 0;
-    width: 4px;
+    width: 5px;
     height: 100%;
-    background: #95a5a6;
-    transition: all 0.3s ease;
+    background: linear-gradient(180deg, #95a5a6 0%, #7f8c8d 100%);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 2px 0 8px rgba(0,0,0,0.1);
 }
 
 .account-card.account-connected::before {
     background: linear-gradient(180deg, #27ae60 0%, #229954 100%);
+    box-shadow: 2px 0 12px rgba(39, 174, 96, 0.3);
 }
 
 .account-card.account-disconnected::before {
-    background: #95a5a6;
-    opacity: 0.6;
+    background: linear-gradient(180deg, #95a5a6 0%, #7f8c8d 100%);
+    opacity: 0.5;
+}
+
+.account-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100px;
+    height: 100px;
+    background: radial-gradient(circle, rgba(52, 152, 219, 0.05) 0%, transparent 70%);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
 .account-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.12);
     border-color: #3498db;
+}
+
+.account-card:hover::after {
+    opacity: 1;
 }
 
 .account-card-body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.25rem;
-    gap: 1rem;
+    padding: 1.5rem;
+    gap: 1.25rem;
+    position: relative;
+    z-index: 1;
 }
 
 .account-main-info {
@@ -608,26 +630,59 @@ function showTelegramForm() {
 }
 
 .account-platform-icon {
-    font-size: 2.5rem;
-    width: 60px;
-    height: 60px;
+    font-size: 2.75rem;
+    width: 70px;
+    height: 70px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-radius: 12px;
-    border: 2px solid #dee2e6;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 16px;
+    border: 2px solid #e1e8ed;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.account-platform-icon::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(52, 152, 219, 0.1) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.account-card:hover .account-platform-icon {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    border-color: #3498db;
+}
+
+.account-card:hover .account-platform-icon::before {
+    opacity: 1;
 }
 
 .account-status-indicator {
     position: absolute;
-    bottom: -2px;
-    right: -2px;
-    width: 18px;
-    height: 18px;
+    bottom: -3px;
+    right: -3px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     border: 3px solid white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+    transition: all 0.3s ease;
+    z-index: 2;
+}
+
+.account-card:hover .account-status-indicator {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
 .account-status-indicator.connected {
@@ -653,18 +708,20 @@ function showTelegramForm() {
 
 .account-title {
     margin: 0;
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: #2c3e50;
-    line-height: 1.4;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    line-height: 1.3;
     word-break: break-word;
+    letter-spacing: -0.01em;
 }
 
 .account-subtitle {
-    margin: 0 0 0.5rem 0;
+    margin: 0.25rem 0 0.75rem 0;
     font-size: 0.875rem;
-    color: #6c757d;
-    line-height: 1.4;
+    color: #64748b;
+    line-height: 1.5;
+    font-weight: 400;
 }
 
 .account-meta {
@@ -678,11 +735,18 @@ function showTelegramForm() {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.375rem 0.75rem;
-    border-radius: 20px;
+    padding: 0.5rem 0.875rem;
+    border-radius: 24px;
     font-size: 0.8125rem;
-    font-weight: 500;
+    font-weight: 600;
     white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    transition: all 0.2s ease;
+}
+
+.account-card:hover .account-status-badge {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.12);
 }
 
 .account-status-badge.status-connected {
@@ -723,14 +787,21 @@ function showTelegramForm() {
 }
 
 .badge-default {
-    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-    color: #856404;
-    border: 1px solid #ffeaa7;
-    padding: 0.25rem 0.625rem;
-    border-radius: 12px;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #92400e;
+    border: 1px solid #fde68a;
+    padding: 0.375rem 0.75rem;
+    border-radius: 16px;
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 700;
     white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(146, 64, 14, 0.15);
+    transition: all 0.2s ease;
+}
+
+.account-card:hover .badge-default {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(146, 64, 14, 0.2);
 }
 
 .account-actions-compact {
@@ -742,27 +813,48 @@ function showTelegramForm() {
 }
 
 .btn-action-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
     border: none;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.125rem;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    font-size: 1.25rem;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.12);
     flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-action-icon::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.3s ease, height 0.3s ease;
+}
+
+.btn-action-icon:hover::before {
+    width: 100px;
+    height: 100px;
 }
 
 .btn-action-icon:hover {
-    transform: translateY(-2px) scale(1.05);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    transform: translateY(-3px) scale(1.08);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
 }
 
 .btn-action-icon:active {
-    transform: translateY(0) scale(0.98);
+    transform: translateY(-1px) scale(1.02);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 
 .btn-action-success {
