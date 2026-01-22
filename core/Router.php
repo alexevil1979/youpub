@@ -64,6 +64,7 @@ class Router
         $path = $this->normalizePath(parse_url($uri, PHP_URL_PATH));
 
         foreach ($this->routes as $route) {
+            $params = [];
             if ($route['method'] === $method && $this->matchPath($route['path'], $path, $params)) {
                 // Выполнить middleware
                 foreach ($route['middlewares'] as $middleware) {
