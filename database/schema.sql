@@ -41,6 +41,8 @@ CREATE TABLE `youtube_integrations` (
   `user_id` int(11) NOT NULL,
   `channel_id` varchar(255) DEFAULT NULL,
   `channel_name` varchar(255) DEFAULT NULL,
+  `account_name` varchar(255) DEFAULT NULL COMMENT 'Название аккаунта для идентификации',
+  `is_default` tinyint(1) DEFAULT 0 COMMENT 'Аккаунт по умолчанию',
   `access_token` text,
   `refresh_token` text,
   `token_expires_at` datetime DEFAULT NULL,
