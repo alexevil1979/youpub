@@ -126,6 +126,7 @@ class SearchController extends Controller
         // Ограничиваем количество результатов
         $results = array_slice($results, 0, 20);
 
-        $this->success(['results' => $results, 'query' => $query]);
+        // Возвращаем результаты в правильном формате
+        $this->success(['results' => $results, 'query' => $query, 'count' => count($results)]);
     }
 }

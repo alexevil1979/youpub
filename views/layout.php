@@ -29,9 +29,8 @@
                     <input type="text" 
                            id="global-search-input" 
                            class="search-input" 
-                           placeholder="Поиск по всем разделам..." 
+                           placeholder="🔍 Поиск по всем разделам..." 
                            autocomplete="off">
-                    <span class="search-icon">🔍</span>
                     <div id="search-results" class="search-results"></div>
                 </div>
             </div>

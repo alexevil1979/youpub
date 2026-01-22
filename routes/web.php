@@ -8,6 +8,7 @@ use App\Controllers\ScheduleController;
 use App\Modules\ContentGroups\Controllers\GroupController;
 use App\Modules\ContentGroups\Controllers\TemplateController;
 use App\Modules\ContentGroups\Controllers\SmartScheduleController;
+use App\Controllers\SearchController;
 use App\Middlewares\AuthMiddleware;
 
 /** @var Router $router */

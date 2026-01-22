@@ -63,11 +63,27 @@
      * Выполнить поиск
      */
     function performSearch(query) {
-        fetch('/search?q=' + encodeURIComponent(query))
-            .then(response => response.json())
+        fetch('/api/search?q=' + encodeURIComponent(query), {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            },
+            credentials: 'same-origin'
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success && data.data && data.data.results) {
                     currentResults = data.data.results;
+                    renderResults(currentResults);
+                } else if (data.success && Array.isArray(data.data)) {
+                    // Альтернативный формат ответа
+                    currentResults = data.data;
                     renderResults(currentResults);
                 } else {
                     currentResults = [];
