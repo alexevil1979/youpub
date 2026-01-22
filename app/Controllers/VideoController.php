@@ -108,6 +108,11 @@ class VideoController extends Controller
         $result = $this->videoService->publishNow($id, $userId);
 
         if ($result['success']) {
+            // Получаем обновленный список публикаций
+            $publicationRepo = new \App\Repositories\PublicationRepository();
+            $publications = $publicationRepo->findSuccessfulByVideoId($id);
+            
+            $result['data']['publications'] = $publications;
             $this->success($result['data'] ?? [], $result['message']);
         } else {
             $this->error($result['message'], 400);

@@ -78,6 +78,25 @@ class VideoApiController extends Controller
     }
 
     /**
+     * Получить публикации видео
+     */
+    public function publications(int $id): void
+    {
+        $userId = $_SESSION['user_id'];
+        $video = $this->videoService->getVideo($id, $userId);
+
+        if (!$video) {
+            $this->error('Video not found', 404);
+            return;
+        }
+
+        $publicationRepo = new \App\Repositories\PublicationRepository();
+        $publications = $publicationRepo->findSuccessfulByVideoId($id);
+
+        $this->success($publications);
+    }
+
+    /**
      * Удалить видео
      */
     public function delete(int $id): void

@@ -17,6 +17,7 @@ $router->post('/api/auth/register', [AuthApiController::class, 'register']);
 $router->get('/api/videos', [VideoApiController::class, 'list'], [ApiAuthMiddleware::class]);
 $router->post('/api/videos/upload', [VideoApiController::class, 'upload'], [ApiAuthMiddleware::class]);
 $router->get('/api/videos/{id}', [VideoApiController::class, 'show'], [ApiAuthMiddleware::class]);
+$router->get('/api/videos/{id}/publications', [VideoApiController::class, 'publications'], [ApiAuthMiddleware::class]);
 $router->delete('/api/videos/{id}', [VideoApiController::class, 'delete'], [ApiAuthMiddleware::class]);
 
 $router->get('/api/schedules', [ScheduleApiController::class, 'list'], [ApiAuthMiddleware::class]);

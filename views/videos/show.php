@@ -62,48 +62,16 @@ ob_start();
             <p><strong>Загружено:</strong> <?= date('d.m.Y H:i', strtotime($video['created_at'])) ?></p>
         </div>
 
-        <?php if (!empty($publications)): ?>
-        <div class="video-publications">
+        <div class="video-publications" id="video-publications" style="<?= empty($publications) ? 'display: none;' : '' ?>">
             <h3>Опубликовано на платформах:</h3>
-            <div class="publications-list">
-                <?php foreach ($publications as $publication): ?>
-                    <div class="publication-item">
-                        <div class="publication-platform">
-                            <strong><?= ucfirst($publication['platform']) ?></strong>
-                            <?php if ($publication['published_at']): ?>
-                                <span class="publication-date"><?= date('d.m.Y H:i', strtotime($publication['published_at'])) ?></span>
-                            <?php endif; ?>
-                        </div>
-                        <?php if ($publication['platform_url']): ?>
-                            <a href="<?= htmlspecialchars($publication['platform_url']) ?>" target="_blank" class="btn btn-primary btn-sm">
-                                Открыть на <?= ucfirst($publication['platform']) ?>
-                            </a>
-                        <?php elseif ($publication['platform_id']): ?>
-                            <?php
-                            // Формируем URL в зависимости от платформы
-                            $url = '';
-                            switch ($publication['platform']) {
-                                case 'youtube':
-                                    $url = 'https://youtube.com/watch?v=' . $publication['platform_id'];
-                                    break;
-                                case 'telegram':
-                                    $url = 'https://t.me/' . $publication['platform_id'];
-                                    break;
-                                default:
-                                    $url = '#';
-                            }
-                            ?>
-                            <?php if ($url !== '#'): ?>
-                                <a href="<?= htmlspecialchars($url) ?>" target="_blank" class="btn btn-primary btn-sm">
-                                    Открыть на <?= ucfirst($publication['platform']) ?>
-                                </a>
-                            <?php endif; ?>
-                        <?php endif; ?>
-                    </div>
-                <?php endforeach; ?>
+            <div class="publications-list" id="publications-list">
+                <?php if (!empty($publications)): ?>
+                    <?php foreach ($publications as $publication): ?>
+                        <?php include __DIR__ . '/_publication_item.php'; ?>
+                    <?php endforeach; ?>
+                <?php endif; ?>
             </div>
         </div>
-        <?php endif; ?>
 
         <div class="video-actions">
             <a href="/videos" class="btn btn-secondary">Назад к списку</a>
@@ -161,8 +129,13 @@ function publishNow(id) {
         btn.textContent = originalText;
         
         if (data.success) {
-            alert('Видео успешно опубликовано!');
-            window.location.reload();
+            // Добавляем новые публикации без перезагрузки страницы
+            if (data.data && data.data.publications) {
+                addPublications(data.data.publications);
+            }
+            
+            // Показываем уведомление
+            showNotification('Видео успешно опубликовано!', 'success');
         } else {
             alert('Ошибка: ' + (data.message || 'Не удалось опубликовать видео'));
         }
@@ -173,6 +146,123 @@ function publishNow(id) {
         btn.textContent = originalText;
         alert('Произошла ошибка при публикации видео');
     });
+}
+
+function addPublications(publications) {
+    const publicationsList = document.getElementById('publications-list');
+    const publicationsContainer = document.getElementById('video-publications');
+    
+    if (!publicationsList || !publicationsContainer) {
+        return;
+    }
+    
+    // Получаем существующие платформы
+    const existingPlatforms = new Set();
+    publicationsList.querySelectorAll('.publication-item').forEach(item => {
+        existingPlatforms.add(item.getAttribute('data-platform'));
+    });
+    
+    // Добавляем новые публикации
+    publications.forEach(publication => {
+        // Пропускаем, если уже есть публикация для этой платформы
+        if (existingPlatforms.has(publication.platform)) {
+            return;
+        }
+        
+        // Формируем URL
+        let url = publication.platform_url || '';
+        if (!url && publication.platform_id) {
+            switch (publication.platform) {
+                case 'youtube':
+                    url = 'https://youtube.com/watch?v=' + publication.platform_id;
+                    break;
+                case 'telegram':
+                    url = 'https://t.me/' + publication.platform_id;
+                    break;
+            }
+        }
+        
+        // Форматируем дату
+        let dateStr = '';
+        if (publication.published_at) {
+            const date = new Date(publication.published_at);
+            dateStr = date.toLocaleDateString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+        
+        // Создаем элемент
+        const item = document.createElement('div');
+        item.className = 'publication-item';
+        item.setAttribute('data-platform', publication.platform);
+        
+        let html = '<div class="publication-platform">';
+        html += '<strong>' + capitalizeFirst(publication.platform) + '</strong>';
+        if (dateStr) {
+            html += '<span class="publication-date">' + dateStr + '</span>';
+        }
+        html += '</div>';
+        
+        if (url) {
+            html += '<a href="' + escapeHtml(url) + '" target="_blank" class="btn btn-primary btn-sm">';
+            html += 'Открыть на ' + capitalizeFirst(publication.platform);
+            html += '</a>';
+        }
+        
+        item.innerHTML = html;
+        
+        // Добавляем с анимацией
+        item.style.opacity = '0';
+        publicationsList.appendChild(item);
+        
+        // Показываем контейнер
+        publicationsContainer.style.display = 'block';
+        
+        // Анимация появления
+        setTimeout(() => {
+            item.style.transition = 'opacity 0.3s';
+            item.style.opacity = '1';
+        }, 10);
+        
+        existingPlatforms.add(publication.platform);
+    });
+}
+
+function capitalizeFirst(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showNotification(message, type) {
+    // Создаем элемент уведомления
+    const notification = document.createElement('div');
+    notification.className = 'alert alert-' + (type === 'success' ? 'success' : 'error');
+    notification.textContent = message;
+    notification.style.position = 'fixed';
+    notification.style.top = '20px';
+    notification.style.right = '20px';
+    notification.style.zIndex = '10000';
+    notification.style.minWidth = '300px';
+    
+    document.body.appendChild(notification);
+    
+    // Удаляем через 3 секунды
+    setTimeout(() => {
+        notification.style.transition = 'opacity 0.3s';
+        notification.style.opacity = '0';
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 300);
+    }, 3000);
 }
 </script>
 
