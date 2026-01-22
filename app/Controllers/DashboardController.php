@@ -272,6 +272,31 @@ class DashboardController extends Controller
     }
 
     /**
+     * Отключение YouTube
+     */
+    public function youtubeDisconnect(): void
+    {
+        $userId = $_SESSION['user_id'];
+        $integrationRepo = new YoutubeIntegrationRepository();
+        $existing = $integrationRepo->findByUserId($userId);
+
+        if ($existing) {
+            $integrationRepo->update($existing['id'], [
+                'status' => 'disconnected',
+                'access_token' => null,
+                'refresh_token' => null,
+                'token_expires_at' => null,
+            ]);
+            $_SESSION['success'] = 'YouTube успешно отключен.';
+        } else {
+            $_SESSION['error'] = 'YouTube интеграция не найдена.';
+        }
+
+        header('Location: /integrations');
+        exit;
+    }
+
+    /**
      * Подключение Telegram
      */
     public function telegramConnect(): void
