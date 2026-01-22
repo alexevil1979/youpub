@@ -88,17 +88,111 @@ class SmartScheduleController extends Controller
             exit;
         }
 
-        // Для fixed типа нужен publish_at
-        if ($data['schedule_type'] === 'fixed' && empty($data['publish_at'])) {
-            $_SESSION['error'] = 'Укажите дату и время публикации';
-            header('Location: /content-groups/schedules/create');
-            exit;
+        // Обработка нескольких точек времени для fixed типа
+        $dailyTimePoints = null;
+        $dailyPointsStartDate = null;
+        $dailyPointsEndDate = null;
+        
+        if ($data['schedule_type'] === 'fixed') {
+            $fixedTimeMode = $this->getParam('fixed_time_mode', 'single');
+            
+            if ($fixedTimeMode === 'multiple') {
+                // Режим нескольких точек времени
+                $timePointsArray = $_POST['daily_time_points'] ?? [];
+                $timePoints = array_filter($timePointsArray, function($time) {
+                    return !empty(trim($time));
+                });
+                
+                if (empty($timePoints)) {
+                    $_SESSION['error'] = 'Укажите хотя бы одну точку времени';
+                    header('Location: /content-groups/schedules/create');
+                    exit;
+                }
+                
+                // Валидация формата времени
+                foreach ($timePoints as $time) {
+                    if (!preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $time)) {
+                        $_SESSION['error'] = 'Неверный формат времени. Используйте HH:MM';
+                        header('Location: /content-groups/schedules/create');
+                        exit;
+                    }
+                }
+                
+                $dailyTimePoints = json_encode(array_values($timePoints));
+                $dailyPointsStartDate = $this->getParam('fixed_start_date');
+                $dailyPointsEndDate = $this->getParam('fixed_end_date');
+                
+                if (empty($dailyPointsStartDate)) {
+                    $_SESSION['error'] = 'Укажите начальную дату';
+                    header('Location: /content-groups/schedules/create');
+                    exit;
+                }
+            } else {
+                // Обычный режим одной точки времени
+                if (empty($data['publish_at'])) {
+                    $_SESSION['error'] = 'Укажите дату и время публикации';
+                    header('Location: /content-groups/schedules/create');
+                    exit;
+                }
+            }
         }
 
         $scheduleRepo = new \App\Repositories\ScheduleRepository();
-        $scheduleId = $scheduleRepo->create($data);
-
-        $_SESSION['success'] = 'Умное расписание создано успешно';
+        
+        // Если указаны несколько точек времени, создаем несколько расписаний
+        if ($dailyTimePoints && $dailyPointsStartDate) {
+            $timePointsArray = json_decode($dailyTimePoints, true);
+            $startDate = strtotime($dailyPointsStartDate);
+            $endDate = $dailyPointsEndDate ? strtotime($dailyPointsEndDate . ' 23:59:59') : null;
+            
+            if ($startDate === false) {
+                $_SESSION['error'] = 'Неверный формат начальной даты';
+                header('Location: /content-groups/schedules/create');
+                exit;
+            }
+            
+            $createdSchedules = [];
+            $currentDate = $startDate;
+            
+            // Учитываем дни недели, если указаны
+            $weekdaysArray = $weekdays ? explode(',', $weekdays) : null;
+            
+            // Создаем расписания для каждого дня в диапазоне
+            while ($endDate === null || $currentDate <= $endDate) {
+                $dayOfWeek = (int)date('N', $currentDate); // 1-7 (пн-вс)
+                
+                // Проверяем, нужно ли создавать расписание для этого дня недели
+                if ($weekdaysArray && !in_array($dayOfWeek, $weekdaysArray)) {
+                    $currentDate = strtotime('+1 day', $currentDate);
+                    continue;
+                }
+                
+                $dateStr = date('Y-m-d', $currentDate);
+                
+                // Создаем расписание для каждой точки времени
+                foreach ($timePointsArray as $timePoint) {
+                    $publishDateTime = $dateStr . ' ' . $timePoint . ':00';
+                    
+                    $scheduleData = array_merge($data, [
+                        'publish_at' => $publishDateTime,
+                        'daily_time_points' => $dailyTimePoints,
+                    ]);
+                    
+                    $scheduleId = $scheduleRepo->create($scheduleData);
+                    $createdSchedules[] = $scheduleId;
+                }
+                
+                // Переходим к следующему дню
+                $currentDate = strtotime('+1 day', $currentDate);
+            }
+            
+            $_SESSION['success'] = 'Создано ' . count($createdSchedules) . ' расписаний';
+        } else {
+            // Обычное создание одного расписания
+            $scheduleId = $scheduleRepo->create($data);
+            $_SESSION['success'] = 'Умное расписание создано успешно';
+        }
+        
         header('Location: /schedules');
         exit;
     }

@@ -44,12 +44,46 @@ class ScheduleService extends Service
             $errors['platform'] = 'Invalid platform';
         }
 
-        if (empty($data['publish_at'])) {
-            $errors['publish_at'] = 'Publish date is required';
+        // Проверка для нескольких точек времени
+        $dailyTimePoints = null;
+        $dailyPointsStartDate = null;
+        $dailyPointsEndDate = null;
+        
+        if (!empty($data['daily_time_points']) && is_array($data['daily_time_points'])) {
+            // Фильтруем пустые значения
+            $timePoints = array_filter($data['daily_time_points'], function($time) {
+                return !empty(trim($time));
+            });
+            
+            if (empty($timePoints)) {
+                $errors['daily_time_points'] = 'At least one time point is required';
+            } else {
+                // Валидация формата времени
+                foreach ($timePoints as $time) {
+                    if (!preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $time)) {
+                        $errors['daily_time_points'] = 'Invalid time format. Use HH:MM';
+                        break;
+                    }
+                }
+                if (empty($errors['daily_time_points'])) {
+                    $dailyTimePoints = json_encode(array_values($timePoints));
+                    $dailyPointsStartDate = $data['daily_points_start_date'] ?? null;
+                    $dailyPointsEndDate = $data['daily_points_end_date'] ?? null;
+                    
+                    if (empty($dailyPointsStartDate)) {
+                        $errors['daily_points_start_date'] = 'Start date is required for multiple time points';
+                    }
+                }
+            }
         } else {
-            $publishAt = strtotime($data['publish_at']);
-            if ($publishAt === false || $publishAt < time()) {
-                $errors['publish_at'] = 'Invalid publish date';
+            // Обычная проверка одной даты
+            if (empty($data['publish_at'])) {
+                $errors['publish_at'] = 'Publish date is required';
+            } else {
+                $publishAt = strtotime($data['publish_at']);
+                if ($publishAt === false || $publishAt < time()) {
+                    $errors['publish_at'] = 'Invalid publish date';
+                }
             }
         }
 
@@ -57,23 +91,70 @@ class ScheduleService extends Service
             return ['success' => false, 'message' => 'Validation failed', 'errors' => $errors];
         }
 
-        // Создание расписания
-        $scheduleId = $this->scheduleRepo->create([
-            'user_id' => $userId,
-            'video_id' => $data['video_id'],
-            'platform' => $data['platform'],
-            'publish_at' => date('Y-m-d H:i:s', strtotime($data['publish_at'])),
-            'timezone' => $data['timezone'] ?? 'UTC',
-            'repeat_type' => $data['repeat_type'] ?? 'once',
-            'repeat_until' => !empty($data['repeat_until']) ? date('Y-m-d H:i:s', strtotime($data['repeat_until'])) : null,
-            'status' => 'pending',
-        ]);
+        // Если указаны несколько точек времени, создаем несколько расписаний
+        if ($dailyTimePoints && $dailyPointsStartDate) {
+            $timePointsArray = json_decode($dailyTimePoints, true);
+            $startDate = strtotime($dailyPointsStartDate);
+            $endDate = $dailyPointsEndDate ? strtotime($dailyPointsEndDate . ' 23:59:59') : null;
+            
+            if ($startDate === false) {
+                return ['success' => false, 'message' => 'Invalid start date', 'errors' => ['daily_points_start_date' => 'Invalid date format']];
+            }
+            
+            $createdSchedules = [];
+            $currentDate = $startDate;
+            
+            // Создаем расписания для каждого дня в диапазоне
+            while ($endDate === null || $currentDate <= $endDate) {
+                $dateStr = date('Y-m-d', $currentDate);
+                
+                // Создаем расписание для каждой точки времени
+                foreach ($timePointsArray as $timePoint) {
+                    $publishDateTime = $dateStr . ' ' . $timePoint . ':00';
+                    
+                    $scheduleId = $this->scheduleRepo->create([
+                        'user_id' => $userId,
+                        'video_id' => $data['video_id'],
+                        'platform' => $data['platform'],
+                        'publish_at' => $publishDateTime,
+                        'timezone' => $data['timezone'] ?? 'UTC',
+                        'repeat_type' => 'once',
+                        'repeat_until' => null,
+                        'status' => 'pending',
+                        'daily_time_points' => $dailyTimePoints,
+                    ]);
+                    
+                    $createdSchedules[] = $scheduleId;
+                }
+                
+                // Переходим к следующему дню
+                $currentDate = strtotime('+1 day', $currentDate);
+            }
+            
+            return [
+                'success' => true,
+                'message' => 'Schedules created successfully (' . count($createdSchedules) . ' schedules)',
+                'data' => ['ids' => $createdSchedules, 'count' => count($createdSchedules)]
+            ];
+        } else {
+            // Обычное создание одного расписания
+            $scheduleId = $this->scheduleRepo->create([
+                'user_id' => $userId,
+                'video_id' => $data['video_id'],
+                'platform' => $data['platform'],
+                'publish_at' => date('Y-m-d H:i:s', strtotime($data['publish_at'])),
+                'timezone' => $data['timezone'] ?? 'UTC',
+                'repeat_type' => $data['repeat_type'] ?? 'once',
+                'repeat_until' => !empty($data['repeat_until']) ? date('Y-m-d H:i:s', strtotime($data['repeat_until'])) : null,
+                'status' => 'pending',
+            ]);
 
-        return [
-            'success' => true,
-            'message' => 'Schedule created successfully',
-            'data' => ['id' => $scheduleId]
-        ];
+            return [
+                'success' => true,
+                'message' => 'Schedule created successfully',
+                'data' => ['id' => $scheduleId]
+            ];
+        }
     }
 
     /**

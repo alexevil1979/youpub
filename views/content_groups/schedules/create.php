@@ -52,8 +52,36 @@ ob_start();
     </div>
 
     <div class="form-group" id="fixed_options">
-        <label for="publish_at">Дата и время первой публикации *</label>
-        <input type="datetime-local" id="publish_at" name="publish_at" required>
+        <label>Режим времени</label>
+        <select id="fixed_time_mode" name="fixed_time_mode" onchange="toggleFixedTimeMode()">
+            <option value="single">Одна точка времени</option>
+            <option value="multiple">Несколько точек в день</option>
+        </select>
+        
+        <div id="single_time_fixed" style="margin-top: 1rem;">
+            <label for="publish_at">Дата и время первой публикации *</label>
+            <input type="datetime-local" id="publish_at" name="publish_at" required>
+        </div>
+        
+        <div id="multiple_times_fixed" style="display: none; margin-top: 1rem;">
+            <label>Точки времени в день *</label>
+            <div id="fixed-time-points-container">
+                <div class="time-point-item">
+                    <input type="time" class="time-point-input" name="daily_time_points[]" placeholder="HH:MM" required>
+                    <button type="button" class="btn-remove-time" onclick="removeFixedTimePoint(this)" title="Удалить">🗑</button>
+                </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="addFixedTimePoint()" style="margin-top: 0.5rem;">➕ Добавить время</button>
+            <div class="form-group" style="margin-top: 1rem;">
+                <label for="fixed_start_date">Начальная дата *</label>
+                <input type="date" id="fixed_start_date" name="fixed_start_date">
+            </div>
+            <div class="form-group">
+                <label for="fixed_end_date">Конечная дата (опционально)</label>
+                <input type="date" id="fixed_end_date" name="fixed_end_date">
+            </div>
+            <small>Укажите несколько временных точек для публикации в течение дня. Расписание будет создано для каждой точки на каждый день в указанном диапазоне.</small>
+        </div>
     </div>
 
     <div class="form-group" id="interval_options" style="display: none;">
@@ -150,9 +178,47 @@ function toggleScheduleOptions() {
     }
 }
 
+function toggleFixedTimeMode() {
+    const mode = document.getElementById('fixed_time_mode').value;
+    const singleTime = document.getElementById('single_time_fixed');
+    const multipleTimes = document.getElementById('multiple_times_fixed');
+    const publishAtInput = document.getElementById('publish_at');
+    
+    if (mode === 'multiple') {
+        singleTime.style.display = 'none';
+        multipleTimes.style.display = 'block';
+        publishAtInput.removeAttribute('required');
+    } else {
+        singleTime.style.display = 'block';
+        multipleTimes.style.display = 'none';
+        publishAtInput.setAttribute('required', 'required');
+    }
+}
+
+function addFixedTimePoint() {
+    const container = document.getElementById('fixed-time-points-container');
+    const newItem = document.createElement('div');
+    newItem.className = 'time-point-item';
+    newItem.innerHTML = `
+        <input type="time" class="time-point-input" name="daily_time_points[]" placeholder="HH:MM" required>
+        <button type="button" class="btn-remove-time" onclick="removeFixedTimePoint(this)" title="Удалить">🗑</button>
+    `;
+    container.appendChild(newItem);
+}
+
+function removeFixedTimePoint(btn) {
+    const container = document.getElementById('fixed-time-points-container');
+    if (container.children.length > 1) {
+        btn.parentElement.remove();
+    } else {
+        alert('Должна быть хотя бы одна точка времени');
+    }
+}
+
 // Инициализация при загрузке
 document.addEventListener('DOMContentLoaded', function() {
     toggleScheduleOptions();
+    toggleFixedTimeMode();
 });
 </script>
 
