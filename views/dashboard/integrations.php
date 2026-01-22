@@ -25,7 +25,7 @@ ob_start();
                 <?php foreach ($youtubeAccounts as $account): ?>
                     <div class="account-card <?= $account['status'] === 'connected' ? 'account-connected' : 'account-disconnected' ?>">
                         <div class="account-card-body">
-                            <div class="account-main-info">
+                            <div class="account-left-section">
                                 <div class="account-icon-wrapper">
                                     <div class="account-platform-icon">📺</div>
                                     <?php if ($account['status'] === 'connected'): ?>
@@ -35,24 +35,24 @@ ob_start();
                                     <?php endif; ?>
                                 </div>
                                 <div class="account-info-content">
-                                    <div class="account-title-row">
+                                    <div class="account-header-row">
                                         <h3 class="account-title"><?= htmlspecialchars($account['account_name'] ?? $account['channel_name'] ?? 'YouTube канал') ?></h3>
-                                        <?php if ($account['is_default']): ?>
-                                            <span class="badge badge-default">⭐ По умолчанию</span>
-                                        <?php endif; ?>
+                                        <div class="account-badges-row">
+                                            <?php if ($account['is_default']): ?>
+                                                <span class="badge badge-default">⭐ По умолчанию</span>
+                                            <?php endif; ?>
+                                            <span class="account-status-badge status-<?= $account['status'] === 'connected' ? 'connected' : ($account['status'] === 'error' ? 'error' : 'disconnected') ?>">
+                                                <?php if ($account['status'] === 'connected'): ?>
+                                                    <span class="status-dot"></span> Подключено
+                                                <?php else: ?>
+                                                    <span class="status-dot"></span> <?= ucfirst($account['status']) ?>
+                                                <?php endif; ?>
+                                            </span>
+                                        </div>
                                     </div>
                                     <?php if ($account['channel_name'] && $account['channel_name'] !== ($account['account_name'] ?? '')): ?>
                                         <p class="account-subtitle"><?= htmlspecialchars($account['channel_name']) ?></p>
                                     <?php endif; ?>
-                                    <div class="account-meta">
-                                        <span class="account-status-badge status-<?= $account['status'] === 'connected' ? 'connected' : ($account['status'] === 'error' ? 'error' : 'disconnected') ?>">
-                                            <?php if ($account['status'] === 'connected'): ?>
-                                                <span class="status-dot"></span> Подключено
-                                            <?php else: ?>
-                                                <span class="status-dot"></span> <?= ucfirst($account['status']) ?>
-                                            <?php endif; ?>
-                                        </span>
-                                    </div>
                                 </div>
                             </div>
                             <div class="account-actions-compact">
@@ -89,7 +89,7 @@ ob_start();
                 <?php foreach ($telegramAccounts as $account): ?>
                     <div class="account-card <?= $account['status'] === 'connected' ? 'account-connected' : 'account-disconnected' ?>">
                         <div class="account-card-body">
-                            <div class="account-main-info">
+                            <div class="account-left-section">
                                 <div class="account-icon-wrapper">
                                     <div class="account-platform-icon">💬</div>
                                     <?php if ($account['status'] === 'connected'): ?>
@@ -99,24 +99,24 @@ ob_start();
                                     <?php endif; ?>
                                 </div>
                                 <div class="account-info-content">
-                                    <div class="account-title-row">
+                                    <div class="account-header-row">
                                         <h3 class="account-title"><?= htmlspecialchars($account['account_name'] ?? $account['channel_username'] ?? 'Telegram канал') ?></h3>
-                                        <?php if ($account['is_default']): ?>
-                                            <span class="badge badge-default">⭐ По умолчанию</span>
-                                        <?php endif; ?>
+                                        <div class="account-badges-row">
+                                            <?php if ($account['is_default']): ?>
+                                                <span class="badge badge-default">⭐ По умолчанию</span>
+                                            <?php endif; ?>
+                                            <span class="account-status-badge status-<?= $account['status'] === 'connected' ? 'connected' : ($account['status'] === 'error' ? 'error' : 'disconnected') ?>">
+                                                <?php if ($account['status'] === 'connected'): ?>
+                                                    <span class="status-dot"></span> Подключено
+                                                <?php else: ?>
+                                                    <span class="status-dot"></span> <?= ucfirst($account['status']) ?>
+                                                <?php endif; ?>
+                                            </span>
+                                        </div>
                                     </div>
                                     <?php if ($account['channel_username']): ?>
                                         <p class="account-subtitle">@<?= htmlspecialchars($account['channel_username']) ?></p>
                                     <?php endif; ?>
-                                    <div class="account-meta">
-                                        <span class="account-status-badge status-<?= $account['status'] === 'connected' ? 'connected' : ($account['status'] === 'error' ? 'error' : 'disconnected') ?>">
-                                            <?php if ($account['status'] === 'connected'): ?>
-                                                <span class="status-dot"></span> Подключено
-                                            <?php else: ?>
-                                                <span class="status-dot"></span> <?= ucfirst($account['status']) ?>
-                                            <?php endif; ?>
-                                        </span>
-                                    </div>
                                 </div>
                             </div>
                             <div class="account-actions-compact">
@@ -150,7 +150,7 @@ ob_start();
                 <?php foreach ($tiktokAccounts as $account): ?>
                     <div class="account-card <?= $account['status'] === 'connected' ? 'account-connected' : 'account-disconnected' ?>">
                         <div class="account-card-body">
-                            <div class="account-main-info">
+                            <div class="account-left-section">
                                 <div class="account-icon-wrapper">
                                     <div class="account-platform-icon">🎵</div>
                                     <?php if ($account['status'] === 'connected'): ?>
@@ -160,24 +160,24 @@ ob_start();
                                     <?php endif; ?>
                                 </div>
                                 <div class="account-info-content">
-                                    <div class="account-title-row">
+                                    <div class="account-header-row">
                                         <h3 class="account-title"><?= htmlspecialchars($account['account_name'] ?? $account['username'] ?? 'TikTok аккаунт') ?></h3>
-                                        <?php if ($account['is_default']): ?>
-                                            <span class="badge badge-default">⭐ По умолчанию</span>
-                                        <?php endif; ?>
+                                        <div class="account-badges-row">
+                                            <?php if ($account['is_default']): ?>
+                                                <span class="badge badge-default">⭐ По умолчанию</span>
+                                            <?php endif; ?>
+                                            <span class="account-status-badge status-<?= $account['status'] === 'connected' ? 'connected' : ($account['status'] === 'error' ? 'error' : 'disconnected') ?>">
+                                                <?php if ($account['status'] === 'connected'): ?>
+                                                    <span class="status-dot"></span> Подключено
+                                                <?php else: ?>
+                                                    <span class="status-dot"></span> <?= ucfirst($account['status']) ?>
+                                                <?php endif; ?>
+                                            </span>
+                                        </div>
                                     </div>
                                     <?php if ($account['username']): ?>
                                         <p class="account-subtitle">@<?= htmlspecialchars($account['username']) ?></p>
                                     <?php endif; ?>
-                                    <div class="account-meta">
-                                        <span class="account-status-badge status-<?= $account['status'] === 'connected' ? 'connected' : ($account['status'] === 'error' ? 'error' : 'disconnected') ?>">
-                                            <?php if ($account['status'] === 'connected'): ?>
-                                                <span class="status-dot"></span> Подключено
-                                            <?php else: ?>
-                                                <span class="status-dot"></span> <?= ucfirst($account['status']) ?>
-                                            <?php endif; ?>
-                                        </span>
-                                    </div>
                                 </div>
                             </div>
                             <div class="account-actions-compact">
@@ -211,7 +211,7 @@ ob_start();
                 <?php foreach ($instagramAccounts as $account): ?>
                     <div class="account-card <?= $account['status'] === 'connected' ? 'account-connected' : 'account-disconnected' ?>">
                         <div class="account-card-body">
-                            <div class="account-main-info">
+                            <div class="account-left-section">
                                 <div class="account-icon-wrapper">
                                     <div class="account-platform-icon">📷</div>
                                     <?php if ($account['status'] === 'connected'): ?>
@@ -221,24 +221,24 @@ ob_start();
                                     <?php endif; ?>
                                 </div>
                                 <div class="account-info-content">
-                                    <div class="account-title-row">
+                                    <div class="account-header-row">
                                         <h3 class="account-title"><?= htmlspecialchars($account['account_name'] ?? $account['username'] ?? 'Instagram аккаунт') ?></h3>
-                                        <?php if ($account['is_default']): ?>
-                                            <span class="badge badge-default">⭐ По умолчанию</span>
-                                        <?php endif; ?>
+                                        <div class="account-badges-row">
+                                            <?php if ($account['is_default']): ?>
+                                                <span class="badge badge-default">⭐ По умолчанию</span>
+                                            <?php endif; ?>
+                                            <span class="account-status-badge status-<?= $account['status'] === 'connected' ? 'connected' : ($account['status'] === 'error' ? 'error' : 'disconnected') ?>">
+                                                <?php if ($account['status'] === 'connected'): ?>
+                                                    <span class="status-dot"></span> Подключено
+                                                <?php else: ?>
+                                                    <span class="status-dot"></span> <?= ucfirst($account['status']) ?>
+                                                <?php endif; ?>
+                                            </span>
+                                        </div>
                                     </div>
                                     <?php if ($account['username']): ?>
                                         <p class="account-subtitle">@<?= htmlspecialchars($account['username']) ?></p>
                                     <?php endif; ?>
-                                    <div class="account-meta">
-                                        <span class="account-status-badge status-<?= $account['status'] === 'connected' ? 'connected' : ($account['status'] === 'error' ? 'error' : 'disconnected') ?>">
-                                            <?php if ($account['status'] === 'connected'): ?>
-                                                <span class="status-dot"></span> Подключено
-                                            <?php else: ?>
-                                                <span class="status-dot"></span> <?= ucfirst($account['status']) ?>
-                                            <?php endif; ?>
-                                        </span>
-                                    </div>
                                 </div>
                             </div>
                             <div class="account-actions-compact">
@@ -609,17 +609,17 @@ function showTelegramForm() {
 .account-card-body {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     padding: 1.5rem;
-    gap: 1.25rem;
+    gap: 1.5rem;
     position: relative;
     z-index: 1;
 }
 
-.account-main-info {
+.account-left-section {
     display: flex;
     align-items: flex-start;
-    gap: 1rem;
+    gap: 1.25rem;
     flex: 1;
     min-width: 0;
 }
@@ -698,11 +698,17 @@ function showTelegramForm() {
     min-width: 0;
 }
 
-.account-title-row {
+.account-header-row {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 0.75rem;
     margin-bottom: 0.5rem;
+}
+
+.account-badges-row {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
     flex-wrap: wrap;
 }
 
@@ -717,18 +723,11 @@ function showTelegramForm() {
 }
 
 .account-subtitle {
-    margin: 0.25rem 0 0.75rem 0;
+    margin: 0;
     font-size: 0.875rem;
     color: #64748b;
     line-height: 1.5;
     font-weight: 400;
-}
-
-.account-meta {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
 }
 
 .account-status-badge {
@@ -806,10 +805,12 @@ function showTelegramForm() {
 
 .account-actions-compact {
     display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    align-items: center;
+    flex-direction: column;
+    gap: 0.625rem;
+    align-items: stretch;
     flex-shrink: 0;
+    padding-left: 1rem;
+    border-left: 1px solid #e1e8ed;
 }
 
 .btn-action-icon {
@@ -983,16 +984,20 @@ function showTelegramForm() {
 @media (max-width: 768px) {
     .account-card-body {
         flex-direction: column;
-        align-items: flex-start;
+        align-items: stretch;
     }
     
-    .account-main-info {
+    .account-left-section {
         width: 100%;
     }
     
     .account-actions-compact {
         width: 100%;
-        margin-top: 1rem;
+        flex-direction: row;
+        padding-left: 0;
+        padding-top: 1rem;
+        border-left: none;
+        border-top: 1px solid #e1e8ed;
         justify-content: flex-start;
     }
     
@@ -1005,6 +1010,10 @@ function showTelegramForm() {
     .integration-header .btn {
         width: 100%;
         justify-content: center;
+    }
+    
+    .account-header-row {
+        gap: 0.5rem;
     }
 }
 </style>
