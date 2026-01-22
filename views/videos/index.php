@@ -370,13 +370,13 @@ function toggleFolder(header) {
     const content = folder.querySelector('.folder-content');
     const toggle = header.querySelector('.folder-toggle');
     
-    if (content.style.display === 'none') {
+    if (content.style.display === 'none' || !content.style.display) {
         content.style.display = 'block';
         toggle.textContent = '▼';
         folder.classList.add('expanded');
     } else {
         content.style.display = 'none';
-        toggle.innerHTML = '<?= \App\Helpers\IconHelper::render('play', 20) ?>';
+        toggle.textContent = '▶';
         folder.classList.remove('expanded');
     }
 }
