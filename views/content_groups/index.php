@@ -66,40 +66,16 @@ ob_start();
                 </div>
 
                 <div class="group-actions">
-                    <div class="action-group action-group-primary">
-                        <a href="/content-groups/<?= $group['id'] ?>" class="btn-action btn-action-primary" title="Открыть группу">
-                            <span class="btn-icon">👁</span>
-                            <span class="btn-text">Открыть</span>
-                        </a>
-                        <a href="/content-groups/<?= $group['id'] ?>/edit" class="btn-action btn-action-info" title="Редактировать">
-                            <span class="btn-icon">✏️</span>
-                            <span class="btn-text">Изменить</span>
-                        </a>
-                    </div>
-                    
-                    <div class="action-group action-group-secondary">
-                        <button type="button" class="btn-action btn-action-<?= $group['status'] === 'active' ? 'warning' : 'success' ?>" 
-                                onclick="toggleGroupStatus(<?= $group['id'] ?>, '<?= $group['status'] ?>')" 
-                                title="<?= $group['status'] === 'active' ? 'Приостановить публикации' : 'Возобновить публикации' ?>">
-                            <span class="btn-icon"><?= $group['status'] === 'active' ? '⏸' : '▶' ?></span>
-                            <span class="btn-text"><?= $group['status'] === 'active' ? 'Пауза' : 'Включить' ?></span>
-                        </button>
-                        <button type="button" class="btn-action btn-action-secondary" onclick="duplicateGroup(<?= $group['id'] ?>)" title="Создать копию группы">
-                            <span class="btn-icon">📋</span>
-                            <span class="btn-text">Копировать</span>
-                        </button>
-                        <button type="button" class="btn-action btn-action-secondary" onclick="shuffleGroup(<?= $group['id'] ?>)" title="Перемешать порядок видео">
-                            <span class="btn-icon">🔀</span>
-                            <span class="btn-text">Перемешать</span>
-                        </button>
-                    </div>
-                    
-                    <div class="action-group action-group-danger">
-                        <button type="button" class="btn-action btn-action-danger" onclick="deleteGroup(<?= $group['id'] ?>)" title="Удалить группу">
-                            <span class="btn-icon">🗑</span>
-                            <span class="btn-text">Удалить</span>
-                        </button>
-                    </div>
+                    <a href="/content-groups/<?= $group['id'] ?>" class="btn-action-icon btn-action-primary" title="Открыть группу">👁</a>
+                    <a href="/content-groups/<?= $group['id'] ?>/edit" class="btn-action-icon btn-action-info" title="Редактировать">✏️</a>
+                    <button type="button" class="btn-action-icon btn-action-<?= $group['status'] === 'active' ? 'warning' : 'success' ?>" 
+                            onclick="toggleGroupStatus(<?= $group['id'] ?>, '<?= $group['status'] ?>')" 
+                            title="<?= $group['status'] === 'active' ? 'Приостановить' : 'Включить' ?>">
+                        <?= $group['status'] === 'active' ? '⏸' : '▶' ?>
+                    </button>
+                    <button type="button" class="btn-action-icon btn-action-secondary" onclick="duplicateGroup(<?= $group['id'] ?>)" title="Копировать">📋</button>
+                    <button type="button" class="btn-action-icon btn-action-secondary" onclick="shuffleGroup(<?= $group['id'] ?>)" title="Перемешать">🔀</button>
+                    <button type="button" class="btn-action-icon btn-action-danger" onclick="deleteGroup(<?= $group['id'] ?>)" title="Удалить">🗑</button>
                 </div>
             </div>
         <?php endforeach; ?>

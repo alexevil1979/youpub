@@ -860,11 +860,12 @@ footer {
 
 .group-actions {
     display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.5rem;
     margin-top: 1rem;
     padding-top: 1rem;
     border-top: 1px solid #e0e0e0;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
 .action-group {
@@ -884,6 +885,34 @@ footer {
 .action-group-danger {
     justify-content: flex-start;
     margin-top: 0.25rem;
+}
+
+/* Компактные кнопки-иконки для групп */
+.btn-action-icon {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    flex-shrink: 0;
+}
+
+.btn-action-icon:hover {
+    transform: translateY(-2px) scale(1.1);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.btn-action-icon:active {
+    transform: translateY(0) scale(0.95);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .btn-action {
@@ -972,6 +1001,61 @@ footer {
 }
 
 .btn-action-danger:hover {
+    background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
+}
+
+/* Стили для компактных кнопок-иконок */
+.btn-action-icon.btn-action-primary {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    color: white;
+}
+
+.btn-action-icon.btn-action-primary:hover {
+    background: linear-gradient(135deg, #2980b9 0%, #21618c 100%);
+}
+
+.btn-action-icon.btn-action-info {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    color: white;
+}
+
+.btn-action-icon.btn-action-info:hover {
+    background: linear-gradient(135deg, #138496 0%, #117a8b 100%);
+}
+
+.btn-action-icon.btn-action-success {
+    background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+    color: white;
+}
+
+.btn-action-icon.btn-action-success:hover {
+    background: linear-gradient(135deg, #229954 0%, #1e8449 100%);
+}
+
+.btn-action-icon.btn-action-warning {
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+    color: white;
+}
+
+.btn-action-icon.btn-action-warning:hover {
+    background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+}
+
+.btn-action-icon.btn-action-secondary {
+    background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+    color: white;
+}
+
+.btn-action-icon.btn-action-secondary:hover {
+    background: linear-gradient(135deg, #7f8c8d 0%, #6c7a7b 100%);
+}
+
+.btn-action-icon.btn-action-danger {
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    color: white;
+}
+
+.btn-action-icon.btn-action-danger:hover {
     background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
 }
 
