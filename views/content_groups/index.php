@@ -19,49 +19,87 @@ ob_start();
         $templatesMap[$template['id']] = $template;
     }
     ?>
-    <div class="groups-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; margin-top: 2rem;">
+    <div class="groups-grid">
         <?php foreach ($groups as $group): ?>
-            <div class="group-card" style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
-                <h3><?= htmlspecialchars($group['name']) ?></h3>
-                <?php if ($group['description']): ?>
-                    <p style="color: #666; margin: 0.5rem 0;"><?= htmlspecialchars($group['description']) ?></p>
-                <?php endif; ?>
-                
-                <div class="group-info" style="margin: 1rem 0; padding: 0.75rem; background: #f8f9fa; border-radius: 4px;">
-                    <p style="margin: 0.25rem 0;">
-                        <strong>Шаблон:</strong> 
-                        <?php if ($group['template_id'] && isset($templatesMap[$group['template_id']])): ?>
-                            <span style="color: #27ae60;">✓ <?= htmlspecialchars($templatesMap[$group['template_id']]['name']) ?></span>
-                        <?php else: ?>
-                            <span style="color: #95a5a6;">Без шаблона</span>
-                        <?php endif; ?>
-                    </p>
-                    <p style="margin: 0.25rem 0;">
-                        <strong>Статус:</strong> 
-                        <span class="badge badge-<?= $group['status'] === 'active' ? 'success' : ($group['status'] === 'paused' ? 'warning' : 'secondary') ?>">
-                            <?= ucfirst($group['status']) ?>
-                        </span>
-                    </p>
+            <div class="group-card <?= $group['status'] === 'active' ? 'group-card-active' : 'group-card-paused' ?>">
+                <div class="group-card-header">
+                    <h3 class="group-title"><?= htmlspecialchars($group['name']) ?></h3>
+                    <span class="group-status-badge badge-<?= $group['status'] === 'active' ? 'success' : ($group['status'] === 'paused' ? 'warning' : 'secondary') ?>">
+                        <?= $group['status'] === 'active' ? '● Активна' : '⏸ На паузе' ?>
+                    </span>
                 </div>
                 
-                <div class="group-stats" style="margin: 1rem 0; padding: 1rem; background: #f8f9fa; border-radius: 4px;">
+                <?php if ($group['description']): ?>
+                    <p class="group-description"><?= htmlspecialchars($group['description']) ?></p>
+                <?php endif; ?>
+                
+                <div class="group-info-box">
+                    <div class="group-info-item">
+                        <span class="info-label">Шаблон:</span>
+                        <?php if ($group['template_id'] && isset($templatesMap[$group['template_id']])): ?>
+                            <span class="info-value info-value-success">✓ <?= htmlspecialchars($templatesMap[$group['template_id']]['name']) ?></span>
+                        <?php else: ?>
+                            <span class="info-value info-value-muted">Без шаблона</span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                
+                <div class="group-stats-grid">
                     <?php if (isset($group['stats'])): ?>
-                        <p><strong>Всего:</strong> <?= $group['stats']['total_files'] ?? 0 ?></p>
-                        <p><strong>Опубликовано:</strong> <span style="color: #27ae60;"><?= $group['stats']['published_count'] ?? 0 ?></span></p>
-                        <p><strong>В очереди:</strong> <?= $group['stats']['queued_count'] ?? 0 ?></p>
-                        <p><strong>Ошибки:</strong> <span style="color: #e74c3c;"><?= $group['stats']['error_count'] ?? 0 ?></span></p>
+                        <div class="stat-item">
+                            <div class="stat-value"><?= $group['stats']['total_files'] ?? 0 ?></div>
+                            <div class="stat-label">Всего</div>
+                        </div>
+                        <div class="stat-item stat-success">
+                            <div class="stat-value"><?= $group['stats']['published_count'] ?? 0 ?></div>
+                            <div class="stat-label">Опубликовано</div>
+                        </div>
+                        <div class="stat-item stat-warning">
+                            <div class="stat-value"><?= $group['stats']['queued_count'] ?? 0 ?></div>
+                            <div class="stat-label">В очереди</div>
+                        </div>
+                        <div class="stat-item stat-danger">
+                            <div class="stat-value"><?= $group['stats']['error_count'] ?? 0 ?></div>
+                            <div class="stat-label">Ошибки</div>
+                        </div>
                     <?php endif; ?>
                 </div>
 
-                <div class="group-actions" style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
-                    <a href="/content-groups/<?= $group['id'] ?>" class="btn btn-primary btn-sm">Открыть</a>
-                    <a href="/content-groups/<?= $group['id'] ?>/edit" class="btn btn-info btn-sm">Редактировать</a>
-                    <button type="button" class="btn btn-<?= $group['status'] === 'active' ? 'warning' : 'success' ?> btn-sm" onclick="toggleGroupStatus(<?= $group['id'] ?>, '<?= $group['status'] ?>')">
-                        <?= $group['status'] === 'active' ? '⏸ Выключить' : '▶ Включить' ?>
-                    </button>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="duplicateGroup(<?= $group['id'] ?>)">📋 Копировать</button>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="shuffleGroup(<?= $group['id'] ?>)">🔀 Перемешать</button>
-                    <button type="button" class="btn btn-danger btn-sm" onclick="deleteGroup(<?= $group['id'] ?>)">🗑 Удалить</button>
+                <div class="group-actions">
+                    <div class="action-group action-group-primary">
+                        <a href="/content-groups/<?= $group['id'] ?>" class="btn-action btn-action-primary" title="Открыть группу">
+                            <span class="btn-icon">👁</span>
+                            <span class="btn-text">Открыть</span>
+                        </a>
+                        <a href="/content-groups/<?= $group['id'] ?>/edit" class="btn-action btn-action-info" title="Редактировать">
+                            <span class="btn-icon">✏️</span>
+                            <span class="btn-text">Изменить</span>
+                        </a>
+                    </div>
+                    
+                    <div class="action-group action-group-secondary">
+                        <button type="button" class="btn-action btn-action-<?= $group['status'] === 'active' ? 'warning' : 'success' ?>" 
+                                onclick="toggleGroupStatus(<?= $group['id'] ?>, '<?= $group['status'] ?>')" 
+                                title="<?= $group['status'] === 'active' ? 'Приостановить публикации' : 'Возобновить публикации' ?>">
+                            <span class="btn-icon"><?= $group['status'] === 'active' ? '⏸' : '▶' ?></span>
+                            <span class="btn-text"><?= $group['status'] === 'active' ? 'Пауза' : 'Включить' ?></span>
+                        </button>
+                        <button type="button" class="btn-action btn-action-secondary" onclick="duplicateGroup(<?= $group['id'] ?>)" title="Создать копию группы">
+                            <span class="btn-icon">📋</span>
+                            <span class="btn-text">Копировать</span>
+                        </button>
+                        <button type="button" class="btn-action btn-action-secondary" onclick="shuffleGroup(<?= $group['id'] ?>)" title="Перемешать порядок видео">
+                            <span class="btn-icon">🔀</span>
+                            <span class="btn-text">Перемешать</span>
+                        </button>
+                    </div>
+                    
+                    <div class="action-group action-group-danger">
+                        <button type="button" class="btn-action btn-action-danger" onclick="deleteGroup(<?= $group['id'] ?>)" title="Удалить группу">
+                            <span class="btn-icon">🗑</span>
+                            <span class="btn-text">Удалить</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         <?php endforeach; ?>
