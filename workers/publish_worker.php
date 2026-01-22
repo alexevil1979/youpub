@@ -11,6 +11,9 @@ use Core\Database;
 use App\Repositories\ScheduleRepository;
 use App\Services\YoutubeService;
 use App\Services\TelegramService;
+use App\Services\TiktokService;
+use App\Services\InstagramService;
+use App\Services\PinterestService;
 
 // Загрузка конфигурации
 $config = require __DIR__ . '/../config/env.php';
@@ -36,6 +39,9 @@ try {
     $scheduleRepo = new ScheduleRepository();
     $youtubeService = new YoutubeService();
     $telegramService = new TelegramService();
+    $tiktokService = new TiktokService();
+    $instagramService = new InstagramService();
+    $pinterestService = new PinterestService();
 
     // Найти расписания, готовые к публикации
     $schedules = $scheduleRepo->findDueForPublishing();
@@ -53,8 +59,14 @@ try {
                 $result = $youtubeService->publishVideo($schedule['id']);
             } elseif ($schedule['platform'] === 'telegram') {
                 $result = $telegramService->publishVideo($schedule['id']);
+            } elseif ($schedule['platform'] === 'tiktok') {
+                $result = $tiktokService->publishVideo($schedule['id']);
+            } elseif ($schedule['platform'] === 'instagram') {
+                $result = $instagramService->publishReel($schedule['id']);
+            } elseif ($schedule['platform'] === 'pinterest') {
+                $result = $pinterestService->publishPin($schedule['id']);
             } elseif ($schedule['platform'] === 'both') {
-                // Публикация на обе платформы
+                // Публикация на обе платформы (YouTube и Telegram)
                 $youtubeResult = $youtubeService->publishVideo($schedule['id']);
                 $telegramResult = $telegramService->publishVideo($schedule['id']);
                 

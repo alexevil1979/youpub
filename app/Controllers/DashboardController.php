@@ -91,6 +91,66 @@ class DashboardController extends Controller
     }
 
     /**
+     * Подключение TikTok
+     */
+    public function tiktokConnect(): void
+    {
+        // TODO: Реализовать OAuth flow для TikTok
+        header('Location: /integrations');
+        exit;
+    }
+
+    /**
+     * Callback от TikTok
+     */
+    public function tiktokCallback(): void
+    {
+        // TODO: Обработка OAuth callback
+        header('Location: /integrations');
+        exit;
+    }
+
+    /**
+     * Подключение Instagram
+     */
+    public function instagramConnect(): void
+    {
+        // TODO: Реализовать OAuth flow для Instagram
+        header('Location: /integrations');
+        exit;
+    }
+
+    /**
+     * Callback от Instagram
+     */
+    public function instagramCallback(): void
+    {
+        // TODO: Обработка OAuth callback
+        header('Location: /integrations');
+        exit;
+    }
+
+    /**
+     * Подключение Pinterest
+     */
+    public function pinterestConnect(): void
+    {
+        // TODO: Реализовать OAuth flow для Pinterest
+        header('Location: /integrations');
+        exit;
+    }
+
+    /**
+     * Callback от Pinterest
+     */
+    public function pinterestCallback(): void
+    {
+        // TODO: Обработка OAuth callback
+        header('Location: /integrations');
+        exit;
+    }
+
+    /**
      * Статистика
      */
     public function statistics(): void

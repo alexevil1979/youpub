@@ -67,6 +67,58 @@ CREATE TABLE `telegram_integrations` (
   CONSTRAINT `telegram_integrations_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Таблица интеграций TikTok
+CREATE TABLE `tiktok_integrations` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `access_token` text,
+  `refresh_token` text,
+  `token_expires_at` datetime DEFAULT NULL,
+  `open_id` varchar(255) DEFAULT NULL,
+  `username` varchar(255) DEFAULT NULL,
+  `status` enum('connected','disconnected','error') DEFAULT 'disconnected',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `tiktok_integrations_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Таблица интеграций Instagram
+CREATE TABLE `instagram_integrations` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `access_token` text,
+  `refresh_token` text,
+  `token_expires_at` datetime DEFAULT NULL,
+  `instagram_account_id` varchar(255) DEFAULT NULL,
+  `username` varchar(255) DEFAULT NULL,
+  `status` enum('connected','disconnected','error') DEFAULT 'disconnected',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `instagram_integrations_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Таблица интеграций Pinterest
+CREATE TABLE `pinterest_integrations` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `access_token` text,
+  `refresh_token` text,
+  `token_expires_at` datetime DEFAULT NULL,
+  `board_id` varchar(255) DEFAULT NULL,
+  `board_name` varchar(255) DEFAULT NULL,
+  `username` varchar(255) DEFAULT NULL,
+  `status` enum('connected','disconnected','error') DEFAULT 'disconnected',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `pinterest_integrations_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Таблица видео
 CREATE TABLE `videos` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -94,7 +146,7 @@ CREATE TABLE `schedules` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
   `video_id` int(11) NOT NULL,
-  `platform` enum('youtube','telegram','both') NOT NULL,
+  `platform` enum('youtube','telegram','tiktok','instagram','pinterest','both') NOT NULL,
   `publish_at` datetime NOT NULL,
   `timezone` varchar(50) DEFAULT 'UTC',
   `repeat_type` enum('once','daily','weekly','monthly') DEFAULT 'once',
@@ -118,7 +170,7 @@ CREATE TABLE `publications` (
   `schedule_id` int(11) DEFAULT NULL,
   `user_id` int(11) NOT NULL,
   `video_id` int(11) NOT NULL,
-  `platform` enum('youtube','telegram') NOT NULL,
+  `platform` enum('youtube','telegram','tiktok','instagram','pinterest') NOT NULL,
   `platform_id` varchar(255) DEFAULT NULL,
   `platform_url` varchar(500) DEFAULT NULL,
   `status` enum('success','failed') NOT NULL,
@@ -140,7 +192,7 @@ CREATE TABLE `publications` (
 CREATE TABLE `statistics` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `publication_id` int(11) NOT NULL,
-  `platform` enum('youtube','telegram') NOT NULL,
+  `platform` enum('youtube','telegram','tiktok','instagram','pinterest') NOT NULL,
   `views` int(11) DEFAULT 0,
   `likes` int(11) DEFAULT 0,
   `comments` int(11) DEFAULT 0,

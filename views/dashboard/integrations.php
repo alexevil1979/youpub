@@ -4,13 +4,22 @@ ob_start();
 
 use App\Repositories\YoutubeIntegrationRepository;
 use App\Repositories\TelegramIntegrationRepository;
+use App\Repositories\TiktokIntegrationRepository;
+use App\Repositories\InstagramIntegrationRepository;
+use App\Repositories\PinterestIntegrationRepository;
 
 $userId = $_SESSION['user_id'];
 $youtubeRepo = new YoutubeIntegrationRepository();
 $telegramRepo = new TelegramIntegrationRepository();
+$tiktokRepo = new TiktokIntegrationRepository();
+$instagramRepo = new InstagramIntegrationRepository();
+$pinterestRepo = new PinterestIntegrationRepository();
 
 $youtubeIntegration = $youtubeRepo->findByUserId($userId);
 $telegramIntegration = $telegramRepo->findByUserId($userId);
+$tiktokIntegration = $tiktokRepo->findByUserId($userId);
+$instagramIntegration = $instagramRepo->findByUserId($userId);
+$pinterestIntegration = $pinterestRepo->findByUserId($userId);
 ?>
 
 <h1>Интеграции</h1>
@@ -64,6 +73,63 @@ $telegramIntegration = $telegramRepo->findByUserId($userId);
 
                     <button type="submit" class="btn btn-primary">Подключить Telegram</button>
                 </form>
+            </div>
+        <?php endif; ?>
+    </div>
+
+    <!-- TikTok интеграция -->
+    <div class="integration-card">
+        <h2>TikTok</h2>
+        <?php if ($tiktokIntegration && $tiktokIntegration['status'] === 'connected'): ?>
+            <div class="integration-status connected">
+                <p>✓ Подключено</p>
+                <p>Аккаунт: <?= htmlspecialchars($tiktokIntegration['username'] ?? 'Не указан') ?></p>
+                <a href="/integrations/tiktok/disconnect" class="btn btn-danger">Отключить</a>
+            </div>
+        <?php else: ?>
+            <div class="integration-status disconnected">
+                <p>Не подключено</p>
+                <p>Подключите TikTok аккаунт для публикации видео</p>
+                <a href="/integrations/tiktok" class="btn btn-primary">Подключить TikTok</a>
+                <small>Требуется TikTok for Developers API</small>
+            </div>
+        <?php endif; ?>
+    </div>
+
+    <!-- Instagram интеграция -->
+    <div class="integration-card">
+        <h2>Instagram Reels</h2>
+        <?php if ($instagramIntegration && $instagramIntegration['status'] === 'connected'): ?>
+            <div class="integration-status connected">
+                <p>✓ Подключено</p>
+                <p>Аккаунт: <?= htmlspecialchars($instagramIntegration['username'] ?? 'Не указан') ?></p>
+                <a href="/integrations/instagram/disconnect" class="btn btn-danger">Отключить</a>
+            </div>
+        <?php else: ?>
+            <div class="integration-status disconnected">
+                <p>Не подключено</p>
+                <p>Подключите Instagram для публикации Reels</p>
+                <a href="/integrations/instagram" class="btn btn-primary">Подключить Instagram</a>
+                <small>Требуется Instagram Graph API</small>
+            </div>
+        <?php endif; ?>
+    </div>
+
+    <!-- Pinterest интеграция -->
+    <div class="integration-card">
+        <h2>Pinterest</h2>
+        <?php if ($pinterestIntegration && $pinterestIntegration['status'] === 'connected'): ?>
+            <div class="integration-status connected">
+                <p>✓ Подключено</p>
+                <p>Доска: <?= htmlspecialchars($pinterestIntegration['board_name'] ?? 'Не указана') ?></p>
+                <a href="/integrations/pinterest/disconnect" class="btn btn-danger">Отключить</a>
+            </div>
+        <?php else: ?>
+            <div class="integration-status disconnected">
+                <p>Не подключено</p>
+                <p>Подключите Pinterest для публикации Idea Pins / Video Pins</p>
+                <a href="/integrations/pinterest" class="btn btn-primary">Подключить Pinterest</a>
+                <small>Требуется Pinterest API v5</small>
             </div>
         <?php endif; ?>
     </div>

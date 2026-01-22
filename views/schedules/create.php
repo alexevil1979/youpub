@@ -25,7 +25,10 @@ ob_start();
         <select id="platform" name="platform" required>
             <option value="youtube">YouTube</option>
             <option value="telegram">Telegram</option>
-            <option value="both">Обе платформы</option>
+            <option value="tiktok">TikTok</option>
+            <option value="instagram">Instagram Reels</option>
+            <option value="pinterest">Pinterest (Idea Pins / Video Pins)</option>
+            <option value="both">YouTube + Telegram</option>
         </select>
     </div>
 

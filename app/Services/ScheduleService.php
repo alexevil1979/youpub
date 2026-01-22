@@ -40,7 +40,7 @@ class ScheduleService extends Service
 
         if (empty($data['platform'])) {
             $errors['platform'] = 'Platform is required';
-        } elseif (!in_array($data['platform'], ['youtube', 'telegram', 'both'])) {
+        } elseif (!in_array($data['platform'], ['youtube', 'telegram', 'tiktok', 'instagram', 'pinterest', 'both'])) {
             $errors['platform'] = 'Invalid platform';
         }
 
