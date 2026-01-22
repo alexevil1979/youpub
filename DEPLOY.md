@@ -154,7 +154,9 @@ sudo crontab -e
 
 ### 11. Настройка PHP
 
-Отредактируйте настройки PHP для больших файлов:
+#### Вариант 1: Если используется mod_php (Apache)
+
+Отредактируйте настройки PHP:
 
 ```bash
 sudo nano /etc/php/8.1/apache2/php.ini
@@ -168,10 +170,57 @@ max_execution_time = 3600
 memory_limit = 512M
 ```
 
-Перезапустите Apache:
+#### Вариант 2: Если используется PHP-FPM (рекомендуется)
+
+Настройте через конфигурацию виртуального хоста. Обновите файл `/etc/apache2/sites-available/you.1tlt.ru.conf`:
+
+```apache
+<VirtualHost *:80>
+    ServerName you.1tlt.ru
+    ServerAlias www.you.1tlt.ru
+    DocumentRoot /ssd/www/youpub
+
+    <Directory /ssd/www/youpub>
+        Options -Indexes +FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    # Настройки PHP-FPM
+    <FilesMatch \.php$>
+        SetHandler "proxy:unix:/var/run/php/php8.1-fpm.sock|fcgi://localhost"
+    </FilesMatch>
+
+    # PHP настройки для больших файлов
+    php_admin_value upload_max_filesize 5120M
+    php_admin_value post_max_size 5120M
+    php_admin_value max_execution_time 3600
+    php_admin_value memory_limit 512M
+
+    ErrorLog ${APACHE_LOG_DIR}/youpub_error.log
+    CustomLog ${APACHE_LOG_DIR}/youpub_access.log combined
+</VirtualHost>
+```
+
+Или настройте через PHP-FPM pool:
+
+```bash
+sudo nano /etc/php/8.1/fpm/pool.d/www.conf
+```
+
+Найдите и измените:
+```
+php_admin_value[upload_max_filesize] = 5120M
+php_admin_value[post_max_size] = 5120M
+php_admin_value[max_execution_time] = 3600
+php_admin_value[memory_limit] = 512M
+```
+
+Перезапустите сервисы:
 
 ```bash
 sudo systemctl restart apache2
+sudo systemctl restart php8.1-fpm
 ```
 
 ## Обновление проекта
@@ -182,6 +231,9 @@ sudo systemctl restart apache2
 cd /ssd/www/youpub
 sudo git pull origin main
 sudo composer install --no-dev --optimize-autoloader
+
+git reset --hard
+git pull origin main
 
 # Если были изменения в БД
 mysql -u youpub_user -p youpub < database/migrations/new_migration.sql

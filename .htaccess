@@ -14,8 +14,5 @@ RedirectMatch 403 ^/config/.*$
 RedirectMatch 403 ^/core/.*$
 RedirectMatch 403 ^/app/.*$
 
-# Настройки PHP
-php_value upload_max_filesize 5120M
-php_value post_max_size 5120M
-php_value max_execution_time 3600
-php_value memory_limit 512M
+# Настройки PHP (настраиваются через php.ini или конфигурацию виртуального хоста)
+# См. инструкцию в DEPLOY.md раздел "Настройка PHP"
