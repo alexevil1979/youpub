@@ -51,7 +51,13 @@ try {
     
     // Вывод ошибки (в production лучше показывать общее сообщение)
     http_response_code(500);
-    if ($config['APP_DEBUG'] ?? false) {
+    $debug = false;
+    if (file_exists(__DIR__ . '/config/env.php')) {
+        $config = require __DIR__ . '/config/env.php';
+        $debug = $config['APP_DEBUG'] ?? false;
+    }
+    
+    if ($debug) {
         echo json_encode([
             'error' => 'Internal Server Error',
             'message' => $e->getMessage(),
