@@ -40,4 +40,24 @@ class PublicationTemplateRepository extends Repository
     {
         return $this->findByUserId($userId, true);
     }
+
+    /**
+     * Поиск шаблонов по запросу
+     */
+    public function search(int $userId, string $query, int $limit = 10): array
+    {
+        $searchTerm = '%' . $query . '%';
+        $sql = "SELECT * FROM {$this->table} 
+                WHERE user_id = ? 
+                AND (
+                    name LIKE ? 
+                    OR description LIKE ?
+                )
+                ORDER BY created_at DESC 
+                LIMIT ?";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$userId, $searchTerm, $searchTerm, $limit]);
+        return $stmt->fetchAll();
+    }
 }

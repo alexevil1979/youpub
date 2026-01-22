@@ -77,4 +77,27 @@ class PublicationRepository extends Repository
         $stmt->execute([$videoId]);
         return $stmt->fetchAll();
     }
+
+    /**
+     * Поиск публикаций по запросу
+     */
+    public function search(int $userId, string $query, int $limit = 10): array
+    {
+        $searchTerm = '%' . $query . '%';
+        $sql = "SELECT p.* FROM {$this->table} p
+                LEFT JOIN videos v ON p.video_id = v.id
+                WHERE p.user_id = ? 
+                AND (
+                    p.platform LIKE ? 
+                    OR p.status LIKE ? 
+                    OR v.title LIKE ? 
+                    OR v.description LIKE ?
+                )
+                ORDER BY p.published_at DESC 
+                LIMIT ?";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$userId, $searchTerm, $searchTerm, $searchTerm, $searchTerm, $limit]);
+        return $stmt->fetchAll();
+    }
 }

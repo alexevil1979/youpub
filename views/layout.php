@@ -24,6 +24,17 @@
                 <a href="/profile">Профиль</a>
                 <a href="/logout">Выход</a>
             </div>
+            <div class="global-search">
+                <div class="search-container">
+                    <input type="text" 
+                           id="global-search-input" 
+                           class="search-input" 
+                           placeholder="Поиск по всем разделам..." 
+                           autocomplete="off">
+                    <span class="search-icon">🔍</span>
+                    <div id="search-results" class="search-results"></div>
+                </div>
+            </div>
         </div>
     </nav>
     <?php endif; ?>
@@ -59,5 +70,8 @@
     </footer>
 
     <script src="/assets/js/main.js"></script>
+    <?php if (isset($_SESSION['user_id'])): ?>
+    <script src="/assets/js/search.js"></script>
+    <?php endif; ?>
 </body>
 </html>
