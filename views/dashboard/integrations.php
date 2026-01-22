@@ -56,7 +56,7 @@ ob_start();
     <div class="integration-card">
         <div class="integration-header">
             <h2>💬 Telegram</h2>
-            <button type="button" class="btn btn-primary btn-sm" onclick="showTelegramForm()">+ Добавить канал</button>
+            <button type="button" class="btn" onclick="showTelegramForm()">Добавить канал</button>
         </div>
         
         <?php if (empty($telegramAccounts)): ?>
