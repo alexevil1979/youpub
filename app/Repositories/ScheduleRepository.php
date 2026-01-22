@@ -48,6 +48,20 @@ class ScheduleRepository extends Repository
     }
 
     /**
+     * Найти предстоящие расписания
+     */
+    public function findUpcoming(int $userId, int $limit = 10): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT * FROM {$this->table} 
+             WHERE user_id = ? AND status = 'pending' AND publish_at > NOW() 
+             ORDER BY publish_at ASC LIMIT ?"
+        );
+        $stmt->execute([$userId, $limit]);
+        return $stmt->fetchAll();
+    }
+
+    /**
      * Найти расписания, готовые к публикации
      */
     public function findDueForPublishing(): array
