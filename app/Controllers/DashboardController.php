@@ -76,6 +76,15 @@ class DashboardController extends Controller
             exit;
         }
 
+        if (empty($redirectUri)) {
+            $_SESSION['error'] = 'YouTube Redirect URI не настроен. Обратитесь к администратору.';
+            header('Location: /integrations');
+            exit;
+        }
+
+        // Логирование для отладки (можно убрать в production)
+        error_log('YouTube OAuth: Client ID = ' . substr($clientId, 0, 20) . '..., Redirect URI = ' . $redirectUri);
+
         // Генерация state токена для безопасности
         $state = bin2hex(random_bytes(16));
         $_SESSION['youtube_oauth_state'] = $state;
