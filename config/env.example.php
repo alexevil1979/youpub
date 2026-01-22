@@ -31,10 +31,25 @@ return [
     // YouTube API
     'YOUTUBE_CLIENT_ID' => '',
     'YOUTUBE_CLIENT_SECRET' => '',
-    'YOUTUBE_REDIRECT_URI' => 'https://you.1tlt.ru/auth/youtube/callback',
+    'YOUTUBE_REDIRECT_URI' => 'https://you.1tlt.ru/integrations/youtube/callback',
     
     // Telegram
     'TELEGRAM_API_URL' => 'https://api.telegram.org/bot',
+    
+    // TikTok API
+    'TIKTOK_CLIENT_KEY' => '',
+    'TIKTOK_CLIENT_SECRET' => '',
+    'TIKTOK_REDIRECT_URI' => 'https://you.1tlt.ru/integrations/tiktok/callback',
+    
+    // Instagram API
+    'INSTAGRAM_APP_ID' => '',
+    'INSTAGRAM_APP_SECRET' => '',
+    'INSTAGRAM_REDIRECT_URI' => 'https://you.1tlt.ru/integrations/instagram/callback',
+    
+    // Pinterest API
+    'PINTEREST_APP_ID' => '',
+    'PINTEREST_APP_SECRET' => '',
+    'PINTEREST_REDIRECT_URI' => 'https://you.1tlt.ru/integrations/pinterest/callback',
     
     // Очереди
     'WORKER_INTERVAL' => 60, // секунды
