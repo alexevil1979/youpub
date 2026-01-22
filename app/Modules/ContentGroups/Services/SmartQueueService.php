@@ -146,24 +146,6 @@ class SmartQueueService extends Service
         }
     }
 
-    /**
-     * Обновить метаданные видео перед публикацией
-     */
-    private function updateVideoMetadata(int $scheduleId, array $templated): void
-    {
-        $schedule = $this->scheduleRepo->findById($scheduleId);
-        if (!$schedule) {
-            return;
-        }
-
-        // Обновляем видео с шаблонными данными
-        $videoRepo = new \App\Repositories\VideoRepository();
-        $videoRepo->update($schedule['video_id'], [
-            'title' => $templated['title'],
-            'description' => $templated['description'],
-            'tags' => $templated['tags'],
-        ]);
-    }
 
     /**
      * Автоматическое перемешивание видео в группе

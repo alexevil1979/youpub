@@ -47,9 +47,8 @@ class TelegramService extends Service
             return ['success' => false, 'message' => 'Video file not found'];
         }
 
-        // Используем данные из расписания, если они есть (для шаблонов)
-        $description = $schedule['description'] ?? $video['description'] ?? '';
-        $caption = $description;
+        // Используем данные из видео (могут быть обновлены шаблоном)
+        $caption = $video['description'] ?? '';
 
         // Обновление статуса расписания
         $this->scheduleRepo->update($scheduleId, ['status' => 'processing']);
