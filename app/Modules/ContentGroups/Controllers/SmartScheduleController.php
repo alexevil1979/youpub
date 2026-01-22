@@ -51,10 +51,11 @@ class SmartScheduleController extends Controller
     {
         $userId = $_SESSION['user_id'];
         
-        // Обработка weekdays из массива
-        $weekdays = $this->getParam('weekdays', []);
-        if (is_array($weekdays)) {
-            $weekdays = implode(',', $weekdays);
+        // Обработка weekdays из массива checkbox
+        $weekdaysArray = $_POST['weekdays'] ?? [];
+        $weekdays = null;
+        if (!empty($weekdaysArray) && is_array($weekdaysArray)) {
+            $weekdays = implode(',', array_map('intval', $weekdaysArray));
         }
         
         $data = [
