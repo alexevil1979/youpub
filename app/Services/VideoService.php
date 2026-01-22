@@ -191,11 +191,8 @@ class VideoService extends Service
                 'user_id' => $userId,
                 'video_id' => $videoId,
                 'platform' => 'youtube',
-                'scheduled_at' => date('Y-m-d H:i:s'),
+                'publish_at' => date('Y-m-d H:i:s'),
                 'status' => 'pending',
-                'title' => $video['title'],
-                'description' => $video['description'] ?? '',
-                'tags' => $video['tags'] ?? '',
             ]);
 
             $result = $youtubeService->publishVideo($scheduleId);
@@ -212,11 +209,8 @@ class VideoService extends Service
                 'user_id' => $userId,
                 'video_id' => $videoId,
                 'platform' => 'telegram',
-                'scheduled_at' => date('Y-m-d H:i:s'),
+                'publish_at' => date('Y-m-d H:i:s'),
                 'status' => 'pending',
-                'title' => $video['title'],
-                'description' => $video['description'] ?? '',
-                'tags' => $video['tags'] ?? '',
             ]);
 
             $result = $telegramService->publishVideo($scheduleId);
