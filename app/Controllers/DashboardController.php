@@ -236,17 +236,36 @@ class DashboardController extends Controller
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
         curl_close($ch);
+
+        // Логирование для отладки
+        error_log('YouTube Channel Info Request:');
+        error_log('  HTTP Code: ' . $httpCode);
+        if ($curlError) {
+            error_log('  cURL Error: ' . $curlError);
+        }
+        error_log('  Response: ' . substr($response, 0, 500));
 
         if ($httpCode === 200) {
             $data = json_decode($response, true);
             if (!empty($data['items'])) {
                 $channel = $data['items'][0];
+                $channelName = $channel['snippet']['title'] ?? null;
+                $channelId = $channel['id'] ?? null;
+                
+                error_log('  Channel ID: ' . $channelId);
+                error_log('  Channel Name: ' . $channelName);
+                
                 return [
-                    'channel_id' => $channel['id'],
-                    'channel_name' => $channel['snippet']['title'] ?? null,
+                    'channel_id' => $channelId,
+                    'channel_name' => $channelName,
                 ];
+            } else {
+                error_log('  No channels found in response');
             }
+        } else {
+            error_log('  Failed to get channel info. HTTP Code: ' . $httpCode);
         }
 
         return [];
