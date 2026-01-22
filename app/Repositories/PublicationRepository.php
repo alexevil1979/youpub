@@ -44,34 +44,4 @@ class PublicationRepository extends Repository
         $stmt->execute([$userId, $status]);
         return $stmt->fetchAll();
     }
-
-    /**
-     * Найти все публикации
-     */
-    public function findAll(array $conditions = [], array $orderBy = []): array
-    {
-        $sql = "SELECT * FROM {$this->table}";
-        $params = [];
-
-        if (!empty($conditions)) {
-            $where = [];
-            foreach ($conditions as $key => $value) {
-                $where[] = "{$key} = ?";
-                $params[] = $value;
-            }
-            $sql .= " WHERE " . implode(" AND ", $where);
-        }
-
-        if (!empty($orderBy)) {
-            $order = [];
-            foreach ($orderBy as $field => $direction) {
-                $order[] = "{$field} " . strtoupper($direction);
-            }
-            $sql .= " ORDER BY " . implode(", ", $order);
-        }
-
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchAll();
-    }
 }
