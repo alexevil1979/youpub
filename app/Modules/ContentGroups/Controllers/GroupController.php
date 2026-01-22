@@ -84,6 +84,18 @@ class GroupController extends Controller
         }
 
         $files = $this->groupService->getGroupFiles($id, $userId);
+        
+        // Получаем публикации для всех видео в группе
+        $publicationRepo = new \App\Repositories\PublicationRepository();
+        $filePublications = [];
+        foreach ($files as $file) {
+            $publications = $publicationRepo->findSuccessfulByVideoId($file['video_id']);
+            if (!empty($publications)) {
+                // Берем первую (последнюю по дате) успешную публикацию
+                $filePublications[$file['video_id']] = $publications[0];
+            }
+        }
+        
         $templates = $this->templateService->getUserTemplates($userId, true);
         
         include __DIR__ . '/../../../../views/content_groups/show.php';
