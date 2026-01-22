@@ -226,4 +226,34 @@ class GroupService extends Service
     {
         return $this->fileRepo->findNextUnpublished($groupId);
     }
+
+    /**
+     * Переключить статус файла в группе
+     */
+    public function toggleFileStatus(int $groupId, int $fileId, int $userId, string $newStatus): array
+    {
+        $group = $this->groupRepo->findById($groupId);
+        if (!$group || $group['user_id'] !== $userId) {
+            return ['success' => false, 'message' => 'Group not found or unauthorized'];
+        }
+
+        $file = $this->fileRepo->findById($fileId);
+        if (!$file || $file['group_id'] !== $groupId) {
+            return ['success' => false, 'message' => 'File not found in this group'];
+        }
+
+        // Валидация статуса
+        $allowedStatuses = ['new', 'queued', 'published', 'error', 'paused'];
+        if (!in_array($newStatus, $allowedStatuses)) {
+            return ['success' => false, 'message' => 'Invalid status'];
+        }
+
+        $this->fileRepo->updateFileStatus($fileId, $newStatus);
+
+        return [
+            'success' => true,
+            'message' => 'File status updated successfully',
+            'data' => ['status' => $newStatus]
+        ];
+    }
 }

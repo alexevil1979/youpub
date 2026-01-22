@@ -291,4 +291,27 @@ class GroupController extends Controller
 
         $this->success([], 'Group deleted successfully');
     }
+
+    /**
+     * Переключить статус файла в группе
+     */
+    public function toggleFileStatus(int $id, int $fileId): void
+    {
+        $userId = $_SESSION['user_id'];
+        $data = $this->getRequestData();
+        $newStatus = $data['status'] ?? null;
+
+        if (!$newStatus) {
+            $this->error('Status is required', 400);
+            return;
+        }
+
+        $result = $this->groupService->toggleFileStatus($id, $fileId, $userId, $newStatus);
+
+        if ($result['success']) {
+            $this->success(['status' => $result['data']['status'] ?? null], $result['message']);
+        } else {
+            $this->error($result['message'], 400);
+        }
+    }
 }
