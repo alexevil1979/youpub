@@ -173,8 +173,9 @@ CREATE TABLE `logs` (
 
 -- Создание администратора по умолчанию
 -- Пароль: admin123 (замените после первого входа!)
--- Хеш пароля: admin123
+-- Для сброса пароля используйте: php scripts/reset_admin_password.php [новый_пароль]
+-- Хеш пароля admin123: $2y$10$UpoFWZEWKbS0afOLQy3.g.3I94M2WLxq2beqUclpiLIRSY4zJy6Cm
 INSERT INTO `users` (`email`, `password_hash`, `name`, `role`, `status`) VALUES
-('admin@you.1tlt.ru', '$2y$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Administrator', 'admin', 'active');
+('admin@you.1tlt.ru', '$2y$10$UpoFWZEWKbS0afOLQy3.g.3I94M2WLxq2beqUclpiLIRSY4zJy6Cm', 'Administrator', 'admin', 'active');
 
 COMMIT;
