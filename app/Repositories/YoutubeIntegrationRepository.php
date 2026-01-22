@@ -1,0 +1,26 @@
+<?php
+
+namespace App\Repositories;
+
+use Core\Repository;
+
+/**
+ * Репозиторий интеграций YouTube
+ */
+class YoutubeIntegrationRepository extends Repository
+{
+    public function __construct()
+    {
+        parent::__construct('youtube_integrations');
+    }
+
+    /**
+     * Найти по пользователю
+     */
+    public function findByUserId(int $userId): ?array
+    {
+        $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        return $stmt->fetch() ?: null;
+    }
+}

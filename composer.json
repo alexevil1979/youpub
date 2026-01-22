@@ -1,0 +1,17 @@
+{
+    "name": "youpub/youpub",
+    "description": "SaaS система для автоматической публикации видео на YouTube и Telegram",
+    "type": "project",
+    "require": {
+        "php": ">=8.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "Core\\": "core/",
+            "App\\": "app/"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true
+    }
+}
