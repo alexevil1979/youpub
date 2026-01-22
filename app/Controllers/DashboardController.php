@@ -123,121 +123,189 @@ class DashboardController extends Controller
      */
     public function youtubeCallback(): void
     {
-        $userId = $_SESSION['user_id'];
-        $code = $_GET['code'] ?? null;
-        $state = $_GET['state'] ?? null;
-        $error = $_GET['error'] ?? null;
+        try {
+            // Проверка авторизации
+            if (!isset($_SESSION['user_id'])) {
+                error_log('YouTube Callback: User not authenticated');
+                $_SESSION['error'] = 'Необходима авторизация. Пожалуйста, войдите в систему.';
+                header('Location: /login');
+                exit;
+            }
 
-        // Проверка state токена
-        if (!isset($_SESSION['youtube_oauth_state']) || $state !== $_SESSION['youtube_oauth_state']) {
-            $_SESSION['error'] = 'Неверный state токен. Попробуйте снова.';
-            header('Location: /integrations');
-            exit;
-        }
+            $userId = $_SESSION['user_id'];
+            $code = $_GET['code'] ?? null;
+            $state = $_GET['state'] ?? null;
+            $error = $_GET['error'] ?? null;
 
-        unset($_SESSION['youtube_oauth_state']);
+            error_log('YouTube Callback: User ID = ' . $userId . ', Code = ' . ($code ? 'present' : 'missing') . ', State = ' . ($state ? 'present' : 'missing'));
 
-        if ($error) {
-            $_SESSION['error'] = 'Ошибка авторизации: ' . htmlspecialchars($error);
-            header('Location: /integrations');
-            exit;
-        }
+            // Проверка state токена
+            if (!isset($_SESSION['youtube_oauth_state']) || $state !== $_SESSION['youtube_oauth_state']) {
+                error_log('YouTube Callback: Invalid state token. Expected: ' . ($_SESSION['youtube_oauth_state'] ?? 'none') . ', Got: ' . ($state ?? 'none'));
+                $_SESSION['error'] = 'Неверный state токен. Попробуйте снова.';
+                header('Location: /integrations');
+                exit;
+            }
 
-        if (!$code) {
-            $_SESSION['error'] = 'Код авторизации не получен.';
-            header('Location: /integrations');
-            exit;
-        }
+            unset($_SESSION['youtube_oauth_state']);
 
-        $clientId = $this->config['YOUTUBE_CLIENT_ID'];
-        $clientSecret = $this->config['YOUTUBE_CLIENT_SECRET'];
-        $redirectUri = $this->config['YOUTUBE_REDIRECT_URI'];
+            if ($error) {
+                error_log('YouTube Callback: OAuth error: ' . $error);
+                $_SESSION['error'] = 'Ошибка авторизации: ' . htmlspecialchars($error);
+                header('Location: /integrations');
+                exit;
+            }
 
-        // Обмен кода на токены
-        $tokenUrl = 'https://oauth2.googleapis.com/token';
-        $tokenData = [
-            'code' => $code,
-            'client_id' => $clientId,
-            'client_secret' => $clientSecret,
-            'redirect_uri' => $redirectUri,
-            'grant_type' => 'authorization_code',
-        ];
+            if (!$code) {
+                error_log('YouTube Callback: Authorization code not received');
+                $_SESSION['error'] = 'Код авторизации не получен.';
+                header('Location: /integrations');
+                exit;
+            }
 
-        $ch = curl_init($tokenUrl);
-        curl_setopt_array($ch, [
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => http_build_query($tokenData),
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER => ['Content-Type: application/x-www-form-urlencoded'],
-        ]);
+            $clientId = $this->config['YOUTUBE_CLIENT_ID'] ?? null;
+            $clientSecret = $this->config['YOUTUBE_CLIENT_SECRET'] ?? null;
+            $redirectUri = $this->config['YOUTUBE_REDIRECT_URI'] ?? null;
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+            if (empty($clientId) || empty($clientSecret) || empty($redirectUri)) {
+                error_log('YouTube Callback: Missing configuration. Client ID: ' . ($clientId ? 'set' : 'missing') . ', Secret: ' . ($clientSecret ? 'set' : 'missing') . ', Redirect URI: ' . ($redirectUri ?: 'missing'));
+                $_SESSION['error'] = 'YouTube интеграция не настроена. Обратитесь к администратору.';
+                header('Location: /integrations');
+                exit;
+            }
 
-        if ($httpCode !== 200) {
-            $_SESSION['error'] = 'Ошибка получения токенов от Google.';
-            header('Location: /integrations');
-            exit;
-        }
+            // Обмен кода на токены
+            $tokenUrl = 'https://oauth2.googleapis.com/token';
+            $tokenData = [
+                'code' => $code,
+                'client_id' => $clientId,
+                'client_secret' => $clientSecret,
+                'redirect_uri' => $redirectUri,
+                'grant_type' => 'authorization_code',
+            ];
 
-        $tokenData = json_decode($response, true);
+            $ch = curl_init($tokenUrl);
+            curl_setopt_array($ch, [
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => http_build_query($tokenData),
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER => ['Content-Type: application/x-www-form-urlencoded'],
+                CURLOPT_SSL_VERIFYPEER => true,
+            ]);
 
-        if (!isset($tokenData['access_token'])) {
-            $_SESSION['error'] = 'Токен доступа не получен.';
-            header('Location: /integrations');
-            exit;
-        }
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            curl_close($ch);
 
-        // Получение информации о канале
-        $channelInfo = $this->getYouTubeChannelInfo($tokenData['access_token']);
+            if ($curlError) {
+                error_log('YouTube Callback: cURL error: ' . $curlError);
+                $_SESSION['error'] = 'Ошибка соединения с Google: ' . $curlError;
+                header('Location: /integrations');
+                exit;
+            }
 
-        // Сохранение интеграции (поддержка мультиаккаунтов)
-        $integrationRepo = new YoutubeIntegrationRepository();
-        $accountName = $this->getParam('account_name', '');
-        
-        // Проверяем, есть ли уже такой канал
-        $channelId = $channelInfo['channel_id'] ?? null;
-        $existing = null;
-        if ($channelId) {
-            $allIntegrations = $integrationRepo->findByUserId($userId);
-            foreach ($allIntegrations as $integration) {
-                if ($integration['channel_id'] === $channelId) {
-                    $existing = $integration;
-                    break;
+            if ($httpCode !== 200) {
+                error_log('YouTube Callback: Token exchange failed. HTTP Code: ' . $httpCode . ', Response: ' . substr($response, 0, 500));
+                $_SESSION['error'] = 'Ошибка получения токенов от Google (HTTP ' . $httpCode . ').';
+                header('Location: /integrations');
+                exit;
+            }
+
+            $tokenData = json_decode($response, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                error_log('YouTube Callback: JSON decode error: ' . json_last_error_msg() . ', Response: ' . substr($response, 0, 500));
+                $_SESSION['error'] = 'Ошибка обработки ответа от Google.';
+                header('Location: /integrations');
+                exit;
+            }
+
+            if (!isset($tokenData['access_token'])) {
+                error_log('YouTube Callback: Access token not in response. Response: ' . json_encode($tokenData));
+                $_SESSION['error'] = 'Токен доступа не получен.';
+                header('Location: /integrations');
+                exit;
+            }
+
+            // Получение информации о канале
+            $channelInfo = $this->getYouTubeChannelInfo($tokenData['access_token']);
+
+            // Сохранение интеграции (поддержка мультиаккаунтов)
+            $integrationRepo = new YoutubeIntegrationRepository();
+            $accountName = $this->getParam('account_name', '');
+            
+            // Проверяем, есть ли уже такой канал
+            $channelId = $channelInfo['channel_id'] ?? null;
+            $existing = null;
+            if ($channelId) {
+                try {
+                    $allIntegrations = $integrationRepo->findByUserId($userId);
+                    foreach ($allIntegrations as $integration) {
+                        if ($integration['channel_id'] === $channelId) {
+                            $existing = $integration;
+                            break;
+                        }
+                    }
+                } catch (\Exception $e) {
+                    error_log('YouTube Callback: Error finding existing integration: ' . $e->getMessage());
+                    // Продолжаем создание новой интеграции
                 }
             }
+
+            $integrationData = [
+                'user_id' => $userId,
+                'access_token' => $tokenData['access_token'],
+                'refresh_token' => $tokenData['refresh_token'] ?? null,
+                'token_expires_at' => isset($tokenData['expires_in']) 
+                    ? date('Y-m-d H:i:s', time() + $tokenData['expires_in']) 
+                    : null,
+                'channel_id' => $channelId,
+                'channel_name' => $channelInfo['channel_name'] ?? null,
+                'account_name' => !empty($accountName) ? $accountName : ($channelInfo['channel_name'] ?? 'YouTube канал'),
+                'status' => 'connected',
+                'is_default' => 0, // По умолчанию не устанавливаем, если есть другие аккаунты
+            ];
+
+            // Если это первый аккаунт, делаем его по умолчанию
+            try {
+                $allIntegrations = $integrationRepo->findByUserId($userId);
+                if (empty($allIntegrations) || (count($allIntegrations) === 1 && $existing)) {
+                    $integrationData['is_default'] = 1;
+                }
+            } catch (\Exception $e) {
+                error_log('YouTube Callback: Error checking existing integrations: ' . $e->getMessage());
+                // Если это первая попытка, делаем по умолчанию
+                $integrationData['is_default'] = 1;
+            }
+
+            try {
+                if ($existing) {
+                    $integrationRepo->update($existing['id'], $integrationData);
+                    error_log('YouTube Callback: Integration updated. ID: ' . $existing['id']);
+                } else {
+                    $newId = $integrationRepo->create($integrationData);
+                    error_log('YouTube Callback: Integration created. ID: ' . $newId);
+                }
+            } catch (\Exception $e) {
+                error_log('YouTube Callback: Database error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+                $_SESSION['error'] = 'Ошибка сохранения интеграции: ' . $e->getMessage();
+                header('Location: /integrations');
+                exit;
+            }
+
+            $_SESSION['success'] = 'YouTube успешно подключен!';
+            header('Location: /integrations');
+            exit;
+
+        } catch (\Throwable $e) {
+            error_log('YouTube Callback: Fatal error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+            error_log('YouTube Callback: Stack trace: ' . $e->getTraceAsString());
+            
+            $_SESSION['error'] = 'Произошла ошибка при подключении YouTube. Попробуйте снова.';
+            header('Location: /integrations');
+            exit;
         }
-
-        $integrationData = [
-            'user_id' => $userId,
-            'access_token' => $tokenData['access_token'],
-            'refresh_token' => $tokenData['refresh_token'] ?? null,
-            'token_expires_at' => isset($tokenData['expires_in']) 
-                ? date('Y-m-d H:i:s', time() + $tokenData['expires_in']) 
-                : null,
-            'channel_id' => $channelId,
-            'channel_name' => $channelInfo['channel_name'] ?? null,
-            'account_name' => !empty($accountName) ? $accountName : ($channelInfo['channel_name'] ?? 'YouTube канал'),
-            'status' => 'connected',
-            'is_default' => 0, // По умолчанию не устанавливаем, если есть другие аккаунты
-        ];
-
-        // Если это первый аккаунт, делаем его по умолчанию
-        $allIntegrations = $integrationRepo->findByUserId($userId);
-        if (empty($allIntegrations) || (count($allIntegrations) === 1 && $existing)) {
-            $integrationData['is_default'] = 1;
-        }
-
-        if ($existing) {
-            $integrationRepo->update($existing['id'], $integrationData);
-        } else {
-            $integrationRepo->create($integrationData);
-        }
-
-        $_SESSION['success'] = 'YouTube успешно подключен!';
-        header('Location: /integrations');
-        exit;
     }
 
     /**
