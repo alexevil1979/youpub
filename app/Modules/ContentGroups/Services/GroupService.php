@@ -160,6 +160,48 @@ class GroupService extends Service
     }
 
     /**
+     * Копировать группу
+     */
+    public function duplicateGroup(int $groupId, int $userId): array
+    {
+        // Проверяем права доступа
+        $group = $this->groupRepo->findById($groupId);
+        if (!$group || $group['user_id'] !== $userId) {
+            return [
+                'success' => false,
+                'message' => 'Group not found or access denied'
+            ];
+        }
+
+        // Создаем копию группы
+        $newGroupId = $this->groupRepo->create([
+            'user_id' => $userId,
+            'name' => $group['name'] . ' (копия)',
+            'description' => $group['description'],
+            'template_id' => $group['template_id'],
+            'status' => 'paused', // Копия создается на паузе
+            'settings' => $group['settings'],
+        ]);
+
+        // Копируем файлы из группы
+        $files = $this->fileRepo->findByGroupId($groupId);
+        foreach ($files as $file) {
+            $this->fileRepo->create([
+                'group_id' => $newGroupId,
+                'video_id' => $file['video_id'],
+                'status' => 'new', // Новые файлы в статусе "new"
+                'order_index' => $file['order_index'],
+            ]);
+        }
+
+        return [
+            'success' => true,
+            'data' => ['id' => $newGroupId],
+            'message' => 'Группа успешно скопирована'
+        ];
+    }
+
+    /**
      * Получить файлы группы
      */
     public function getGroupFiles(int $groupId, int $userId, ?string $status = null): array

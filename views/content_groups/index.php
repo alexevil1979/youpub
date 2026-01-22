@@ -56,7 +56,12 @@ ob_start();
                 <div class="group-actions" style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
                     <a href="/content-groups/<?= $group['id'] ?>" class="btn btn-primary btn-sm">Открыть</a>
                     <a href="/content-groups/<?= $group['id'] ?>/edit" class="btn btn-info btn-sm">Редактировать</a>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="shuffleGroup(<?= $group['id'] ?>)">Перемешать</button>
+                    <button type="button" class="btn btn-<?= $group['status'] === 'active' ? 'warning' : 'success' ?> btn-sm" onclick="toggleGroupStatus(<?= $group['id'] ?>, '<?= $group['status'] ?>')">
+                        <?= $group['status'] === 'active' ? '⏸ Выключить' : '▶ Включить' ?>
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="duplicateGroup(<?= $group['id'] ?>)">📋 Копировать</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="shuffleGroup(<?= $group['id'] ?>)">🔀 Перемешать</button>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="deleteGroup(<?= $group['id'] ?>)">🗑 Удалить</button>
                 </div>
             </div>
         <?php endforeach; ?>
@@ -64,6 +69,89 @@ ob_start();
 <?php endif; ?>
 
 <script>
+function toggleGroupStatus(id, currentStatus) {
+    const action = currentStatus === 'active' ? 'выключить' : 'включить';
+    if (!confirm('Вы уверены, что хотите ' + action + ' эту группу?')) {
+        return;
+    }
+    
+    fetch('/content-groups/' + id + '/toggle-status', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message || 'Статус группы изменен');
+            window.location.reload();
+        } else {
+            alert('Ошибка: ' + (data.message || 'Не удалось изменить статус группы'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Произошла ошибка');
+    });
+}
+
+function duplicateGroup(id) {
+    if (!confirm('Создать копию этой группы? Все видео из группы будут скопированы.')) {
+        return;
+    }
+    
+    fetch('/content-groups/' + id + '/duplicate', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Группа успешно скопирована!');
+            window.location.reload();
+        } else {
+            alert('Ошибка: ' + (data.message || 'Не удалось скопировать группу'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Произошла ошибка');
+    });
+}
+
+function deleteGroup(id) {
+    if (!confirm('Вы уверены, что хотите удалить эту группу? Это действие нельзя отменить.')) {
+        return;
+    }
+    
+    if (!confirm('ВНИМАНИЕ: Все видео останутся, но будут удалены из группы. Продолжить?')) {
+        return;
+    }
+    
+    fetch('/content-groups/' + id, {
+        method: 'DELETE',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Группа удалена');
+            window.location.reload();
+        } else {
+            alert('Ошибка: ' + (data.message || 'Не удалось удалить группу'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Произошла ошибка');
+    });
+}
+
 function shuffleGroup(id) {
     if (!confirm('Перемешать видео в группе?')) {
         return;

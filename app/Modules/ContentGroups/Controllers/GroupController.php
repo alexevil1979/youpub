@@ -236,6 +236,44 @@ class GroupController extends Controller
     }
 
     /**
+     * Переключить статус группы (включить/выключить)
+     */
+    public function toggleStatus(int $id): void
+    {
+        $userId = $_SESSION['user_id'];
+        $group = $this->groupService->getGroupWithStats($id, $userId);
+
+        if (!$group) {
+            $this->error('Group not found', 404);
+            return;
+        }
+
+        $newStatus = $group['status'] === 'active' ? 'paused' : 'active';
+        $result = $this->groupService->updateGroup($id, $userId, ['status' => $newStatus]);
+
+        if ($result['success']) {
+            $this->success(['status' => $newStatus], $newStatus === 'active' ? 'Группа включена' : 'Группа приостановлена');
+        } else {
+            $this->error($result['message'], 400);
+        }
+    }
+
+    /**
+     * Копировать группу
+     */
+    public function duplicate(int $id): void
+    {
+        $userId = $_SESSION['user_id'];
+        $result = $this->groupService->duplicateGroup($id, $userId);
+
+        if ($result['success']) {
+            $this->success($result['data'], $result['message']);
+        } else {
+            $this->error($result['message'], 400);
+        }
+    }
+
+    /**
      * Удалить группу
      */
     public function delete(int $id): void
