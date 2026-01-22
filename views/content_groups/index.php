@@ -10,6 +10,15 @@ ob_start();
 <?php if (empty($groups)): ?>
     <p style="margin-top: 2rem;">Нет созданных групп</p>
 <?php else: ?>
+    <?php 
+    // Получаем все шаблоны для отображения
+    $templateService = new \App\Modules\ContentGroups\Services\TemplateService();
+    $allTemplates = $templateService->getUserTemplates($_SESSION['user_id'], true);
+    $templatesMap = [];
+    foreach ($allTemplates as $template) {
+        $templatesMap[$template['id']] = $template;
+    }
+    ?>
     <div class="groups-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; margin-top: 2rem;">
         <?php foreach ($groups as $group): ?>
             <div class="group-card" style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
@@ -17,6 +26,23 @@ ob_start();
                 <?php if ($group['description']): ?>
                     <p style="color: #666; margin: 0.5rem 0;"><?= htmlspecialchars($group['description']) ?></p>
                 <?php endif; ?>
+                
+                <div class="group-info" style="margin: 1rem 0; padding: 0.75rem; background: #f8f9fa; border-radius: 4px;">
+                    <p style="margin: 0.25rem 0;">
+                        <strong>Шаблон:</strong> 
+                        <?php if ($group['template_id'] && isset($templatesMap[$group['template_id']])): ?>
+                            <span style="color: #27ae60;">✓ <?= htmlspecialchars($templatesMap[$group['template_id']]['name']) ?></span>
+                        <?php else: ?>
+                            <span style="color: #95a5a6;">Без шаблона</span>
+                        <?php endif; ?>
+                    </p>
+                    <p style="margin: 0.25rem 0;">
+                        <strong>Статус:</strong> 
+                        <span class="badge badge-<?= $group['status'] === 'active' ? 'success' : ($group['status'] === 'paused' ? 'warning' : 'secondary') ?>">
+                            <?= ucfirst($group['status']) ?>
+                        </span>
+                    </p>
+                </div>
                 
                 <div class="group-stats" style="margin: 1rem 0; padding: 1rem; background: #f8f9fa; border-radius: 4px;">
                     <?php if (isset($group['stats'])): ?>
@@ -27,14 +53,9 @@ ob_start();
                     <?php endif; ?>
                 </div>
 
-                <div class="group-status" style="margin: 1rem 0;">
-                    <span class="badge badge-<?= $group['status'] === 'active' ? 'success' : ($group['status'] === 'paused' ? 'warning' : 'secondary') ?>">
-                        <?= ucfirst($group['status']) ?>
-                    </span>
-                </div>
-
-                <div class="group-actions" style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                <div class="group-actions" style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
                     <a href="/content-groups/<?= $group['id'] ?>" class="btn btn-primary btn-sm">Открыть</a>
+                    <a href="/content-groups/<?= $group['id'] ?>/edit" class="btn btn-info btn-sm">Редактировать</a>
                     <button type="button" class="btn btn-secondary btn-sm" onclick="shuffleGroup(<?= $group['id'] ?>)">Перемешать</button>
                 </div>
             </div>
