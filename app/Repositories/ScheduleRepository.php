@@ -97,4 +97,27 @@ class ScheduleRepository extends Repository
         $stmt->execute();
         return $stmt->fetchAll();
     }
+
+    /**
+     * Поиск расписаний по запросу
+     */
+    public function search(int $userId, string $query, int $limit = 10): array
+    {
+        $searchTerm = '%' . $query . '%';
+        $sql = "SELECT s.* FROM {$this->table} s
+                LEFT JOIN videos v ON s.video_id = v.id
+                WHERE s.user_id = ? 
+                AND (
+                    s.platform LIKE ? 
+                    OR s.status LIKE ? 
+                    OR v.title LIKE ? 
+                    OR v.description LIKE ?
+                )
+                ORDER BY s.created_at DESC 
+                LIMIT ?";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$userId, $searchTerm, $searchTerm, $searchTerm, $searchTerm, $limit]);
+        return $stmt->fetchAll();
+    }
 }
