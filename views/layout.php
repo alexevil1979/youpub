@@ -29,6 +29,16 @@
     <?php endif; ?>
 
     <main class="container">
+        <?php if (isset($_SESSION['user_id'])): ?>
+            <?php
+            // Генерируем хлебные крошки, если они не переданы явно
+            if (!isset($breadcrumbs)) {
+                $breadcrumbs = \Core\Breadcrumbs::generateFromUrl();
+            }
+            echo \Core\Breadcrumbs::render($breadcrumbs ?? null);
+            ?>
+        <?php endif; ?>
+
         <?php if (isset($_SESSION['success'])): ?>
             <div class="alert alert-success"><?= htmlspecialchars($_SESSION['success']) ?></div>
             <?php unset($_SESSION['success']); ?>

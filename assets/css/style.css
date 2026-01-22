@@ -826,6 +826,58 @@ footer {
     background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
 }
 
+/* Хлебные крошки */
+.breadcrumbs {
+    margin: 1rem 0 1.5rem 0;
+    padding: 0.75rem 0;
+}
+
+.breadcrumb-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 0.9rem;
+}
+
+.breadcrumb-item {
+    display: flex;
+    align-items: center;
+    color: #666;
+}
+
+.breadcrumb-item:not(:last-child)::after {
+    content: '';
+}
+
+.breadcrumb-item a {
+    color: #3498db;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.breadcrumb-item a:hover {
+    color: #2980b9;
+    text-decoration: underline;
+}
+
+.breadcrumb-item.active {
+    color: #2c3e50;
+    font-weight: 500;
+}
+
+.breadcrumb-item.active span {
+    color: inherit;
+}
+
+.breadcrumb-separator {
+    margin: 0 0.5rem;
+    color: #95a5a6;
+    font-size: 0.875rem;
+}
+
 /* Адаптивность */
 @media (max-width: 768px) {
     .groups-grid {
@@ -848,5 +900,13 @@ footer {
     
     .action-group {
         justify-content: center;
+    }
+
+    .breadcrumb-list {
+        font-size: 0.8rem;
+    }
+
+    .breadcrumb-separator {
+        margin: 0 0.25rem;
     }
 }
