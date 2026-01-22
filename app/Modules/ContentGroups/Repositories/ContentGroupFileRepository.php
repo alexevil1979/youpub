@@ -132,4 +132,20 @@ class ContentGroupFileRepository extends Repository
         }
         return $this->update($id, $data);
     }
+
+    /**
+     * Найти группы для видео
+     */
+    public function findGroupsByVideoId(int $videoId): array
+    {
+        $sql = "SELECT cgf.*, cg.name as group_name, cg.status as group_status
+                FROM {$this->table} cgf
+                JOIN content_groups cg ON cgf.group_id = cg.id
+                WHERE cgf.video_id = ?
+                ORDER BY cg.name ASC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$videoId]);
+        return $stmt->fetchAll();
+    }
 }
