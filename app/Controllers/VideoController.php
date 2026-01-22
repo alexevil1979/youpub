@@ -87,6 +87,11 @@ class VideoController extends Controller
             return;
         }
 
+        // Проверяем, что файл существует
+        if (!file_exists($video['file_path'])) {
+            error_log('Video file not found: ' . $video['file_path']);
+        }
+
         include __DIR__ . '/../../views/videos/show.php';
     }
 
