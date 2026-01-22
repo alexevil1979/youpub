@@ -58,6 +58,24 @@ class DashboardController extends Controller
      */
     public function integrations(): void
     {
+        $userId = $_SESSION['user_id'];
+        
+        // Загружаем все интеграции для каждой платформы
+        $youtubeRepo = new YoutubeIntegrationRepository();
+        $youtubeAccounts = $youtubeRepo->findByUserId($userId);
+        
+        $telegramRepo = new \App\Repositories\TelegramIntegrationRepository();
+        $telegramAccounts = $telegramRepo->findByUserId($userId);
+        
+        $tiktokRepo = new \App\Repositories\TiktokIntegrationRepository();
+        $tiktokAccounts = $tiktokRepo->findByUserId($userId);
+        
+        $instagramRepo = new \App\Repositories\InstagramIntegrationRepository();
+        $instagramAccounts = $instagramRepo->findByUserId($userId);
+        
+        $pinterestRepo = new \App\Repositories\PinterestIntegrationRepository();
+        $pinterestAccounts = $pinterestRepo->findByUserId($userId);
+        
         include __DIR__ . '/../../views/dashboard/integrations.php';
     }
 
