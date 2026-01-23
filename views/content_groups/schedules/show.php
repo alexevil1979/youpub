@@ -239,11 +239,14 @@ ob_start();
                                         echo "{$minutes} мин.";
                                         ?>
                                     </small>
+                                <?php elseif ($publishTime !== false && $publishTime <= $now): ?>
+                                    <span style="color: #f39c12; font-weight: 500;">Готово к публикации</span>
+                                    <br><small style="color: #95a5a6;">
+                                        <?= date('d.m.Y H:i', $publishTime) ?>
+                                        <br>Ожидает публикации воркером
+                                    </small>
                                 <?php else: ?>
-                                    <span style="color: #e74c3c;">Просрочено</span>
-                                    <?php if ($publishTime !== false): ?>
-                                        <br><small style="color: #95a5a6;"><?= date('d.m.Y H:i', $publishTime) ?></small>
-                                    <?php endif; ?>
+                                    <span style="color: #e74c3c;">Ошибка времени</span>
                                 <?php endif; ?>
                             <?php else: ?>
                                 <span style="color: #95a5a6;">Не запланировано</span>
