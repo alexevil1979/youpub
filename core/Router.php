@@ -175,7 +175,10 @@ class Router
             if (is_string($class) && class_exists($class)) {
                 $instance = new $class();
                 if (method_exists($instance, $method)) {
-                    call_user_func_array([$instance, $method], array_values($params));
+                    // Приводим типы параметров согласно сигнатуре метода
+                    $reflection = new \ReflectionMethod($instance, $method);
+                    $typedParams = $this->convertParamsToTypes($params, $reflection);
+                    call_user_func_array([$instance, $method], $typedParams);
                     return;
                 }
             }
