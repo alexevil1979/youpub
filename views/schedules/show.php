@@ -2,22 +2,53 @@
 $title = 'Расписание публикации';
 ob_start();
 
-// Получаем информацию о видео
-$videoRepo = new \App\Repositories\VideoRepository();
-$video = $videoRepo->findById($schedule['video_id']);
+// Получаем информацию о видео (если есть video_id)
+$video = null;
+if (!empty($schedule['video_id'])) {
+    try {
+        $videoRepo = new \App\Repositories\VideoRepository();
+        $video = $videoRepo->findById($schedule['video_id']);
+    } catch (\Exception $e) {
+        error_log("Error loading video for schedule: " . $e->getMessage());
+    }
+}
+
+// Получаем информацию о группе (если есть content_group_id)
+$group = null;
+if (!empty($schedule['content_group_id'])) {
+    try {
+        $groupRepo = new \App\Modules\ContentGroups\Repositories\ContentGroupRepository();
+        $group = $groupRepo->findById($schedule['content_group_id']);
+    } catch (\Exception $e) {
+        error_log("Error loading group for schedule: " . $e->getMessage());
+    }
+}
 ?>
 
 <h1>Расписание публикации</h1>
 
-<div class="schedule-details">
-    <div class="detail-item">
-        <strong>Видео:</strong>
+<div class="info-card schedule-details">
+    <div class="info-card-grid">
         <?php if ($video): ?>
-            <a href="/videos/<?= $video['id'] ?>"><?= htmlspecialchars($video['title'] ?? $video['file_name']) ?></a>
-        <?php else: ?>
-            ID: <?= $schedule['video_id'] ?>
+            <div class="info-card-item">
+                <div class="info-card-label">Видео:</div>
+                <div class="info-card-value">
+                    <a href="/videos/<?= $video['id'] ?>"><?= htmlspecialchars($video['title'] ?? $video['file_name']) ?></a>
+                </div>
+            </div>
+        <?php elseif ($group): ?>
+            <div class="info-card-item">
+                <div class="info-card-label">Группа контента:</div>
+                <div class="info-card-value">
+                    <a href="/content-groups/<?= $group['id'] ?>"><?= htmlspecialchars($group['name']) ?></a>
+                </div>
+            </div>
+        <?php elseif (!empty($schedule['video_id'])): ?>
+            <div class="info-card-item">
+                <div class="info-card-label">Видео:</div>
+                <div class="info-card-value" style="color: #e74c3c;">ID: <?= $schedule['video_id'] ?> (не найдено)</div>
+            </div>
         <?php endif; ?>
-    </div>
 
     <div class="detail-item">
         <strong>Платформа:</strong> <?= ucfirst($schedule['platform']) ?>

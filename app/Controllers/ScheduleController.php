@@ -80,18 +80,36 @@ class ScheduleController extends Controller
     /**
      * Показать расписание
      */
-    public function show(int $id): void
+    public function show($id): void
     {
-        $userId = $_SESSION['user_id'];
-        $schedule = $this->scheduleService->getSchedule($id, $userId);
+        try {
+            $id = (int)$id;
+            if ($id <= 0) {
+                http_response_code(404);
+                echo 'Schedule not found';
+                return;
+            }
+            
+            $userId = $_SESSION['user_id'] ?? null;
+            if (!$userId) {
+                header('Location: /login');
+                exit;
+            }
+            
+            $schedule = $this->scheduleService->getSchedule($id, $userId);
 
-        if (!$schedule) {
-            http_response_code(404);
-            echo 'Schedule not found';
-            return;
+            if (!$schedule) {
+                http_response_code(404);
+                echo 'Schedule not found';
+                return;
+            }
+
+            include __DIR__ . '/../../views/schedules/show.php';
+        } catch (\Exception $e) {
+            error_log("ScheduleController::show: Error - " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+            http_response_code(500);
+            echo 'Internal Server Error';
         }
-
-        include __DIR__ . '/../../views/schedules/show.php';
     }
 
     /**
