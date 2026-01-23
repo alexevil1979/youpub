@@ -29,30 +29,38 @@ if (!isset($templates)) {
 ?>
 
 <?php if (empty($templates)): ?>
-    <p style="margin-top: 2rem;">Нет созданных шаблонов</p>
+    <div class="empty-state" style="margin-top: 2rem;">
+        <div class="empty-state-icon"><?= \App\Helpers\IconHelper::render('file', 64) ?></div>
+        <h3>Нет созданных шаблонов</h3>
+        <p>Создайте первый шаблон для автоматического оформления публикаций</p>
+        <a href="/content-groups/templates/create" class="btn btn-primary">Создать шаблон</a>
+    </div>
 <?php else: ?>
     <div style="margin-top: 2rem;">
-        <table style="width: 100%; border-collapse: collapse;">
+        <table class="data-table">
             <thead>
-                <tr style="background: #f8f9fa;">
-                    <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Название</th>
-                    <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Описание</th>
-                    <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Статус</th>
-                    <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Действия</th>
+                <tr>
+                    <th>Название</th>
+                    <th>Описание</th>
+                    <th>Статус</th>
+                    <th style="width: 150px;">Действия</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($templates as $template): ?>
-                    <tr style="border-bottom: 1px solid #dee2e6;">
-                        <td style="padding: 0.75rem;"><?= htmlspecialchars($template['name']) ?></td>
-                        <td style="padding: 0.75rem;"><?= htmlspecialchars($template['description'] ?? '') ?></td>
-                        <td style="padding: 0.75rem;">
-                            <span class="badge badge-<?= $template['is_active'] ? 'success' : 'secondary' ?>">
+                    <tr>
+                        <td><?= htmlspecialchars($template['name']) ?></td>
+                        <td><?= htmlspecialchars($template['description'] ?? '') ?></td>
+                        <td>
+                            <span class="status-badge status-<?= $template['is_active'] ? 'active' : 'inactive' ?>">
                                 <?= $template['is_active'] ? 'Активен' : 'Неактивен' ?>
                             </span>
                         </td>
-                        <td style="padding: 0.75rem;">
-                            <button type="button" class="btn btn-sm btn-danger" onclick="deleteTemplate(<?= $template['id'] ?>)">Удалить</button>
+                        <td>
+                            <div class="action-buttons">
+                                <a href="/content-groups/templates/<?= $template['id'] ?>/edit" class="btn btn-xs btn-primary" title="Редактировать"><?= \App\Helpers\IconHelper::render('edit', 14, 'icon-inline') ?></a>
+                                <button type="button" class="btn btn-xs btn-danger" onclick="deleteTemplate(<?= $template['id'] ?>)" title="Удалить"><?= \App\Helpers\IconHelper::render('delete', 14, 'icon-inline') ?></button>
+                            </div>
                         </td>
                     </tr>
                 <?php endforeach; ?>

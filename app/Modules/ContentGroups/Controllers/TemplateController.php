@@ -185,6 +185,90 @@ class TemplateController extends Controller
     }
 
     /**
+     * Показать форму редактирования шаблона
+     */
+    public function showEdit(int $id): void
+    {
+        $userId = $_SESSION['user_id'] ?? null;
+        if (!$userId) {
+            header('Location: /login');
+            exit;
+        }
+        
+        $templateRepo = new \App\Modules\ContentGroups\Repositories\PublicationTemplateRepository();
+        $template = $templateRepo->findById($id);
+
+        if (!$template || $template['user_id'] !== $userId) {
+            $_SESSION['error'] = 'Шаблон не найден';
+            header('Location: /content-groups/templates');
+            exit;
+        }
+
+        $csrfToken = (new \Core\Auth())->generateCsrfToken();
+        include __DIR__ . '/../../../../views/content_groups/templates/edit.php';
+    }
+
+    /**
+     * Обновить шаблон
+     */
+    public function update(int $id): void
+    {
+        try {
+            $userId = $_SESSION['user_id'] ?? null;
+            
+            if (!$userId) {
+                $_SESSION['error'] = 'Необходима авторизация';
+                header('Location: /content-groups/templates');
+                exit;
+            }
+            
+            $templateRepo = new \App\Modules\ContentGroups\Repositories\PublicationTemplateRepository();
+            $template = $templateRepo->findById($id);
+
+            if (!$template || $template['user_id'] !== $userId) {
+                $_SESSION['error'] = 'Шаблон не найден';
+                header('Location: /content-groups/templates');
+                exit;
+            }
+            
+            $emojiList = $this->getParam('emoji_list', '');
+            $emojiArray = !empty($emojiList) ? array_filter(array_map('trim', explode(',', $emojiList))) : [];
+
+            $variants = [];
+            if ($this->getParam('variant_1')) {
+                $variants['description'][] = $this->getParam('variant_1');
+            }
+            if ($this->getParam('variant_2')) {
+                $variants['description'][] = $this->getParam('variant_2');
+            }
+            if ($this->getParam('variant_3')) {
+                $variants['description'][] = $this->getParam('variant_3');
+            }
+
+            $data = [
+                'name' => $this->getParam('name', ''),
+                'description' => $this->getParam('description', ''),
+                'title_template' => $this->getParam('title_template', ''),
+                'description_template' => $this->getParam('description_template', ''),
+                'tags_template' => $this->getParam('tags_template', ''),
+                'emoji_list' => $emojiArray,
+                'variants' => !empty($variants) ? $variants : null,
+                'is_active' => $this->getParam('is_active', '1') === '1',
+            ];
+
+            $templateRepo->update($id, $data);
+
+            $_SESSION['success'] = 'Шаблон успешно обновлен';
+            header('Location: /content-groups/templates');
+        } catch (\Exception $e) {
+            error_log('Error updating template: ' . $e->getMessage());
+            $_SESSION['error'] = 'Произошла ошибка при обновлении шаблона: ' . $e->getMessage();
+            header('Location: /content-groups/templates/' . $id . '/edit');
+        }
+        exit;
+    }
+
+    /**
      * Удалить шаблон
      */
     public function delete(int $id): void
