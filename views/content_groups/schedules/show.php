@@ -71,15 +71,19 @@ ob_start();
         <div>
             <strong>Следующая публикация:</strong><br>
             <?php 
-            // Берем время первой неопубликованной публикации из списка файлов
+            // Берем время первой неопубликованной публикации из списка файлов, которая еще не прошла
             $nextPublishTime = null;
             $now = time();
             if (!empty($scheduledFiles)) {
                 foreach ($scheduledFiles as $item) {
                     if (!isset($item['is_published']) || !$item['is_published']) {
                         if (!empty($item['publish_at'])) {
-                            $nextPublishTime = strtotime($item['publish_at']);
-                            break;
+                            $publishTime = strtotime($item['publish_at']);
+                            // Берем только будущие публикации
+                            if ($publishTime > $now) {
+                                $nextPublishTime = $publishTime;
+                                break;
+                            }
                         }
                     }
                 }
@@ -101,7 +105,21 @@ ob_start();
                         $nextPublishTime = $baseTime;
                     }
                 } elseif (!empty($schedule['publish_at'])) {
-                    $nextPublishTime = strtotime($schedule['publish_at']);
+                    $scheduleTime = strtotime($schedule['publish_at']);
+                    // Если время расписания прошло, ищем следующее доступное время
+                    if ($scheduleTime <= $now && $scheduleType === 'fixed') {
+                        // Для фиксированных расписаний с просроченным временем берем следующее время из файлов
+                        // или пересчитываем с учетом задержки
+                        $delayMinutes = isset($schedule['delay_between_posts']) ? (int)$schedule['delay_between_posts'] : 0;
+                        if ($delayMinutes > 0) {
+                            // Добавляем задержку к текущему времени
+                            $nextPublishTime = $now + ($delayMinutes * 60);
+                        } else {
+                            $nextPublishTime = $scheduleTime;
+                        }
+                    } else {
+                        $nextPublishTime = $scheduleTime;
+                    }
                 }
             }
             
@@ -125,8 +143,9 @@ ob_start();
                     echo "{$minutes} мин.";
                     ?>
                 </small>
-            <?php elseif ($nextPublishTime): ?>
-                <span style="color: #e74c3c;">Просрочено</span>
+            <?php elseif ($nextPublishTime && $nextPublishTime <= $now): ?>
+                <span style="color: #f39c12; font-weight: 500;">Готово к публикации</span>
+                <br><small style="color: #95a5a6;">Ожидает публикации воркером</small>
             <?php else: ?>
                 <span style="color: #95a5a6;">Не запланировано</span>
             <?php endif; ?>
