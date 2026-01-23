@@ -53,7 +53,7 @@ class ContentGroupFileRepository extends Repository
             JOIN videos v ON v.id = cgf.video_id
             WHERE cgf.group_id = ? 
             AND cgf.status IN ('new', 'queued')
-            AND v.status = 'uploaded'
+            AND v.status IN ('uploaded', 'ready')
             ORDER BY cgf.order_index ASC, cgf.created_at ASC
             LIMIT 1
         ";

@@ -123,19 +123,13 @@ if (!isset($groups)) {
                                         // Проверяем наличие доступных видео
                                         try {
                                             $fileRepo = new \App\Modules\ContentGroups\Repositories\ContentGroupFileRepository();
-                                            $availableFiles = $fileRepo->findByGroupId((int)$group['id'], ['order_index' => 'ASC']);
-                                            $hasUnpublished = false;
-                                            foreach ($availableFiles as $file) {
-                                                if (in_array($file['status'] ?? 'new', ['new', 'queued'])) {
-                                                    $hasUnpublished = true;
-                                                    break;
-                                                }
-                                            }
-                                            if (!$hasUnpublished) {
+                                            $nextFile = $fileRepo->findNextUnpublished((int)$group['id']);
+                                            if (!$nextFile) {
                                                 $reasons[] = 'Нет доступных видео';
                                             }
                                         } catch (\Exception $e) {
                                             error_log("Error checking files: " . $e->getMessage());
+                                            $reasons[] = 'Ошибка проверки видео';
                                         }
                                         
                                         // Проверяем подключенные интеграции
