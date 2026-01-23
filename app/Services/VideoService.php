@@ -159,91 +159,140 @@ class VideoService extends Service
      */
     public function publishNow(int $videoId, int $userId): array
     {
-        $video = $this->getVideo($videoId, $userId);
-        
-        if (!$video) {
-            return ['success' => false, 'message' => 'Video not found'];
-        }
-
-        if (!file_exists($video['file_path'])) {
-            return ['success' => false, 'message' => 'Video file not found'];
-        }
-
-        // Проверяем подключенные интеграции (поддержка мультиаккаунтов)
-        $youtubeRepo = new \App\Repositories\YoutubeIntegrationRepository();
-        $telegramRepo = new \App\Repositories\TelegramIntegrationRepository();
-        $scheduleRepo = new \App\Repositories\ScheduleRepository();
-        $publicationRepo = new \App\Repositories\PublicationRepository();
-
-        // Используем аккаунты по умолчанию
-        $youtubeIntegration = $youtubeRepo->findDefaultByUserId($userId);
-        $telegramIntegration = $telegramRepo->findDefaultByUserId($userId);
-
-        $results = [];
-        $hasIntegration = false;
-
-        // Публикация на YouTube
-        if ($youtubeIntegration && $youtubeIntegration['status'] === 'connected') {
-            $hasIntegration = true;
-            $youtubeService = new \App\Services\YoutubeService();
+        try {
+            error_log("publishNow: Starting publication for video ID {$videoId}, user ID {$userId}");
             
-            // Создаем временное расписание для публикации
-            $scheduleId = $scheduleRepo->create([
-                'user_id' => $userId,
-                'video_id' => $videoId,
-                'platform' => 'youtube',
-                'publish_at' => date('Y-m-d H:i:s'),
-                'status' => 'pending',
-            ]);
-
-            $result = $youtubeService->publishVideo($scheduleId);
-            $results['youtube'] = $result;
-        }
-
-        // Публикация в Telegram
-        if ($telegramIntegration && $telegramIntegration['status'] === 'connected') {
-            $hasIntegration = true;
-            $telegramService = new \App\Services\TelegramService();
+            $video = $this->getVideo($videoId, $userId);
             
-            // Создаем временное расписание для публикации
-            $scheduleId = $scheduleRepo->create([
-                'user_id' => $userId,
-                'video_id' => $videoId,
-                'platform' => 'telegram',
-                'publish_at' => date('Y-m-d H:i:s'),
-                'status' => 'pending',
-            ]);
-
-            $result = $telegramService->publishVideo($scheduleId);
-            $results['telegram'] = $result;
-        }
-
-        if (!$hasIntegration) {
-            return ['success' => false, 'message' => 'No integrations connected. Please connect YouTube or Telegram first.'];
-        }
-
-        // Проверяем результаты
-        $allSuccess = true;
-        $messages = [];
-        
-        foreach ($results as $platform => $result) {
-            if (!$result['success']) {
-                $allSuccess = false;
-                $messages[] = ucfirst($platform) . ': ' . $result['message'];
+            if (!$video) {
+                error_log("publishNow: Video not found - ID {$videoId}, user ID {$userId}");
+                return ['success' => false, 'message' => 'Видео не найдено'];
             }
-        }
 
-        if ($allSuccess) {
-            return [
-                'success' => true,
-                'message' => 'Video published successfully on all connected platforms',
-                'data' => $results
-            ];
-        } else {
+            if (!file_exists($video['file_path'])) {
+                error_log("publishNow: Video file not found - {$video['file_path']}");
+                return ['success' => false, 'message' => 'Файл видео не найден: ' . basename($video['file_path'])];
+            }
+
+            // Проверяем подключенные интеграции (поддержка мультиаккаунтов)
+            $youtubeRepo = new \App\Repositories\YoutubeIntegrationRepository();
+            $telegramRepo = new \App\Repositories\TelegramIntegrationRepository();
+            $scheduleRepo = new \App\Repositories\ScheduleRepository();
+            $publicationRepo = new \App\Repositories\PublicationRepository();
+
+            // Используем аккаунты по умолчанию
+            $youtubeIntegration = $youtubeRepo->findDefaultByUserId($userId);
+            $telegramIntegration = $telegramRepo->findDefaultByUserId($userId);
+
+            error_log("publishNow: YouTube integration - " . ($youtubeIntegration ? "found, status: {$youtubeIntegration['status']}" : "not found"));
+            error_log("publishNow: Telegram integration - " . ($telegramIntegration ? "found, status: {$telegramIntegration['status']}" : "not found"));
+
+            $results = [];
+            $hasIntegration = false;
+
+            // Публикация на YouTube
+            if ($youtubeIntegration && $youtubeIntegration['status'] === 'connected') {
+                $hasIntegration = true;
+                error_log("publishNow: Attempting YouTube publication");
+                
+                try {
+                    $youtubeService = new \App\Services\YoutubeService();
+                    
+                    // Создаем временное расписание для публикации
+                    $scheduleId = $scheduleRepo->create([
+                        'user_id' => $userId,
+                        'video_id' => $videoId,
+                        'platform' => 'youtube',
+                        'publish_at' => date('Y-m-d H:i:s'),
+                        'status' => 'pending',
+                    ]);
+
+                    error_log("publishNow: Created schedule ID {$scheduleId} for YouTube");
+                    $result = $youtubeService->publishVideo($scheduleId);
+                    error_log("publishNow: YouTube publication result - success: " . ($result['success'] ? 'yes' : 'no') . ", message: " . ($result['message'] ?? 'no message'));
+                    $results['youtube'] = $result;
+                } catch (\Exception $e) {
+                    error_log("publishNow: YouTube publication exception - " . $e->getMessage());
+                    $results['youtube'] = [
+                        'success' => false,
+                        'message' => 'Ошибка публикации на YouTube: ' . $e->getMessage()
+                    ];
+                }
+            } elseif ($youtubeIntegration) {
+                error_log("publishNow: YouTube integration exists but status is '{$youtubeIntegration['status']}', not 'connected'");
+            }
+
+            // Публикация в Telegram
+            if ($telegramIntegration && $telegramIntegration['status'] === 'connected') {
+                $hasIntegration = true;
+                error_log("publishNow: Attempting Telegram publication");
+                
+                try {
+                    $telegramService = new \App\Services\TelegramService();
+                    
+                    // Создаем временное расписание для публикации
+                    $scheduleId = $scheduleRepo->create([
+                        'user_id' => $userId,
+                        'video_id' => $videoId,
+                        'platform' => 'telegram',
+                        'publish_at' => date('Y-m-d H:i:s'),
+                        'status' => 'pending',
+                    ]);
+
+                    error_log("publishNow: Created schedule ID {$scheduleId} for Telegram");
+                    $result = $telegramService->publishVideo($scheduleId);
+                    error_log("publishNow: Telegram publication result - success: " . ($result['success'] ? 'yes' : 'no') . ", message: " . ($result['message'] ?? 'no message'));
+                    $results['telegram'] = $result;
+                } catch (\Exception $e) {
+                    error_log("publishNow: Telegram publication exception - " . $e->getMessage());
+                    $results['telegram'] = [
+                        'success' => false,
+                        'message' => 'Ошибка публикации в Telegram: ' . $e->getMessage()
+                    ];
+                }
+            } elseif ($telegramIntegration) {
+                error_log("publishNow: Telegram integration exists but status is '{$telegramIntegration['status']}', not 'connected'");
+            }
+
+            if (!$hasIntegration) {
+                error_log("publishNow: No connected integrations found");
+                return [
+                    'success' => false, 
+                    'message' => 'Нет подключенных интеграций. Пожалуйста, подключите YouTube или Telegram в разделе "Интеграции".'
+                ];
+            }
+
+            // Проверяем результаты
+            $allSuccess = true;
+            $messages = [];
+            
+            foreach ($results as $platform => $result) {
+                if (!$result['success']) {
+                    $allSuccess = false;
+                    $messages[] = ucfirst($platform) . ': ' . ($result['message'] ?? 'Неизвестная ошибка');
+                }
+            }
+
+            if ($allSuccess) {
+                error_log("publishNow: All publications successful");
+                return [
+                    'success' => true,
+                    'message' => 'Видео успешно опубликовано на всех подключенных платформах',
+                    'data' => $results
+                ];
+            } else {
+                error_log("publishNow: Some publications failed - " . implode('; ', $messages));
+                return [
+                    'success' => false,
+                    'message' => 'Ошибка публикации: ' . implode('; ', $messages),
+                    'data' => $results
+                ];
+            }
+        } catch (\Exception $e) {
+            error_log("publishNow: Exception - " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
             return [
                 'success' => false,
-                'message' => 'Some publications failed: ' . implode('; ', $messages),
-                'data' => $results
+                'message' => 'Произошла ошибка при публикации: ' . $e->getMessage()
             ];
         }
     }
