@@ -142,7 +142,13 @@ try {
     exit; // Завершаем выполнение после вывода ошибки
 }
 
-// Отправить буфер только если он существует
-if (ob_get_level() > 0) {
-    ob_end_flush();
+// Отправить буфер только если он существует и не был очищен
+$bufferLevel = ob_get_level();
+if ($bufferLevel > 0) {
+    try {
+        ob_end_flush();
+    } catch (\Throwable $e) {
+        // Игнорируем ошибки буфера, если он уже был очищен
+        error_log("Buffer flush error (ignored): " . $e->getMessage());
+    }
 }
