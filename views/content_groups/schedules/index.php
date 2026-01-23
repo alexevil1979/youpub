@@ -61,7 +61,7 @@ if (!isset($groups)) {
                         ? $scheduleTypeNames[$schedule['schedule_type']] 
                         : ($schedule['schedule_type'] ?? 'Неизвестно');
                 ?>
-                    <tr style="border-bottom: 1px solid #dee2e6;">
+                    <tr style="border-bottom: 1px solid #dee2e6;" data-publish-at="<?= $nextPublishAt ? date('Y-m-d H:i:s', $nextPublishAt) : '' ?>" data-status="<?= $schedule['status'] ?? '' ?>">
                         <td style="padding: 0.75rem;">
                             <?php if ($group && isset($group['id']) && isset($group['name'])): ?>
                                 <a href="/content-groups/<?= (int)$group['id'] ?>"><?= htmlspecialchars($group['name']) ?></a>
@@ -182,9 +182,17 @@ if (!isset($groups)) {
                                         <?php endif; ?>
                                     </div>
                                 <?php else: ?>
-                                    <span style="color: #3498db; font-weight: 500;">
-                                        <?= date('d.m.Y H:i', $nextPublishAt) ?>
-                                    </span>
+                                    <div>
+                                        <div style="color: #3498db; font-weight: 500;">
+                                            <?= date('d.m.Y H:i', $nextPublishAt) ?>
+                                        </div>
+                                        <?php if (isset($schedule['status']) && $schedule['status'] === 'pending'): ?>
+                                            <div class="countdown-timer" data-publish-at="<?= date('Y-m-d H:i:s', $nextPublishAt) ?>" style="margin-top: 0.5rem; font-size: 0.85rem; color: #3498db; font-weight: 500;">
+                                                <span class="countdown-text">Осталось: </span>
+                                                <span class="countdown-value">-</span>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
                                 <?php endif; ?>
                             <?php else: ?>
                                 <span style="color: #95a5a6;">-</span>
@@ -294,6 +302,57 @@ function toggleSchedulePause(id, action) {
         alert('Произошла ошибка');
     });
 }
+
+// Обратный отсчет до публикации
+function updateCountdowns() {
+    const countdowns = document.querySelectorAll('.countdown-timer');
+    
+    countdowns.forEach(timer => {
+        const publishAtStr = timer.getAttribute('data-publish-at');
+        if (!publishAtStr) return;
+        
+        const publishAt = new Date(publishAtStr.replace(' ', 'T'));
+        const now = new Date();
+        const diff = publishAt - now;
+        
+        if (diff <= 0) {
+            timer.querySelector('.countdown-value').textContent = 'Время прошло';
+            timer.style.color = '#e74c3c';
+            return;
+        }
+        
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+        
+        let countdownText = '';
+        if (days > 0) {
+            countdownText = `${days}д ${hours}ч ${minutes}м`;
+        } else if (hours > 0) {
+            countdownText = `${hours}ч ${minutes}м ${seconds}с`;
+        } else if (minutes > 0) {
+            countdownText = `${minutes}м ${seconds}с`;
+        } else {
+            countdownText = `${seconds}с`;
+        }
+        
+        timer.querySelector('.countdown-value').textContent = countdownText;
+        
+        // Меняем цвет при приближении времени
+        if (diff < 3600000) { // Меньше часа
+            timer.style.color = '#e74c3c';
+        } else if (diff < 86400000) { // Меньше суток
+            timer.style.color = '#f39c12';
+        } else {
+            timer.style.color = '#3498db';
+        }
+    });
+}
+
+// Обновляем обратный отсчет каждую секунду
+setInterval(updateCountdowns, 1000);
+updateCountdowns(); // Первый запуск сразу
 </script>
 
 <?php
