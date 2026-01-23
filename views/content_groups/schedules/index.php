@@ -74,16 +74,16 @@ if (!isset($groups)) {
                         </td>
                         <td style="padding: 0.75rem;">
                             <?= htmlspecialchars($scheduleType) ?>
-                            <?php if ($schedule['schedule_type'] === 'interval' && $schedule['interval_minutes']): ?>
-                                <br><small style="color: #95a5a6;">Каждые <?= $schedule['interval_minutes'] ?> мин.</small>
+                            <?php if (isset($schedule['schedule_type']) && $schedule['schedule_type'] === 'interval' && isset($schedule['interval_minutes']) && $schedule['interval_minutes']): ?>
+                                <br><small style="color: #95a5a6;">Каждые <?= (int)$schedule['interval_minutes'] ?> мин.</small>
                             <?php endif; ?>
                         </td>
                         <td style="padding: 0.75rem;">
-                            <?php if ($schedule['publish_at']): ?>
+                            <?php if (isset($schedule['publish_at']) && $schedule['publish_at']): ?>
                                 <?php 
                                 $publishTime = strtotime($schedule['publish_at']);
                                 $now = time();
-                                if ($publishTime > $now):
+                                if ($publishTime !== false && $publishTime > $now):
                                 ?>
                                     <span style="color: #3498db; font-weight: 500;">
                                         <?= date('d.m.Y H:i', $publishTime) ?>
@@ -97,17 +97,19 @@ if (!isset($groups)) {
                         </td>
                         <td style="padding: 0.75rem;">
                             <span class="badge badge-<?= 
-                                $schedule['status'] === 'pending' ? 'warning' : 
-                                ($schedule['status'] === 'published' ? 'success' : 
-                                ($schedule['status'] === 'failed' ? 'danger' : 'secondary')) 
+                                (isset($schedule['status']) && $schedule['status'] === 'pending') ? 'warning' : 
+                                ((isset($schedule['status']) && $schedule['status'] === 'published') ? 'success' : 
+                                ((isset($schedule['status']) && $schedule['status'] === 'failed') ? 'danger' : 'secondary')) 
                             ?>">
-                                <?= ucfirst($schedule['status']) ?>
+                                <?= isset($schedule['status']) ? ucfirst($schedule['status']) : 'Неизвестно' ?>
                             </span>
                         </td>
                         <td style="padding: 0.75rem;">
-                            <button type="button" class="btn btn-sm btn-danger" onclick="deleteSchedule(<?= $schedule['id'] ?>)">
-                                <?= \App\Helpers\IconHelper::render('delete', 16, 'icon-inline') ?> Удалить
-                            </button>
+                            <?php if (isset($schedule['id'])): ?>
+                                <button type="button" class="btn btn-sm btn-danger" onclick="deleteSchedule(<?= (int)$schedule['id'] ?>)">
+                                    <?= \App\Helpers\IconHelper::render('delete', 16, 'icon-inline') ?> Удалить
+                                </button>
+                            <?php endif; ?>
                         </td>
                     </tr>
                 <?php endforeach; ?>
