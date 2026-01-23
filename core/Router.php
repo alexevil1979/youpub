@@ -82,9 +82,40 @@ class Router
             }
         }
 
-        // 404
+        // 404 - проверяем, это AJAX запрос или обычный?
+        $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+        
         http_response_code(404);
-        echo json_encode(['error' => 'Not Found']);
+        
+        if ($isAjax || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false)) {
+            // AJAX запрос - возвращаем JSON
+            echo json_encode(['error' => 'Not Found'], JSON_UNESCAPED_UNICODE);
+        } else {
+            // Обычный запрос - показываем HTML страницу 404
+            $title = 'Страница не найдена';
+            ob_start();
+            ?>
+            <!DOCTYPE html>
+            <html lang="ru">
+            <head>
+                <meta charset="UTF-8">
+                <title>404 - Страница не найдена</title>
+                <style>
+                    body { font-family: Arial, sans-serif; padding: 2rem; text-align: center; }
+                    .error { background: #f8f9fa; border: 1px solid #dee2e6; padding: 2rem; border-radius: 8px; max-width: 600px; margin: 0 auto; }
+                </style>
+            </head>
+            <body>
+                <div class="error">
+                    <h1>404 - Страница не найдена</h1>
+                    <p>Запрашиваемая страница не существует.</p>
+                    <p><a href="/dashboard">Вернуться на главную</a></p>
+                </div>
+            </body>
+            </html>
+            <?php
+            echo ob_get_clean();
+        }
     }
 
     /**
