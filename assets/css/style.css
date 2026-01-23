@@ -720,6 +720,11 @@ footer {
     color: white;
 }
 
+.badge-info {
+    background-color: #17a2b8;
+    color: white;
+}
+
 /* Группы контента - улучшенный UI */
 .groups-grid {
     display: grid;
