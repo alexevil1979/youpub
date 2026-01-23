@@ -417,13 +417,8 @@ class SmartScheduleController extends Controller
                     $intervalMinutes = isset($schedule['interval_minutes']) ? (int)$schedule['interval_minutes'] : 0;
                     $scheduleType = $schedule['schedule_type'] ?? 'fixed';
                     
-                    // Подсчитываем количество уже опубликованных файлов
-                    $publishedCount = 0;
-                    foreach ($files as $file) {
-                        if (isset($file['status']) && in_array($file['status'], ['published', 'queued'])) {
-                            $publishedCount++;
-                        }
-                    }
+                    // Подсчитываем количество уже опубликованных файлов (для пропуска)
+                    $unpublishedIndex = 0; // Индекс для неопубликованных файлов
                     
                     // Для интервальных расписаний вычисляем время для каждого файла
                     foreach ($files as $index => $file) {
@@ -443,25 +438,23 @@ class SmartScheduleController extends Controller
                         
                         // Вычисляем время публикации в зависимости от типа расписания
                         if ($scheduleType === 'interval' && $intervalMinutes > 0) {
-                            // Для интервальных: базовое время + (индекс файла * интервал)
-                            // Учитываем уже опубликованные файлы
-                            $filePosition = $publishedCount + $index - $publishedCount;
+                            // Для интервальных: базовое время + (позиция неопубликованного файла * интервал)
                             
                             // Если базовое время прошло, вычисляем от текущего момента
                             if ($baseTime <= $now) {
                                 // Находим следующий интервал от текущего момента
                                 $elapsed = $now - $baseTime;
                                 $intervalsPassed = floor($elapsed / ($intervalMinutes * 60));
-                                $nextInterval = $intervalsPassed + 1;
                                 
-                                // Время публикации для этого файла
-                                $publishTime = $baseTime + (($nextInterval + $filePosition) * $intervalMinutes * 60);
+                                // Время публикации для этого файла: следующий интервал + позиция файла
+                                $publishTime = $baseTime + (($intervalsPassed + 1 + $unpublishedIndex) * $intervalMinutes * 60);
                             } else {
                                 // Базовое время еще не наступило
-                                $publishTime = $baseTime + ($filePosition * $intervalMinutes * 60);
+                                $publishTime = $baseTime + ($unpublishedIndex * $intervalMinutes * 60);
                             }
                             
                             $nextPublishAt = date('Y-m-d H:i:s', $publishTime);
+                            $unpublishedIndex++; // Увеличиваем индекс для следующего неопубликованного файла
                         } elseif ($scheduleType === 'fixed' && !empty($schedule['publish_at'])) {
                             // Для фиксированных расписаний берем время из publish_at
                             $publishTime = strtotime($schedule['publish_at']);
