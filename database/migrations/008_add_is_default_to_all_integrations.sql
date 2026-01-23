@@ -143,87 +143,84 @@ CALL add_is_default_to_integrations();
 DROP PROCEDURE IF EXISTS add_is_default_to_integrations;
 
 -- Устанавливаем is_default = 1 для первого подключенного аккаунта каждого пользователя, если нет аккаунта по умолчанию
+-- Используем JOIN вместо подзапросов для избежания ошибки MySQL 1093
+
 -- YouTube
 UPDATE youtube_integrations y1
-SET is_default = 1
-WHERE y1.status = 'connected'
-AND NOT EXISTS (
-    SELECT 1 FROM youtube_integrations y2 
-    WHERE y2.user_id = y1.user_id 
-    AND y2.is_default = 1
-)
-AND y1.id = (
-    SELECT y3.id FROM youtube_integrations y3 
-    WHERE y3.user_id = y1.user_id 
-    AND y3.status = 'connected'
-    ORDER BY y3.created_at ASC 
-    LIMIT 1
-);
+INNER JOIN (
+    SELECT user_id, MIN(id) as first_id
+    FROM youtube_integrations
+    WHERE status = 'connected'
+    AND user_id NOT IN (
+        SELECT DISTINCT user_id 
+        FROM youtube_integrations 
+        WHERE is_default = 1
+    )
+    GROUP BY user_id
+) y2 ON y1.id = y2.first_id AND y1.user_id = y2.user_id
+SET y1.is_default = 1
+WHERE y1.status = 'connected';
 
 -- Telegram
 UPDATE telegram_integrations t1
-SET is_default = 1
-WHERE t1.status = 'connected'
-AND NOT EXISTS (
-    SELECT 1 FROM telegram_integrations t2 
-    WHERE t2.user_id = t1.user_id 
-    AND t2.is_default = 1
-)
-AND t1.id = (
-    SELECT t3.id FROM telegram_integrations t3 
-    WHERE t3.user_id = t1.user_id 
-    AND t3.status = 'connected'
-    ORDER BY t3.created_at ASC 
-    LIMIT 1
-);
+INNER JOIN (
+    SELECT user_id, MIN(id) as first_id
+    FROM telegram_integrations
+    WHERE status = 'connected'
+    AND user_id NOT IN (
+        SELECT DISTINCT user_id 
+        FROM telegram_integrations 
+        WHERE is_default = 1
+    )
+    GROUP BY user_id
+) t2 ON t1.id = t2.first_id AND t1.user_id = t2.user_id
+SET t1.is_default = 1
+WHERE t1.status = 'connected';
 
 -- TikTok
 UPDATE tiktok_integrations tk1
-SET is_default = 1
-WHERE tk1.status = 'connected'
-AND NOT EXISTS (
-    SELECT 1 FROM tiktok_integrations tk2 
-    WHERE tk2.user_id = tk1.user_id 
-    AND tk2.is_default = 1
-)
-AND tk1.id = (
-    SELECT tk3.id FROM tiktok_integrations tk3 
-    WHERE tk3.user_id = tk1.user_id 
-    AND tk3.status = 'connected'
-    ORDER BY tk3.created_at ASC 
-    LIMIT 1
-);
+INNER JOIN (
+    SELECT user_id, MIN(id) as first_id
+    FROM tiktok_integrations
+    WHERE status = 'connected'
+    AND user_id NOT IN (
+        SELECT DISTINCT user_id 
+        FROM tiktok_integrations 
+        WHERE is_default = 1
+    )
+    GROUP BY user_id
+) tk2 ON tk1.id = tk2.first_id AND tk1.user_id = tk2.user_id
+SET tk1.is_default = 1
+WHERE tk1.status = 'connected';
 
 -- Instagram
 UPDATE instagram_integrations i1
-SET is_default = 1
-WHERE i1.status = 'connected'
-AND NOT EXISTS (
-    SELECT 1 FROM instagram_integrations i2 
-    WHERE i2.user_id = i1.user_id 
-    AND i2.is_default = 1
-)
-AND i1.id = (
-    SELECT i3.id FROM instagram_integrations i3 
-    WHERE i3.user_id = i1.user_id 
-    AND i3.status = 'connected'
-    ORDER BY i3.created_at ASC 
-    LIMIT 1
-);
+INNER JOIN (
+    SELECT user_id, MIN(id) as first_id
+    FROM instagram_integrations
+    WHERE status = 'connected'
+    AND user_id NOT IN (
+        SELECT DISTINCT user_id 
+        FROM instagram_integrations 
+        WHERE is_default = 1
+    )
+    GROUP BY user_id
+) i2 ON i1.id = i2.first_id AND i1.user_id = i2.user_id
+SET i1.is_default = 1
+WHERE i1.status = 'connected';
 
 -- Pinterest
 UPDATE pinterest_integrations p1
-SET is_default = 1
-WHERE p1.status = 'connected'
-AND NOT EXISTS (
-    SELECT 1 FROM pinterest_integrations p2 
-    WHERE p2.user_id = p1.user_id 
-    AND p2.is_default = 1
-)
-AND p1.id = (
-    SELECT p3.id FROM pinterest_integrations p3 
-    WHERE p3.user_id = p1.user_id 
-    AND p3.status = 'connected'
-    ORDER BY p3.created_at ASC 
-    LIMIT 1
-);
+INNER JOIN (
+    SELECT user_id, MIN(id) as first_id
+    FROM pinterest_integrations
+    WHERE status = 'connected'
+    AND user_id NOT IN (
+        SELECT DISTINCT user_id 
+        FROM pinterest_integrations 
+        WHERE is_default = 1
+    )
+    GROUP BY user_id
+) p2 ON p1.id = p2.first_id AND p1.user_id = p2.user_id
+SET p1.is_default = 1
+WHERE p1.status = 'connected';
