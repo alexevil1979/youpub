@@ -37,6 +37,8 @@ class SmartScheduleController extends Controller
                 exit;
             }
             
+            error_log("SmartScheduleController::index: Loading smart schedules for user {$userId}");
+            
             $scheduleRepo = new \App\Repositories\ScheduleRepository();
             
             // Получаем все умные расписания (с группами контента) для пользователя
@@ -45,26 +47,51 @@ class SmartScheduleController extends Controller
                 return !empty($schedule['content_group_id']);
             });
             
+            // Преобразуем в массив с числовыми индексами
+            $smartSchedules = array_values($smartSchedules);
+            
+            error_log("SmartScheduleController::index: Found " . count($smartSchedules) . " smart schedules");
+            
             // Получаем информацию о группах для расписаний
-            $groupIds = array_unique(array_column($smartSchedules, 'content_group_id'));
+            $groupIds = array_unique(array_filter(array_column($smartSchedules, 'content_group_id')));
             $groups = [];
             if (!empty($groupIds)) {
                 foreach ($groupIds as $groupId) {
-                    $group = $this->groupService->getGroup($groupId, $userId);
-                    if ($group) {
-                        $groups[$groupId] = $group;
+                    try {
+                        $group = $this->groupService->getGroupWithStats($groupId, $userId);
+                        if ($group) {
+                            $groups[$groupId] = $group;
+                        }
+                    } catch (\Exception $e) {
+                        error_log("SmartScheduleController::index: Error loading group {$groupId}: " . $e->getMessage());
+                        // Продолжаем работу, даже если группа не найдена
                     }
                 }
             }
             
-            include __DIR__ . '/../../../../views/content_groups/schedules/index.php';
+            // Проверяем существование файла представления
+            $viewPath = __DIR__ . '/../../../../views/content_groups/schedules/index.php';
+            if (!file_exists($viewPath)) {
+                throw new \Exception("View file not found: {$viewPath}");
+            }
+            
+            include $viewPath;
         } catch (\Exception $e) {
-            error_log("SmartScheduleController::index: Exception - " . $e->getMessage());
-            http_response_code(500);
-            echo json_encode([
-                'error' => 'Internal Server Error',
-                'message' => 'Произошла ошибка при загрузке расписаний: ' . $e->getMessage()
-            ], JSON_UNESCAPED_UNICODE);
+            error_log("SmartScheduleController::index: Exception - " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+            error_log("SmartScheduleController::index: Stack trace: " . $e->getTraceAsString());
+            
+            // Показываем HTML страницу с ошибкой вместо JSON
+            $title = 'Ошибка';
+            ob_start();
+            ?>
+            <div class="alert alert-error">
+                <h2>Ошибка при загрузке умных расписаний</h2>
+                <p><?= htmlspecialchars($e->getMessage()) ?></p>
+                <p><a href="/dashboard" class="btn btn-secondary">Вернуться на главную</a></p>
+            </div>
+            <?php
+            $content = ob_get_clean();
+            include __DIR__ . '/../../../../views/layout.php';
         }
     }
 
