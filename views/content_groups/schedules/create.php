@@ -173,22 +173,57 @@ ob_start();
 <script>
 function toggleScheduleOptions() {
     const type = document.getElementById('schedule_type').value;
+    const publishAtInput = document.getElementById('publish_at');
+    const timePointInputs = document.querySelectorAll('.time-point-input');
     
-    // Скрываем все опции
+    // Скрываем все опции и убираем required у всех полей
     document.getElementById('fixed_options').style.display = 'none';
     document.getElementById('interval_options').style.display = 'none';
     document.getElementById('batch_options').style.display = 'none';
     document.getElementById('random_options').style.display = 'none';
     
+    publishAtInput.removeAttribute('required');
+    publishAtInput.disabled = true;
+    timePointInputs.forEach(input => {
+        input.removeAttribute('required');
+        input.disabled = true;
+    });
+    
     // Показываем нужные опции
     if (type === 'fixed') {
         document.getElementById('fixed_options').style.display = 'block';
+        toggleFixedTimeMode(); // Управляем required в зависимости от режима
     } else if (type === 'interval') {
         document.getElementById('interval_options').style.display = 'block';
+        const intervalInput = document.getElementById('interval_minutes');
+        if (intervalInput) {
+            intervalInput.setAttribute('required', 'required');
+            intervalInput.disabled = false;
+        }
     } else if (type === 'batch') {
         document.getElementById('batch_options').style.display = 'block';
+        const batchCount = document.getElementById('batch_count');
+        const batchWindow = document.getElementById('batch_window_hours');
+        if (batchCount) {
+            batchCount.setAttribute('required', 'required');
+            batchCount.disabled = false;
+        }
+        if (batchWindow) {
+            batchWindow.setAttribute('required', 'required');
+            batchWindow.disabled = false;
+        }
     } else if (type === 'random') {
         document.getElementById('random_options').style.display = 'block';
+        const randomStart = document.getElementById('random_window_start');
+        const randomEnd = document.getElementById('random_window_end');
+        if (randomStart) {
+            randomStart.setAttribute('required', 'required');
+            randomStart.disabled = false;
+        }
+        if (randomEnd) {
+            randomEnd.setAttribute('required', 'required');
+            randomEnd.disabled = false;
+        }
     }
 }
 
@@ -197,15 +232,30 @@ function toggleFixedTimeMode() {
     const singleTime = document.getElementById('single_time_fixed');
     const multipleTimes = document.getElementById('multiple_times_fixed');
     const publishAtInput = document.getElementById('publish_at');
+    const timePointInputs = document.querySelectorAll('.time-point-input');
     
     if (mode === 'multiple') {
         singleTime.style.display = 'none';
         multipleTimes.style.display = 'block';
+        // Убираем required у скрытого поля publish_at
         publishAtInput.removeAttribute('required');
+        publishAtInput.disabled = true;
+        // Добавляем required к видимым полям времени
+        timePointInputs.forEach(input => {
+            input.setAttribute('required', 'required');
+            input.disabled = false;
+        });
     } else {
         singleTime.style.display = 'block';
         multipleTimes.style.display = 'none';
+        // Добавляем required к видимому полю publish_at
         publishAtInput.setAttribute('required', 'required');
+        publishAtInput.disabled = false;
+        // Убираем required у скрытых полей времени
+        timePointInputs.forEach(input => {
+            input.removeAttribute('required');
+            input.disabled = true;
+        });
     }
 }
 
@@ -229,6 +279,39 @@ function removeFixedTimePoint(btn) {
         alert('Должна быть хотя бы одна точка времени');
     }
 }
+
+// Обработчик отправки формы - убираем required у скрытых полей
+document.querySelector('.schedule-form').addEventListener('submit', function(e) {
+    // Убираем required у всех скрытых полей
+    const form = this;
+    const allInputs = form.querySelectorAll('input, select, textarea');
+    allInputs.forEach(input => {
+        const parent = input.closest('div');
+        if (parent && parent.style.display === 'none') {
+            input.removeAttribute('required');
+            input.disabled = true;
+        }
+    });
+    
+    // Убираем required у publish_at если режим multiple
+    const fixedMode = document.getElementById('fixed_time_mode');
+    if (fixedMode && fixedMode.value === 'multiple') {
+        const publishAt = document.getElementById('publish_at');
+        if (publishAt) {
+            publishAt.removeAttribute('required');
+            publishAt.disabled = true;
+        }
+    }
+    
+    // Убираем required у daily_time_points если режим single
+    if (fixedMode && fixedMode.value === 'single') {
+        const timePoints = document.querySelectorAll('.time-point-input');
+        timePoints.forEach(input => {
+            input.removeAttribute('required');
+            input.disabled = true;
+        });
+    }
+});
 
 // Инициализация при загрузке
 document.addEventListener('DOMContentLoaded', function() {
