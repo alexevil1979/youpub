@@ -62,22 +62,57 @@ ob_start();
                 <?= ucfirst($schedule['status'] ?? 'Неизвестно') ?>
             </span>
         </div>
-        <?php if (!empty($schedule['publish_at'])): ?>
         <div>
             <strong>Следующая публикация:</strong><br>
             <?php 
-            $publishTime = strtotime($schedule['publish_at']);
+            // Для интервальных расписаний вычисляем следующее время публикации
+            $nextPublishTime = null;
+            $scheduleType = $schedule['schedule_type'] ?? 'fixed';
             $now = time();
-            if ($publishTime !== false && $publishTime > $now):
+            
+            if ($scheduleType === 'interval' && !empty($schedule['interval_minutes'])) {
+                $baseTime = strtotime($schedule['publish_at'] ?? 'now');
+                $interval = (int)$schedule['interval_minutes'] * 60;
+                
+                if ($baseTime <= $now) {
+                    // Базовое время прошло, вычисляем следующий интервал
+                    $elapsed = $now - $baseTime;
+                    $intervalsPassed = floor($elapsed / $interval);
+                    $nextPublishTime = $baseTime + (($intervalsPassed + 1) * $interval);
+                } else {
+                    // Базовое время еще не наступило
+                    $nextPublishTime = $baseTime;
+                }
+            } elseif (!empty($schedule['publish_at'])) {
+                $nextPublishTime = strtotime($schedule['publish_at']);
+            }
+            
+            if ($nextPublishTime && $nextPublishTime > $now):
             ?>
                 <span style="color: #3498db; font-weight: 500;">
-                    <?= date('d.m.Y H:i', $publishTime) ?>
+                    <?= date('d.m.Y H:i', $nextPublishTime) ?>
                 </span>
-            <?php else: ?>
+                <br><small style="color: #95a5a6;">
+                    <?php
+                    $diff = $nextPublishTime - $now;
+                    $days = floor($diff / 86400);
+                    $hours = floor(($diff % 86400) / 3600);
+                    $minutes = floor(($diff % 3600) / 60);
+                    if ($days > 0) {
+                        echo "через {$days} дн. ";
+                    }
+                    if ($hours > 0) {
+                        echo "{$hours} ч. ";
+                    }
+                    echo "{$minutes} мин.";
+                    ?>
+                </small>
+            <?php elseif ($nextPublishTime): ?>
                 <span style="color: #e74c3c;">Просрочено</span>
+            <?php else: ?>
+                <span style="color: #95a5a6;">Не запланировано</span>
             <?php endif; ?>
         </div>
-        <?php endif; ?>
         <?php if ($template): ?>
         <div>
             <strong>Шаблон:</strong><br>
@@ -125,7 +160,9 @@ ob_start();
                             </span>
                         </td>
                         <td style="padding: 0.75rem;">
-                            <?php if ($publishAt): 
+                            <?php if (isset($item['is_published']) && $item['is_published']): ?>
+                                <span style="color: #27ae60; font-weight: 500;">Опубликовано</span>
+                            <?php elseif ($publishAt): 
                                 $publishTime = strtotime($publishAt);
                                 $now = time();
                             ?>
@@ -150,7 +187,9 @@ ob_start();
                                     </small>
                                 <?php else: ?>
                                     <span style="color: #e74c3c;">Просрочено</span>
-                                    <br><small style="color: #95a5a6;"><?= date('d.m.Y H:i', $publishTime) ?></small>
+                                    <?php if ($publishTime !== false): ?>
+                                        <br><small style="color: #95a5a6;"><?= date('d.m.Y H:i', $publishTime) ?></small>
+                                    <?php endif; ?>
                                 <?php endif; ?>
                             <?php else: ?>
                                 <span style="color: #95a5a6;">Не запланировано</span>
