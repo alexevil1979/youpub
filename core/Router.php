@@ -152,6 +152,41 @@ class Router
     }
 
     /**
+     * Привести параметры к типам согласно сигнатуре метода
+     */
+    private function convertParamsToTypes(array $params, \ReflectionMethod $reflection): array
+    {
+        $typedParams = [];
+        $paramIndex = 0;
+        $paramValues = array_values($params);
+        
+        foreach ($reflection->getParameters() as $param) {
+            $paramName = $param->getName();
+            $paramType = $param->getType();
+            
+            // Получаем значение параметра (сначала по имени, потом по индексу)
+            $value = $params[$paramName] ?? ($paramValues[$paramIndex] ?? null);
+            
+            // Приводим тип, если указан и значение не null
+            if ($paramType && !$paramType->allowsNull() && $value !== null) {
+                $typeName = $paramType->getName();
+                if ($typeName === 'int') {
+                    $value = (int)$value;
+                } elseif ($typeName === 'float') {
+                    $value = (float)$value;
+                } elseif ($typeName === 'bool') {
+                    $value = (bool)$value;
+                }
+            }
+            
+            $typedParams[] = $value;
+            $paramIndex++;
+        }
+        
+        return $typedParams;
+    }
+
+    /**
      * Вызов handler
      */
     private function callHandler($handler, array $params): void
@@ -176,9 +211,14 @@ class Router
                 $instance = new $class();
                 if (method_exists($instance, $method)) {
                     // Приводим типы параметров согласно сигнатуре метода
-                    $reflection = new \ReflectionMethod($instance, $method);
-                    $typedParams = $this->convertParamsToTypes($params, $reflection);
-                    call_user_func_array([$instance, $method], $typedParams);
+                    try {
+                        $reflection = new \ReflectionMethod($instance, $method);
+                        $typedParams = $this->convertParamsToTypes($params, $reflection);
+                        call_user_func_array([$instance, $method], $typedParams);
+                    } catch (\ReflectionException $e) {
+                        // Если не удалось получить reflection, используем параметры как есть
+                        call_user_func_array([$instance, $method], array_values($params));
+                    }
                     return;
                 }
             }
