@@ -143,84 +143,99 @@ CALL add_is_default_to_integrations();
 DROP PROCEDURE IF EXISTS add_is_default_to_integrations;
 
 -- Устанавливаем is_default = 1 для первого подключенного аккаунта каждого пользователя, если нет аккаунта по умолчанию
--- Используем JOIN вместо подзапросов для избежания ошибки MySQL 1093
+-- Используем временные таблицы для избежания ошибки MySQL 1093
 
 -- YouTube
-UPDATE youtube_integrations y1
-INNER JOIN (
-    SELECT user_id, MIN(id) as first_id
-    FROM youtube_integrations
-    WHERE status = 'connected'
-    AND user_id NOT IN (
-        SELECT DISTINCT user_id 
-        FROM youtube_integrations 
-        WHERE is_default = 1
-    )
-    GROUP BY user_id
-) y2 ON y1.id = y2.first_id AND y1.user_id = y2.user_id
-SET y1.is_default = 1
-WHERE y1.status = 'connected';
+CREATE TEMPORARY TABLE IF NOT EXISTS temp_youtube_defaults AS
+SELECT user_id, MIN(id) as first_id
+FROM youtube_integrations
+WHERE status = 'connected'
+AND user_id NOT IN (
+    SELECT DISTINCT user_id 
+    FROM youtube_integrations 
+    WHERE is_default = 1
+)
+GROUP BY user_id;
+
+UPDATE youtube_integrations y
+INNER JOIN temp_youtube_defaults t ON y.id = t.first_id AND y.user_id = t.user_id
+SET y.is_default = 1
+WHERE y.status = 'connected';
+
+DROP TEMPORARY TABLE IF EXISTS temp_youtube_defaults;
 
 -- Telegram
-UPDATE telegram_integrations t1
-INNER JOIN (
-    SELECT user_id, MIN(id) as first_id
-    FROM telegram_integrations
-    WHERE status = 'connected'
-    AND user_id NOT IN (
-        SELECT DISTINCT user_id 
-        FROM telegram_integrations 
-        WHERE is_default = 1
-    )
-    GROUP BY user_id
-) t2 ON t1.id = t2.first_id AND t1.user_id = t2.user_id
-SET t1.is_default = 1
-WHERE t1.status = 'connected';
+CREATE TEMPORARY TABLE IF NOT EXISTS temp_telegram_defaults AS
+SELECT user_id, MIN(id) as first_id
+FROM telegram_integrations
+WHERE status = 'connected'
+AND user_id NOT IN (
+    SELECT DISTINCT user_id 
+    FROM telegram_integrations 
+    WHERE is_default = 1
+)
+GROUP BY user_id;
+
+UPDATE telegram_integrations t
+INNER JOIN temp_telegram_defaults td ON t.id = td.first_id AND t.user_id = td.user_id
+SET t.is_default = 1
+WHERE t.status = 'connected';
+
+DROP TEMPORARY TABLE IF EXISTS temp_telegram_defaults;
 
 -- TikTok
-UPDATE tiktok_integrations tk1
-INNER JOIN (
-    SELECT user_id, MIN(id) as first_id
-    FROM tiktok_integrations
-    WHERE status = 'connected'
-    AND user_id NOT IN (
-        SELECT DISTINCT user_id 
-        FROM tiktok_integrations 
-        WHERE is_default = 1
-    )
-    GROUP BY user_id
-) tk2 ON tk1.id = tk2.first_id AND tk1.user_id = tk2.user_id
-SET tk1.is_default = 1
-WHERE tk1.status = 'connected';
+CREATE TEMPORARY TABLE IF NOT EXISTS temp_tiktok_defaults AS
+SELECT user_id, MIN(id) as first_id
+FROM tiktok_integrations
+WHERE status = 'connected'
+AND user_id NOT IN (
+    SELECT DISTINCT user_id 
+    FROM tiktok_integrations 
+    WHERE is_default = 1
+)
+GROUP BY user_id;
+
+UPDATE tiktok_integrations tk
+INNER JOIN temp_tiktok_defaults tkd ON tk.id = tkd.first_id AND tk.user_id = tkd.user_id
+SET tk.is_default = 1
+WHERE tk.status = 'connected';
+
+DROP TEMPORARY TABLE IF EXISTS temp_tiktok_defaults;
 
 -- Instagram
-UPDATE instagram_integrations i1
-INNER JOIN (
-    SELECT user_id, MIN(id) as first_id
-    FROM instagram_integrations
-    WHERE status = 'connected'
-    AND user_id NOT IN (
-        SELECT DISTINCT user_id 
-        FROM instagram_integrations 
-        WHERE is_default = 1
-    )
-    GROUP BY user_id
-) i2 ON i1.id = i2.first_id AND i1.user_id = i2.user_id
-SET i1.is_default = 1
-WHERE i1.status = 'connected';
+CREATE TEMPORARY TABLE IF NOT EXISTS temp_instagram_defaults AS
+SELECT user_id, MIN(id) as first_id
+FROM instagram_integrations
+WHERE status = 'connected'
+AND user_id NOT IN (
+    SELECT DISTINCT user_id 
+    FROM instagram_integrations 
+    WHERE is_default = 1
+)
+GROUP BY user_id;
+
+UPDATE instagram_integrations i
+INNER JOIN temp_instagram_defaults id ON i.id = id.first_id AND i.user_id = id.user_id
+SET i.is_default = 1
+WHERE i.status = 'connected';
+
+DROP TEMPORARY TABLE IF EXISTS temp_instagram_defaults;
 
 -- Pinterest
-UPDATE pinterest_integrations p1
-INNER JOIN (
-    SELECT user_id, MIN(id) as first_id
-    FROM pinterest_integrations
-    WHERE status = 'connected'
-    AND user_id NOT IN (
-        SELECT DISTINCT user_id 
-        FROM pinterest_integrations 
-        WHERE is_default = 1
-    )
-    GROUP BY user_id
-) p2 ON p1.id = p2.first_id AND p1.user_id = p2.user_id
-SET p1.is_default = 1
-WHERE p1.status = 'connected';
+CREATE TEMPORARY TABLE IF NOT EXISTS temp_pinterest_defaults AS
+SELECT user_id, MIN(id) as first_id
+FROM pinterest_integrations
+WHERE status = 'connected'
+AND user_id NOT IN (
+    SELECT DISTINCT user_id 
+    FROM pinterest_integrations 
+    WHERE is_default = 1
+)
+GROUP BY user_id;
+
+UPDATE pinterest_integrations p
+INNER JOIN temp_pinterest_defaults pd ON p.id = pd.first_id AND p.user_id = pd.user_id
+SET p.is_default = 1
+WHERE p.status = 'connected';
+
+DROP TEMPORARY TABLE IF EXISTS temp_pinterest_defaults;
