@@ -63,28 +63,46 @@ ob_start();
             </span>
         </div>
         <div>
+            <strong>Текущее время:</strong><br>
+            <span style="color: #555; font-weight: 500;" id="current-time">
+                <?= date('d.m.Y H:i:s') ?>
+            </span>
+        </div>
+        <div>
             <strong>Следующая публикация:</strong><br>
             <?php 
-            // Для интервальных расписаний вычисляем следующее время публикации
+            // Берем время первой неопубликованной публикации из списка файлов
             $nextPublishTime = null;
-            $scheduleType = $schedule['schedule_type'] ?? 'fixed';
             $now = time();
-            
-            if ($scheduleType === 'interval' && !empty($schedule['interval_minutes'])) {
-                $baseTime = strtotime($schedule['publish_at'] ?? 'now');
-                $interval = (int)$schedule['interval_minutes'] * 60;
-                
-                if ($baseTime <= $now) {
-                    // Базовое время прошло, вычисляем следующий интервал
-                    $elapsed = $now - $baseTime;
-                    $intervalsPassed = floor($elapsed / $interval);
-                    $nextPublishTime = $baseTime + (($intervalsPassed + 1) * $interval);
-                } else {
-                    // Базовое время еще не наступило
-                    $nextPublishTime = $baseTime;
+            if (!empty($scheduledFiles)) {
+                foreach ($scheduledFiles as $item) {
+                    if (!isset($item['is_published']) || !$item['is_published']) {
+                        if (!empty($item['publish_at'])) {
+                            $nextPublishTime = strtotime($item['publish_at']);
+                            break;
+                        }
+                    }
                 }
-            } elseif (!empty($schedule['publish_at'])) {
-                $nextPublishTime = strtotime($schedule['publish_at']);
+            }
+            
+            // Если не нашли в файлах, вычисляем из расписания
+            if (!$nextPublishTime) {
+                $scheduleType = $schedule['schedule_type'] ?? 'fixed';
+                
+                if ($scheduleType === 'interval' && !empty($schedule['interval_minutes'])) {
+                    $baseTime = strtotime($schedule['publish_at'] ?? 'now');
+                    $interval = (int)$schedule['interval_minutes'] * 60;
+                    
+                    if ($baseTime <= $now) {
+                        $elapsed = $now - $baseTime;
+                        $intervalsPassed = floor($elapsed / $interval);
+                        $nextPublishTime = $baseTime + (($intervalsPassed + 1) * $interval);
+                    } else {
+                        $nextPublishTime = $baseTime;
+                    }
+                } elseif (!empty($schedule['publish_at'])) {
+                    $nextPublishTime = strtotime($schedule['publish_at']);
+                }
             }
             
             if ($nextPublishTime && $nextPublishTime > $now):
