@@ -89,6 +89,65 @@ class VideoController extends Controller
     }
 
     /**
+     * Множественная загрузка видео
+     */
+    public function uploadMultiple(): void
+    {
+        $userId = $_SESSION['user_id'];
+
+        if (!isset($_FILES['videos']) || !is_array($_FILES['videos']['name'])) {
+            $this->error('No files uploaded');
+            return;
+        }
+
+        // Преобразуем массив файлов в удобный формат
+        $files = [];
+        $fileCount = count($_FILES['videos']['name']);
+        
+        for ($i = 0; $i < $fileCount; $i++) {
+            if ($_FILES['videos']['error'][$i] === UPLOAD_ERR_NO_FILE) {
+                continue; // Пропускаем пустые файлы
+            }
+            
+            $files[] = [
+                'name' => $_FILES['videos']['name'][$i],
+                'type' => $_FILES['videos']['type'][$i],
+                'tmp_name' => $_FILES['videos']['tmp_name'][$i],
+                'error' => $_FILES['videos']['error'][$i],
+                'size' => $_FILES['videos']['size'][$i],
+            ];
+        }
+
+        if (empty($files)) {
+            $this->error('No valid files selected');
+            return;
+        }
+
+        $groupId = $this->getParam('group_id', null);
+        $groupId = $groupId ? (int)$groupId : null;
+        
+        $titleTemplate = $this->getParam('title_template', '');
+        $description = $this->getParam('description', '');
+        $tags = $this->getParam('tags', '');
+
+        $result = $this->videoService->uploadMultipleVideos(
+            $userId,
+            $files,
+            $groupId,
+            $titleTemplate,
+            $description,
+            $tags
+        );
+
+        // Всегда возвращаем JSON для множественной загрузки
+        if ($result['success']) {
+            $this->success($result['data'], $result['message']);
+        } else {
+            $this->error($result['message'], 400);
+        }
+    }
+
+    /**
      * Показать видео
      */
     public function show(int $id): void

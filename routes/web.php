@@ -38,6 +38,7 @@ $router->get('/profile', [DashboardController::class, 'profile'], [AuthMiddlewar
 $router->get('/videos', [VideoController::class, 'index'], [AuthMiddleware::class]);
 $router->get('/videos/upload', [VideoController::class, 'showUpload'], [AuthMiddleware::class]);
 $router->post('/videos/upload', [VideoController::class, 'upload'], [AuthMiddleware::class]);
+$router->post('/videos/upload-multiple', [VideoController::class, 'uploadMultiple'], [AuthMiddleware::class]);
 $router->get('/videos/{id}', [VideoController::class, 'show'], [AuthMiddleware::class]);
 $router->get('/videos/{id}/edit', [VideoController::class, 'showEdit'], [AuthMiddleware::class]);
 $router->post('/videos/{id}/edit', [VideoController::class, 'update'], [AuthMiddleware::class]);

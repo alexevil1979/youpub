@@ -305,6 +305,181 @@ class VideoService extends Service
     }
 
     /**
+     * Загрузить несколько видео
+     */
+    public function uploadMultipleVideos(int $userId, array $files, ?int $groupId, string $titleTemplate, string $description, string $tags): array
+    {
+        $results = [];
+        $uploadedVideoIds = [];
+        
+        // Проверка лимитов
+        $user = $this->userRepo->findById($userId);
+        $userVideos = $this->videoRepo->findByUserId($userId);
+        $currentCount = count($userVideos);
+        
+        if ($currentCount >= $user['upload_limit']) {
+            return ['success' => false, 'message' => 'Upload limit reached'];
+        }
+        
+        // Ограничение на количество файлов
+        if (count($files) > 50) {
+            return ['success' => false, 'message' => 'Maximum 50 files allowed'];
+        }
+        
+        // Проверяем, не превысит ли загрузка лимит
+        if ($currentCount + count($files) > $user['upload_limit']) {
+            $allowed = $user['upload_limit'] - $currentCount;
+            return ['success' => false, 'message' => "Upload limit will be exceeded. You can upload only {$allowed} more files."];
+        }
+        
+        // Подготовка директории
+        $uploadDir = $this->config['UPLOAD_DIR'] . '/' . $userId;
+        $uploadDir = realpath(dirname($uploadDir)) . '/' . basename($uploadDir);
+        
+        $baseDir = dirname($uploadDir);
+        if (!is_dir($baseDir)) {
+            @mkdir($baseDir, 0755, true);
+        }
+        
+        if (!is_dir($uploadDir)) {
+            @mkdir($uploadDir, 0755, true);
+        }
+        
+        if (!is_writable($uploadDir)) {
+            return ['success' => false, 'message' => 'Upload directory is not writable'];
+        }
+        
+        // Обработка каждого файла
+        foreach ($files as $index => $file) {
+            $fileResult = [
+                'fileName' => $file['name'] ?? 'unknown',
+                'success' => false,
+                'message' => '',
+                'videoId' => null
+            ];
+            
+            // Проверка ошибки загрузки
+            if ($file['error'] !== UPLOAD_ERR_OK) {
+                $fileResult['message'] = 'Upload error: ' . $this->getUploadErrorMessage($file['error']);
+                $results[] = $fileResult;
+                continue;
+            }
+            
+            // Проверка размера
+            if ($file['size'] > $this->config['UPLOAD_MAX_SIZE']) {
+                $fileResult['message'] = 'File size exceeds maximum allowed size';
+                $results[] = $fileResult;
+                continue;
+            }
+            
+            // Проверка типа файла
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mimeType = finfo_file($finfo, $file['tmp_name']);
+            finfo_close($finfo);
+            
+            if (!in_array($mimeType, $this->config['ALLOWED_VIDEO_TYPES'])) {
+                $fileResult['message'] = 'Invalid file type: ' . $mimeType;
+                $results[] = $fileResult;
+                continue;
+            }
+            
+            // Генерация имени файла
+            $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+            $fileName = uniqid('video_', true) . '.' . $extension;
+            $filePath = $uploadDir . '/' . $fileName;
+            
+            // Перемещение файла
+            $moved = @move_uploaded_file($file['tmp_name'], $filePath);
+            if (!$moved) {
+                $fileResult['message'] = 'Failed to save file';
+                $results[] = $fileResult;
+                continue;
+            }
+            
+            // Генерация названия
+            $title = $file['name'];
+            if ($titleTemplate) {
+                $title = str_replace(['{index}', '{filename}'], [$index + 1, $file['name']], $titleTemplate);
+            }
+            
+            // Сохранение в БД
+            try {
+                $videoId = $this->videoRepo->create([
+                    'user_id' => $userId,
+                    'file_path' => $filePath,
+                    'file_name' => $file['name'],
+                    'file_size' => $file['size'],
+                    'mime_type' => $mimeType,
+                    'title' => $title,
+                    'description' => $description,
+                    'tags' => $tags,
+                    'status' => 'uploaded',
+                ]);
+                
+                $fileResult['success'] = true;
+                $fileResult['message'] = 'Uploaded successfully';
+                $fileResult['videoId'] = $videoId;
+                $uploadedVideoIds[] = $videoId;
+            } catch (\Exception $e) {
+                error_log('Error creating video record: ' . $e->getMessage());
+                $fileResult['message'] = 'Failed to save video record: ' . $e->getMessage();
+                // Удаляем файл, если не удалось сохранить запись
+                if (file_exists($filePath)) {
+                    @unlink($filePath);
+                }
+            }
+            
+            $results[] = $fileResult;
+        }
+        
+        // Добавление в группу, если указана
+        if ($groupId && !empty($uploadedVideoIds)) {
+            try {
+                $groupService = new \App\Modules\ContentGroups\Services\GroupService();
+                $addResult = $groupService->addVideosToGroup($groupId, $uploadedVideoIds, $userId);
+                
+                if (!$addResult['success']) {
+                    error_log('Failed to add videos to group: ' . $addResult['message']);
+                }
+            } catch (\Exception $e) {
+                error_log('Error adding videos to group: ' . $e->getMessage());
+            }
+        }
+        
+        $successCount = count(array_filter($results, fn($r) => $r['success']));
+        $totalCount = count($results);
+        
+        return [
+            'success' => $successCount > 0,
+            'message' => "Uploaded {$successCount} of {$totalCount} files",
+            'data' => [
+                'results' => $results,
+                'successCount' => $successCount,
+                'totalCount' => $totalCount,
+                'videoIds' => $uploadedVideoIds
+            ]
+        ];
+    }
+    
+    /**
+     * Получить сообщение об ошибке загрузки
+     */
+    private function getUploadErrorMessage(int $errorCode): string
+    {
+        $messages = [
+            UPLOAD_ERR_INI_SIZE => 'File exceeds upload_max_filesize',
+            UPLOAD_ERR_FORM_SIZE => 'File exceeds MAX_FILE_SIZE',
+            UPLOAD_ERR_PARTIAL => 'File was only partially uploaded',
+            UPLOAD_ERR_NO_FILE => 'No file was uploaded',
+            UPLOAD_ERR_NO_TMP_DIR => 'Missing temporary folder',
+            UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk',
+            UPLOAD_ERR_EXTENSION => 'File upload stopped by extension',
+        ];
+        
+        return $messages[$errorCode] ?? 'Unknown upload error';
+    }
+
+    /**
      * Переключить статус видео
      */
     public function toggleVideoStatus(int $id, int $userId): array
