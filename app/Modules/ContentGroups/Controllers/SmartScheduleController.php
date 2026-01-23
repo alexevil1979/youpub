@@ -172,7 +172,13 @@ class SmartScheduleController extends Controller
      */
     public function showCreate(): void
     {
-        $userId = $_SESSION['user_id'];
+        $userId = $_SESSION['user_id'] ?? null;
+        
+        if (!$userId) {
+            header('Location: /login');
+            exit;
+        }
+        
         $groups = $this->groupService->getUserGroups($userId);
         $templates = $this->templateService->getUserTemplates($userId, true);
         $csrfToken = (new \Core\Auth())->generateCsrfToken();
