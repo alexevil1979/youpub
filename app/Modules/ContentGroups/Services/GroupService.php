@@ -232,28 +232,56 @@ class GroupService extends Service
      */
     public function toggleFileStatus(int $groupId, int $fileId, int $userId, string $newStatus): array
     {
-        $group = $this->groupRepo->findById($groupId);
-        if (!$group || $group['user_id'] !== $userId) {
-            return ['success' => false, 'message' => 'Group not found or unauthorized'];
+        try {
+            error_log("GroupService::toggleFileStatus: groupId={$groupId}, fileId={$fileId}, userId={$userId}, newStatus={$newStatus}");
+            
+            $group = $this->groupRepo->findById($groupId);
+            if (!$group) {
+                error_log("GroupService::toggleFileStatus: Group not found - ID {$groupId}");
+                return ['success' => false, 'message' => 'Группа не найдена'];
+            }
+            
+            if ($group['user_id'] !== $userId) {
+                error_log("GroupService::toggleFileStatus: Unauthorized - group userId={$group['user_id']}, request userId={$userId}");
+                return ['success' => false, 'message' => 'Нет доступа к этой группе'];
+            }
+
+            $file = $this->fileRepo->findById($fileId);
+            if (!$file) {
+                error_log("GroupService::toggleFileStatus: File not found - ID {$fileId}");
+                return ['success' => false, 'message' => 'Файл не найден'];
+            }
+            
+            if ($file['group_id'] !== $groupId) {
+                error_log("GroupService::toggleFileStatus: File belongs to different group - file groupId={$file['group_id']}, request groupId={$groupId}");
+                return ['success' => false, 'message' => 'Файл не принадлежит этой группе'];
+            }
+
+            // Валидация статуса
+            $allowedStatuses = ['new', 'queued', 'published', 'error', 'paused'];
+            if (!in_array($newStatus, $allowedStatuses)) {
+                error_log("GroupService::toggleFileStatus: Invalid status - {$newStatus}");
+                return ['success' => false, 'message' => 'Недопустимый статус: ' . $newStatus];
+            }
+
+            $updated = $this->fileRepo->updateFileStatus($fileId, $newStatus);
+            if (!$updated) {
+                error_log("GroupService::toggleFileStatus: Failed to update file status in database");
+                return ['success' => false, 'message' => 'Не удалось обновить статус в базе данных'];
+            }
+
+            error_log("GroupService::toggleFileStatus: Success - file {$fileId} status changed to {$newStatus}");
+            return [
+                'success' => true,
+                'message' => 'Статус файла изменен',
+                'data' => ['status' => $newStatus]
+            ];
+        } catch (\Exception $e) {
+            error_log("GroupService::toggleFileStatus: Exception - " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+            return [
+                'success' => false,
+                'message' => 'Произошла ошибка: ' . $e->getMessage()
+            ];
         }
-
-        $file = $this->fileRepo->findById($fileId);
-        if (!$file || $file['group_id'] !== $groupId) {
-            return ['success' => false, 'message' => 'File not found in this group'];
-        }
-
-        // Валидация статуса
-        $allowedStatuses = ['new', 'queued', 'published', 'error', 'paused'];
-        if (!in_array($newStatus, $allowedStatuses)) {
-            return ['success' => false, 'message' => 'Invalid status'];
-        }
-
-        $this->fileRepo->updateFileStatus($fileId, $newStatus);
-
-        return [
-            'success' => true,
-            'message' => 'File status updated successfully',
-            'data' => ['status' => $newStatus]
-        ];
     }
 }

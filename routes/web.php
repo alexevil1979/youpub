@@ -99,6 +99,7 @@ $router->post('/content-groups/{id}/add-videos', [GroupController::class, 'addVi
 $router->delete('/content-groups/{groupId}/videos/{videoId}', [GroupController::class, 'removeVideo'], [AuthMiddleware::class]);
 $router->post('/content-groups/{id}/shuffle', [GroupController::class, 'shuffle'], [AuthMiddleware::class]);
 $router->post('/content-groups/{id}/toggle-status', [GroupController::class, 'toggleStatus'], [AuthMiddleware::class]);
+$router->post('/content-groups/{id}/files/{fileId}/toggle-status', [GroupController::class, 'toggleFileStatus'], [AuthMiddleware::class]);
 $router->post('/content-groups/{id}/duplicate', [GroupController::class, 'duplicate'], [AuthMiddleware::class]);
 $router->delete('/content-groups/{id}', [GroupController::class, 'delete'], [AuthMiddleware::class]);
 

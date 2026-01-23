@@ -309,21 +309,39 @@ class GroupController extends Controller
      */
     public function toggleFileStatus(int $id, int $fileId): void
     {
-        $userId = $_SESSION['user_id'];
-        $data = $this->getRequestData();
-        $newStatus = $data['status'] ?? null;
+        try {
+            $userId = $_SESSION['user_id'] ?? null;
+            
+            if (!$userId) {
+                $this->error('Необходима авторизация', 401);
+                return;
+            }
+            
+            error_log("GroupController::toggleFileStatus: groupId={$id}, fileId={$fileId}, userId={$userId}");
+            
+            $data = $this->getRequestData();
+            $newStatus = $data['status'] ?? null;
 
-        if (!$newStatus) {
-            $this->error('Status is required', 400);
-            return;
-        }
+            if (!$newStatus) {
+                error_log("GroupController::toggleFileStatus: Status not provided in request data");
+                $this->error('Статус не указан', 400);
+                return;
+            }
 
-        $result = $this->groupService->toggleFileStatus($id, $fileId, $userId, $newStatus);
+            error_log("GroupController::toggleFileStatus: New status requested: {$newStatus}");
 
-        if ($result['success']) {
-            $this->success(['status' => $result['data']['status'] ?? null], $result['message']);
-        } else {
-            $this->error($result['message'], 400);
+            $result = $this->groupService->toggleFileStatus($id, $fileId, $userId, $newStatus);
+
+            if ($result['success']) {
+                error_log("GroupController::toggleFileStatus: Success - status changed to {$newStatus}");
+                $this->success(['status' => $result['data']['status'] ?? null], $result['message'] ?? 'Статус файла изменен');
+            } else {
+                error_log("GroupController::toggleFileStatus: Failed - " . ($result['message'] ?? 'Unknown error'));
+                $this->error($result['message'] ?? 'Не удалось изменить статус файла', 400);
+            }
+        } catch (\Exception $e) {
+            error_log("GroupController::toggleFileStatus: Exception - " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+            $this->error('Произошла ошибка при изменении статуса: ' . $e->getMessage(), 500);
         }
     }
 }
