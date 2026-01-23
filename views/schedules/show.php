@@ -50,48 +50,63 @@ if (!empty($schedule['content_group_id'])) {
             </div>
         <?php endif; ?>
 
-    <div class="detail-item">
-        <strong>Платформа:</strong> <?= ucfirst($schedule['platform']) ?>
-    </div>
-
-    <div class="detail-item">
-        <strong>Дата публикации:</strong> <?= date('d.m.Y H:i', strtotime($schedule['publish_at'])) ?>
-    </div>
-
-    <div class="detail-item">
-        <strong>Статус:</strong>
-        <span class="badge badge-<?= 
-            $schedule['status'] === 'published' ? 'success' : 
-            ($schedule['status'] === 'failed' ? 'danger' : 
-            ($schedule['status'] === 'processing' ? 'warning' : 'secondary')) 
-        ?>">
-            <?= ucfirst($schedule['status']) ?>
-        </span>
-    </div>
-
-    <?php if ($schedule['content_group_id']): ?>
-        <div class="detail-item">
-            <strong>Группа:</strong>
-            <a href="/content-groups/<?= $schedule['content_group_id'] ?>">Просмотр группы</a>
+        <div class="info-card-item">
+            <div class="info-card-label">Платформа:</div>
+            <div class="info-card-value">
+                <span class="platform-badge platform-<?= $schedule['platform'] ?? 'unknown' ?>">
+                    <?= ucfirst($schedule['platform'] ?? 'Неизвестно') ?>
+                </span>
+            </div>
         </div>
-    <?php endif; ?>
 
-    <?php if ($schedule['schedule_type'] && $schedule['schedule_type'] !== 'fixed'): ?>
-        <div class="detail-item">
-            <strong>Тип расписания:</strong> <?= ucfirst($schedule['schedule_type']) ?>
+        <div class="info-card-item">
+            <div class="info-card-label">Дата публикации:</div>
+            <div class="info-card-value">
+                <?= !empty($schedule['publish_at']) ? date('d.m.Y H:i', strtotime($schedule['publish_at'])) : 'Не указана' ?>
+            </div>
         </div>
-    <?php endif; ?>
 
-    <?php if ($schedule['error_message']): ?>
-        <div class="detail-item" style="color: #e74c3c;">
-            <strong>Ошибка:</strong> <?= htmlspecialchars($schedule['error_message']) ?>
+        <div class="info-card-item">
+            <div class="info-card-label">Статус:</div>
+            <div class="info-card-value">
+                <span class="status-badge status-<?= $schedule['status'] ?? 'unknown' ?>">
+                    <?= ucfirst($schedule['status'] ?? 'Неизвестно') ?>
+                </span>
+            </div>
         </div>
-    <?php endif; ?>
+
+        <?php if (!empty($schedule['schedule_type']) && $schedule['schedule_type'] !== 'fixed'): ?>
+            <div class="info-card-item">
+                <div class="info-card-label">Тип расписания:</div>
+                <div class="info-card-value">
+                    <?php
+                    $scheduleTypeNames = [
+                        'fixed' => 'Фиксированное',
+                        'interval' => 'Интервальное',
+                        'batch' => 'Пакетное',
+                        'random' => 'Случайное',
+                        'wave' => 'Волновое'
+                    ];
+                    echo htmlspecialchars($scheduleTypeNames[$schedule['schedule_type']] ?? ucfirst($schedule['schedule_type']));
+                    ?>
+                </div>
+            </div>
+        <?php endif; ?>
+
+        <?php if (!empty($schedule['error_message'])): ?>
+            <div class="info-card-item" style="grid-column: 1 / -1;">
+                <div class="info-card-label" style="color: #e74c3c;">Ошибка:</div>
+                <div class="info-card-value" style="color: #e74c3c;">
+                    <?= htmlspecialchars($schedule['error_message']) ?>
+                </div>
+            </div>
+        <?php endif; ?>
+    </div>
 </div>
 
-<div class="schedule-actions" style="margin-top: 2rem;">
+<div class="form-actions schedule-actions">
     <a href="/schedules" class="btn btn-secondary">Назад к списку</a>
-    <?php if ($schedule['status'] === 'pending'): ?>
+    <?php if (($schedule['status'] ?? '') === 'pending'): ?>
         <button type="button" class="btn btn-danger" onclick="deleteSchedule(<?= $schedule['id'] ?>)">Удалить расписание</button>
     <?php endif; ?>
 </div>
