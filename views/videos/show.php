@@ -151,7 +151,14 @@ function publishNow(id) {
             'Content-Type': 'application/json'
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.message || 'Ошибка сервера (HTTP ' + response.status + ')');
+            });
+        }
+        return response.json();
+    })
     .then(data => {
         btn.disabled = false;
         btn.textContent = originalText;
@@ -164,15 +171,19 @@ function publishNow(id) {
             
             // Показываем уведомление
             showNotification('Видео успешно опубликовано!', 'success');
+            // Перезагружаем страницу через 2 секунды для обновления списка публикаций
+            setTimeout(() => window.location.reload(), 2000);
         } else {
-            alert('Ошибка: ' + (data.message || 'Не удалось опубликовать видео'));
+            const errorMsg = data.message || 'Не удалось опубликовать видео';
+            console.error('Publication error:', data);
+            showNotification('Ошибка: ' + errorMsg, 'error');
         }
     })
     .catch(error => {
         console.error('Error:', error);
         btn.disabled = false;
         btn.textContent = originalText;
-        alert('Произошла ошибка при публикации видео');
+        showNotification('Произошла ошибка при публикации: ' + error.message, 'error');
     });
 }
 
