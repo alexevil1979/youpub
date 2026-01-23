@@ -59,11 +59,42 @@ try {
                 continue;
             }
             
+            // Вычисляем время до публикации для логирования
+            $timeUntilPublish = '';
+            if (!empty($schedule['publish_at'])) {
+                $publishAt = strtotime($schedule['publish_at']);
+                $now = time();
+                $diff = $publishAt - $now;
+                
+                if ($diff > 0) {
+                    $days = floor($diff / 86400);
+                    $hours = floor(($diff % 86400) / 3600);
+                    $minutes = floor(($diff % 3600) / 60);
+                    $seconds = $diff % 60;
+                    
+                    $timeUntilPublish = ' (осталось: ';
+                    if ($days > 0) {
+                        $timeUntilPublish .= "{$days}д ";
+                    }
+                    if ($hours > 0) {
+                        $timeUntilPublish .= "{$hours}ч ";
+                    }
+                    if ($minutes > 0) {
+                        $timeUntilPublish .= "{$minutes}м ";
+                    }
+                    $timeUntilPublish .= "{$seconds}с)";
+                } elseif ($diff <= 0) {
+                    $timeUntilPublish = ' (время наступило, готово к публикации)';
+                }
+            }
+            
             // Проверяем, готово ли расписание (с учетом типа и лимитов)
             if (!$scheduleEngine->isScheduleReady($schedule)) {
-                logMessage("Schedule ID {$schedule['id']} not ready (limits or timing). Publish_at: " . ($schedule['publish_at'] ?? 'NULL') . ", Status: " . ($schedule['status'] ?? 'NULL') . ", Type: " . ($schedule['schedule_type'] ?? 'NULL'), $logFile);
+                logMessage("Schedule ID {$schedule['id']} not ready (limits or timing). Publish_at: " . ($schedule['publish_at'] ?? 'NULL') . $timeUntilPublish . ", Status: " . ($schedule['status'] ?? 'NULL') . ", Type: " . ($schedule['schedule_type'] ?? 'NULL'), $logFile);
                 continue;
             }
+            
+            logMessage("Schedule ID {$schedule['id']} is ready for publishing. Publish_at: " . ($schedule['publish_at'] ?? 'NULL') . $timeUntilPublish, $logFile);
 
             logMessage("Processing group schedule ID: {$schedule['id']}, Group: {$schedule['group_name']}, Platform: {$schedule['platform']}", $logFile);
 
