@@ -29,16 +29,27 @@ class ScheduleEngineService extends Service
      */
     public function isScheduleReady(array $schedule): bool
     {
-        $now = time();
-        $publishAt = strtotime($schedule['publish_at']);
-
-        // Базовая проверка времени
-        if ($publishAt > $now) {
+        // Проверяем статус расписания
+        if (($schedule['status'] ?? '') === 'paused') {
             return false;
         }
+        
+        $now = time();
+        
+        // Проверяем наличие времени публикации
+        if (empty($schedule['publish_at'])) {
+            return false;
+        }
+        
+        $publishAt = strtotime($schedule['publish_at']);
 
         // Проверка типа расписания
         $scheduleType = $schedule['schedule_type'] ?? 'fixed';
+        
+        // Для фиксированных расписаний время должно наступить
+        if ($scheduleType === 'fixed' && $publishAt > $now) {
+            return false;
+        }
         
         switch ($scheduleType) {
             case 'fixed':
