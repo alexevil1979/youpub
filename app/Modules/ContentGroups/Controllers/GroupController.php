@@ -72,7 +72,7 @@ class GroupController extends Controller
     /**
      * Показать группу
      */
-    public function show(int $id): void
+    public function show($id): void
     {
         // Приводим к int, если передана строка
         $id = (int)$id;
