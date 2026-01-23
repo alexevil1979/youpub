@@ -205,7 +205,18 @@ function removeFromGroup(groupId, videoId) {
 }
 
 function toggleFileStatus(groupId, fileId, currentStatus) {
-    const newStatus = (currentStatus === 'new' || currentStatus === 'queued') ? 'paused' : 'new';
+    // Определяем новый статус: если файл активен (new, queued) - ставим paused, иначе - new
+    let newStatus;
+    if (currentStatus === 'new' || currentStatus === 'queued') {
+        newStatus = 'paused';
+    } else if (currentStatus === 'paused') {
+        newStatus = 'new';
+    } else {
+        // Для published, error - возвращаем в new
+        newStatus = 'new';
+    }
+    
+    console.log('toggleFileStatus: groupId=' + groupId + ', fileId=' + fileId + ', currentStatus=' + currentStatus + ', newStatus=' + newStatus);
     
     fetch('/content-groups/' + groupId + '/files/' + fileId + '/toggle-status', {
         method: 'POST',
@@ -215,18 +226,27 @@ function toggleFileStatus(groupId, fileId, currentStatus) {
         },
         body: JSON.stringify({status: newStatus})
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.message || 'Ошибка сервера (HTTP ' + response.status + ')');
+            });
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             showToast('Статус файла изменен', 'success');
             setTimeout(() => window.location.reload(), 1000);
         } else {
-            showToast('Ошибка: ' + (data.message || 'Не удалось изменить статус'), 'error');
+            const errorMsg = data.message || 'Не удалось изменить статус';
+            console.error('Toggle file status error:', data);
+            showToast('Ошибка: ' + errorMsg, 'error');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        showToast('Произошла ошибка', 'error');
+        showToast('Произошла ошибка: ' + error.message, 'error');
     });
 }
 
