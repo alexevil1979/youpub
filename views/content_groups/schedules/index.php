@@ -187,7 +187,10 @@ if (!isset($groups)) {
                                             <?= date('d.m.Y H:i', $nextPublishAt) ?>
                                         </div>
                                         <?php if (isset($schedule['status']) && $schedule['status'] === 'pending'): ?>
-                                            <div class="countdown-timer" data-publish-at="<?= date('Y-m-d H:i:s', $nextPublishAt) ?>" style="margin-top: 0.5rem; font-size: 0.85rem; color: #3498db; font-weight: 500;">
+                                            <div class="countdown-timer" 
+                                                 data-publish-at="<?= date('Y-m-d H:i:s', $nextPublishAt) ?>" 
+                                                 data-overdue-reason="<?= htmlspecialchars($overdueReason ?? '', ENT_QUOTES) ?>"
+                                                 style="margin-top: 0.5rem; font-size: 0.85rem; color: #3498db; font-weight: 500;">
                                                 <span class="countdown-text">Осталось: </span>
                                                 <span class="countdown-value">-</span>
                                             </div>
@@ -316,7 +319,15 @@ function updateCountdowns() {
         const diff = publishAt - now;
         
         if (diff <= 0) {
-            timer.querySelector('.countdown-value').textContent = 'Время прошло';
+            // Время прошло - показываем причину, если есть
+            const overdueReason = timer.getAttribute('data-overdue-reason');
+            if (overdueReason && overdueReason.trim()) {
+                timer.querySelector('.countdown-text').textContent = 'Причина: ';
+                timer.querySelector('.countdown-value').textContent = overdueReason;
+            } else {
+                timer.querySelector('.countdown-text').textContent = '';
+                timer.querySelector('.countdown-value').textContent = 'Время прошло';
+            }
             timer.style.color = '#e74c3c';
             return;
         }
@@ -337,6 +348,7 @@ function updateCountdowns() {
             countdownText = `${seconds}с`;
         }
         
+        timer.querySelector('.countdown-text').textContent = 'Осталось: ';
         timer.querySelector('.countdown-value').textContent = countdownText;
         
         // Меняем цвет при приближении времени

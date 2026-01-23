@@ -532,7 +532,15 @@ function updateCountdowns() {
         const diff = publishAt - now;
         
         if (diff <= 0) {
-            timer.querySelector('.countdown-value').textContent = 'Время прошло';
+            // Время прошло - показываем причину, если есть
+            const overdueReason = timer.getAttribute('data-overdue-reason');
+            if (overdueReason && overdueReason.trim()) {
+                timer.querySelector('.countdown-text').textContent = 'Причина: ';
+                timer.querySelector('.countdown-value').textContent = overdueReason;
+            } else {
+                timer.querySelector('.countdown-text').textContent = '';
+                timer.querySelector('.countdown-value').textContent = 'Время прошло';
+            }
             timer.style.color = '#e74c3c';
             return;
         }
@@ -553,6 +561,7 @@ function updateCountdowns() {
             countdownText = `${seconds}с`;
         }
         
+        timer.querySelector('.countdown-text').textContent = 'Осталось: ';
         timer.querySelector('.countdown-value').textContent = countdownText;
         
         // Меняем цвет при приближении времени
