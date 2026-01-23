@@ -5,6 +5,20 @@ ob_start();
 
 <h1>Создать шаблон оформления</h1>
 
+<?php if (isset($_SESSION['error'])): ?>
+    <div class="alert alert-error" style="margin-bottom: 1rem;">
+        <?= htmlspecialchars($_SESSION['error']) ?>
+    </div>
+    <?php unset($_SESSION['error']); ?>
+<?php endif; ?>
+
+<?php if (isset($_SESSION['success'])): ?>
+    <div class="alert alert-success" style="margin-bottom: 1rem;">
+        <?= htmlspecialchars($_SESSION['success']) ?>
+    </div>
+    <?php unset($_SESSION['success']); ?>
+<?php endif; ?>
+
 <form method="POST" action="/content-groups/templates/create" class="template-form">
     <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">
     

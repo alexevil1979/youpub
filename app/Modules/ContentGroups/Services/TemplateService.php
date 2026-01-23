@@ -23,31 +23,46 @@ class TemplateService extends Service
      */
     public function createTemplate(int $userId, array $data): array
     {
-        // Валидация обязательных полей
-        if (empty($data['name'])) {
+        try {
+            // Валидация обязательных полей
+            if (empty($data['name'])) {
+                return [
+                    'success' => false,
+                    'message' => 'Название шаблона обязательно'
+                ];
+            }
+
+            $templateId = $this->templateRepo->create([
+                'user_id' => $userId,
+                'name' => trim($data['name'] ?? ''),
+                'description' => !empty($data['description']) ? trim($data['description']) : null,
+                'title_template' => !empty($data['title_template']) ? trim($data['title_template']) : null,
+                'description_template' => !empty($data['description_template']) ? trim($data['description_template']) : null,
+                'tags_template' => !empty($data['tags_template']) ? trim($data['tags_template']) : null,
+                'emoji_list' => !empty($data['emoji_list']) && is_array($data['emoji_list']) ? json_encode($data['emoji_list'], JSON_UNESCAPED_UNICODE) : null,
+                'variants' => !empty($data['variants']) && is_array($data['variants']) ? json_encode($data['variants'], JSON_UNESCAPED_UNICODE) : null,
+                'is_active' => isset($data['is_active']) ? (int)(bool)$data['is_active'] : 1,
+            ]);
+
+            if (!$templateId) {
+                return [
+                    'success' => false,
+                    'message' => 'Не удалось создать шаблон. Попробуйте снова.'
+                ];
+            }
+
+            return [
+                'success' => true,
+                'data' => ['id' => $templateId],
+                'message' => 'Шаблон успешно создан'
+            ];
+        } catch (\Exception $e) {
+            error_log('Error in createTemplate: ' . $e->getMessage());
             return [
                 'success' => false,
-                'message' => 'Название шаблона обязательно'
+                'message' => 'Ошибка при создании шаблона: ' . $e->getMessage()
             ];
         }
-
-        $templateId = $this->templateRepo->create([
-            'user_id' => $userId,
-            'name' => trim($data['name'] ?? ''),
-            'description' => !empty($data['description']) ? trim($data['description']) : null,
-            'title_template' => !empty($data['title_template']) ? trim($data['title_template']) : null,
-            'description_template' => !empty($data['description_template']) ? trim($data['description_template']) : null,
-            'tags_template' => !empty($data['tags_template']) ? trim($data['tags_template']) : null,
-            'emoji_list' => !empty($data['emoji_list']) && is_array($data['emoji_list']) ? json_encode($data['emoji_list']) : null,
-            'variants' => !empty($data['variants']) && is_array($data['variants']) ? json_encode($data['variants']) : null,
-            'is_active' => isset($data['is_active']) ? (int)(bool)$data['is_active'] : 1,
-        ]);
-
-        return [
-            'success' => true,
-            'data' => ['id' => $templateId],
-            'message' => 'Шаблон успешно создан'
-        ];
     }
 
     /**

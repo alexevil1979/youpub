@@ -5,6 +5,20 @@ ob_start();
 
 <h1>Шаблоны оформления</h1>
 
+<?php if (isset($_SESSION['error'])): ?>
+    <div class="alert alert-error" style="margin-bottom: 1rem;">
+        <?= htmlspecialchars($_SESSION['error']) ?>
+    </div>
+    <?php unset($_SESSION['error']); ?>
+<?php endif; ?>
+
+<?php if (isset($_SESSION['success'])): ?>
+    <div class="alert alert-success" style="margin-bottom: 1rem;">
+        <?= htmlspecialchars($_SESSION['success']) ?>
+    </div>
+    <?php unset($_SESSION['success']); ?>
+<?php endif; ?>
+
 <a href="/content-groups/templates/create" class="btn btn-primary">Создать шаблон</a>
 
 <?php if (empty($templates)): ?>

@@ -47,40 +47,52 @@ class TemplateController extends Controller
      */
     public function create(): void
     {
-        $userId = $_SESSION['user_id'];
-        
-        $emojiList = $this->getParam('emoji_list', '');
-        $emojiArray = !empty($emojiList) ? array_filter(array_map('trim', explode(',', $emojiList))) : [];
+        try {
+            $userId = $_SESSION['user_id'] ?? null;
+            
+            if (!$userId) {
+                $_SESSION['error'] = 'Необходима авторизация';
+                header('Location: /content-groups/templates/create');
+                exit;
+            }
+            
+            $emojiList = $this->getParam('emoji_list', '');
+            $emojiArray = !empty($emojiList) ? array_filter(array_map('trim', explode(',', $emojiList))) : [];
 
-        $variants = [];
-        if ($this->getParam('variant_1')) {
-            $variants['description'][] = $this->getParam('variant_1');
-        }
-        if ($this->getParam('variant_2')) {
-            $variants['description'][] = $this->getParam('variant_2');
-        }
-        if ($this->getParam('variant_3')) {
-            $variants['description'][] = $this->getParam('variant_3');
-        }
+            $variants = [];
+            if ($this->getParam('variant_1')) {
+                $variants['description'][] = $this->getParam('variant_1');
+            }
+            if ($this->getParam('variant_2')) {
+                $variants['description'][] = $this->getParam('variant_2');
+            }
+            if ($this->getParam('variant_3')) {
+                $variants['description'][] = $this->getParam('variant_3');
+            }
 
-        $data = [
-            'name' => $this->getParam('name', ''),
-            'description' => $this->getParam('description', ''),
-            'title_template' => $this->getParam('title_template', ''),
-            'description_template' => $this->getParam('description_template', ''),
-            'tags_template' => $this->getParam('tags_template', ''),
-            'emoji_list' => $emojiArray,
-            'variants' => !empty($variants) ? $variants : null,
-            'is_active' => $this->getParam('is_active', '1') === '1',
-        ];
+            $data = [
+                'name' => $this->getParam('name', ''),
+                'description' => $this->getParam('description', ''),
+                'title_template' => $this->getParam('title_template', ''),
+                'description_template' => $this->getParam('description_template', ''),
+                'tags_template' => $this->getParam('tags_template', ''),
+                'emoji_list' => $emojiArray,
+                'variants' => !empty($variants) ? $variants : null,
+                'is_active' => $this->getParam('is_active', '1') === '1',
+            ];
 
-        $result = $this->templateService->createTemplate($userId, $data);
+            $result = $this->templateService->createTemplate($userId, $data);
 
-        if ($result['success']) {
-            $_SESSION['success'] = $result['message'];
-            header('Location: /content-groups/templates');
-        } else {
-            $_SESSION['error'] = $result['message'];
+            if ($result['success']) {
+                $_SESSION['success'] = $result['message'] ?? 'Шаблон успешно создан';
+                header('Location: /content-groups/templates');
+            } else {
+                $_SESSION['error'] = $result['message'] ?? 'Ошибка при создании шаблона';
+                header('Location: /content-groups/templates/create');
+            }
+        } catch (\Exception $e) {
+            error_log('Error creating template: ' . $e->getMessage());
+            $_SESSION['error'] = 'Произошла ошибка при сохранении шаблона: ' . $e->getMessage();
             header('Location: /content-groups/templates/create');
         }
         exit;
