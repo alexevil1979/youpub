@@ -110,7 +110,6 @@ class ScheduleRepository extends Repository
             FROM {$this->table} s
             JOIN content_groups cg ON cg.id = s.content_group_id
             WHERE s.status = 'pending'
-            AND s.status != 'paused'
             AND cg.status = 'active'
             AND s.content_group_id IS NOT NULL
             ORDER BY s.publish_at ASC
@@ -119,6 +118,24 @@ class ScheduleRepository extends Repository
         $stmt = $this->db->prepare($sql);
         $stmt->execute();
         return $stmt->fetchAll();
+    }
+    
+    /**
+     * Очистить зависшие расписания 'processing' (старше указанного времени)
+     */
+    public function cleanupStuckProcessing(int $minutes = 10): int
+    {
+        $sql = "
+            UPDATE {$this->table}
+            SET status = 'failed',
+                error_message = CONCAT('Processing timeout (', ?, ' minutes)')
+            WHERE status = 'processing'
+            AND created_at < DATE_SUB(NOW(), INTERVAL ? MINUTE)
+        ";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$minutes, $minutes]);
+        return $stmt->rowCount();
     }
 
     /**
