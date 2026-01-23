@@ -91,6 +91,21 @@ $router->get('/publications', [DashboardController::class, 'publications'], [Aut
 $router->get('/content-groups', [GroupController::class, 'index'], [AuthMiddleware::class]);
 $router->get('/content-groups/create', [GroupController::class, 'showCreate'], [AuthMiddleware::class]);
 $router->post('/content-groups/create', [GroupController::class, 'create'], [AuthMiddleware::class]);
+
+// Шаблоны публикаций (должны быть ПЕРЕД /content-groups/{id})
+$router->get('/content-groups/templates', [TemplateController::class, 'index'], [AuthMiddleware::class]);
+$router->get('/content-groups/templates/create', [TemplateController::class, 'showCreate'], [AuthMiddleware::class]);
+$router->post('/content-groups/templates/create', [TemplateController::class, 'create'], [AuthMiddleware::class]);
+$router->post('/content-groups/templates/{id}/preview', [TemplateController::class, 'preview'], [AuthMiddleware::class]);
+$router->delete('/content-groups/templates/{id}', [TemplateController::class, 'delete'], [AuthMiddleware::class]);
+
+// Умные расписания (должны быть ПЕРЕД /content-groups/{id})
+$router->get('/content-groups/schedules', [SmartScheduleController::class, 'index'], [AuthMiddleware::class]);
+$router->get('/content-groups/schedules/create', [SmartScheduleController::class, 'showCreate'], [AuthMiddleware::class]);
+$router->post('/content-groups/schedules/create', [SmartScheduleController::class, 'create'], [AuthMiddleware::class]);
+$router->delete('/content-groups/schedules/{id}', [SmartScheduleController::class, 'delete'], [AuthMiddleware::class]);
+
+// Маршруты для конкретных групп (должны быть ПОСЛЕ специфичных маршрутов)
 $router->get('/content-groups/{id}', [GroupController::class, 'show'], [AuthMiddleware::class]);
 $router->get('/content-groups/{id}/edit', [GroupController::class, 'showEdit'], [AuthMiddleware::class]);
 $router->post('/content-groups/{id}/edit', [GroupController::class, 'update'], [AuthMiddleware::class]);
@@ -102,19 +117,6 @@ $router->post('/content-groups/{id}/toggle-status', [GroupController::class, 'to
 $router->post('/content-groups/{id}/files/{fileId}/toggle-status', [GroupController::class, 'toggleFileStatus'], [AuthMiddleware::class]);
 $router->post('/content-groups/{id}/duplicate', [GroupController::class, 'duplicate'], [AuthMiddleware::class]);
 $router->delete('/content-groups/{id}', [GroupController::class, 'delete'], [AuthMiddleware::class]);
-
-// Шаблоны публикаций
-$router->get('/content-groups/templates', [TemplateController::class, 'index'], [AuthMiddleware::class]);
-$router->get('/content-groups/templates/create', [TemplateController::class, 'showCreate'], [AuthMiddleware::class]);
-$router->post('/content-groups/templates/create', [TemplateController::class, 'create'], [AuthMiddleware::class]);
-$router->post('/content-groups/templates/{id}/preview', [TemplateController::class, 'preview'], [AuthMiddleware::class]);
-$router->delete('/content-groups/templates/{id}', [TemplateController::class, 'delete'], [AuthMiddleware::class]);
-
-// Умные расписания
-$router->get('/content-groups/schedules', [SmartScheduleController::class, 'index'], [AuthMiddleware::class]);
-$router->get('/content-groups/schedules/create', [SmartScheduleController::class, 'showCreate'], [AuthMiddleware::class]);
-$router->post('/content-groups/schedules/create', [SmartScheduleController::class, 'create'], [AuthMiddleware::class]);
-$router->delete('/content-groups/schedules/{id}', [SmartScheduleController::class, 'delete'], [AuthMiddleware::class]);
 
 // Поиск
 $router->get('/search', [SearchController::class, 'search'], [AuthMiddleware::class]);
