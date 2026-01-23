@@ -268,4 +268,39 @@ class SmartScheduleController extends Controller
             exit;
         }
     }
+
+    /**
+     * Удалить умное расписание
+     */
+    public function delete(int $id): void
+    {
+        try {
+            $userId = $_SESSION['user_id'] ?? null;
+            
+            if (!$userId) {
+                $this->error('Необходима авторизация', 401);
+                return;
+            }
+            
+            $scheduleRepo = new \App\Repositories\ScheduleRepository();
+            $schedule = $scheduleRepo->findById($id);
+            
+            if (!$schedule || $schedule['user_id'] !== $userId) {
+                $this->error('Расписание не найдено', 404);
+                return;
+            }
+            
+            // Проверяем, что это умное расписание (с группой контента)
+            if (empty($schedule['content_group_id'])) {
+                $this->error('Это не умное расписание', 400);
+                return;
+            }
+            
+            $scheduleRepo->delete($id);
+            $this->success([], 'Расписание успешно удалено');
+        } catch (\Exception $e) {
+            error_log("SmartScheduleController::delete: Exception - " . $e->getMessage());
+            $this->error('Произошла ошибка при удалении расписания: ' . $e->getMessage(), 500);
+        }
+    }
 }
