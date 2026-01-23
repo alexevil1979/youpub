@@ -82,6 +82,8 @@ if (!isset($groups)) {
                             <?php 
                             // Для интервальных расписаний вычисляем следующее время публикации
                             $nextPublishAt = null;
+                            $overdueReason = null;
+                            
                             if (isset($schedule['schedule_type']) && $schedule['schedule_type'] === 'interval' && !empty($schedule['interval_minutes'])) {
                                 $baseTime = strtotime($schedule['publish_at'] ?? 'now');
                                 $interval = (int)$schedule['interval_minutes'] * 60;
@@ -100,15 +102,95 @@ if (!isset($groups)) {
                                 $nextPublishAt = strtotime($schedule['publish_at']);
                             }
                             
+                            // Определяем причину просрочки, если время прошло
                             if ($nextPublishAt !== null):
                                 $now = time();
-                                if ($nextPublishAt > $now):
+                                if ($nextPublishAt <= $now):
+                                    // Время прошло, определяем причину
+                                    $reasons = [];
+                                    
+                                    // Проверяем статус расписания
+                                    if (isset($schedule['status']) && $schedule['status'] === 'paused') {
+                                        $reasons[] = 'Расписание на паузе';
+                                    }
+                                    
+                                    // Проверяем группу
+                                    if ($group) {
+                                        if (isset($group['status']) && $group['status'] !== 'active') {
+                                            $reasons[] = 'Группа неактивна';
+                                        }
+                                        
+                                        // Проверяем наличие доступных видео
+                                        try {
+                                            $fileRepo = new \App\Modules\ContentGroups\Repositories\ContentGroupFileRepository();
+                                            $availableFiles = $fileRepo->findByGroupId((int)$group['id'], ['order_index' => 'ASC']);
+                                            $hasUnpublished = false;
+                                            foreach ($availableFiles as $file) {
+                                                if (in_array($file['status'] ?? 'new', ['new', 'queued'])) {
+                                                    $hasUnpublished = true;
+                                                    break;
+                                                }
+                                            }
+                                            if (!$hasUnpublished) {
+                                                $reasons[] = 'Нет доступных видео';
+                                            }
+                                        } catch (\Exception $e) {
+                                            error_log("Error checking files: " . $e->getMessage());
+                                        }
+                                        
+                                        // Проверяем подключенные интеграции
+                                        try {
+                                            $platform = $schedule['platform'] ?? 'youtube';
+                                            $integrationRepo = null;
+                                            
+                                            switch ($platform) {
+                                                case 'youtube':
+                                                    $integrationRepo = new \App\Repositories\YoutubeIntegrationRepository();
+                                                    break;
+                                                case 'telegram':
+                                                    $integrationRepo = new \App\Repositories\TelegramIntegrationRepository();
+                                                    break;
+                                                case 'tiktok':
+                                                    $integrationRepo = new \App\Repositories\TiktokIntegrationRepository();
+                                                    break;
+                                                case 'instagram':
+                                                    $integrationRepo = new \App\Repositories\InstagramIntegrationRepository();
+                                                    break;
+                                                case 'pinterest':
+                                                    $integrationRepo = new \App\Repositories\PinterestIntegrationRepository();
+                                                    break;
+                                            }
+                                            
+                                            if ($integrationRepo) {
+                                                $integration = $integrationRepo->findDefaultByUserId($schedule['user_id'] ?? 0);
+                                                if (!$integration || ($integration['status'] ?? '') !== 'connected') {
+                                                    $reasons[] = 'Интеграция не подключена';
+                                                }
+                                            }
+                                        } catch (\Exception $e) {
+                                            error_log("Error checking integration: " . $e->getMessage());
+                                        }
+                                    } else {
+                                        $reasons[] = 'Группа не найдена';
+                                    }
+                                    
+                                    // Если нет специфических причин, указываем общую
+                                    if (empty($reasons)) {
+                                        $reasons[] = 'Время публикации прошло';
+                                    }
+                                    
+                                    $overdueReason = implode(', ', $reasons);
                             ?>
+                                    <div>
+                                        <span style="color: #e74c3c; font-weight: 500;">Просрочено</span>
+                                        <?php if ($overdueReason): ?>
+                                            <br><small style="color: #e74c3c; font-size: 0.75rem;"><?= htmlspecialchars($overdueReason) ?></small>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php else: ?>
                                     <span style="color: #3498db; font-weight: 500;">
                                         <?= date('d.m.Y H:i', $nextPublishAt) ?>
                                     </span>
-                                <?php else: ?>
-                                    <span style="color: #e74c3c;">Просрочено</span>
                                 <?php endif; ?>
                             <?php else: ?>
                                 <span style="color: #95a5a6;">-</span>
