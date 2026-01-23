@@ -19,18 +19,35 @@ class PublicationTemplateRepository extends Repository
      */
     public function findByUserId(int $userId, bool $activeOnly = false): array
     {
-        $sql = "SELECT * FROM {$this->table} WHERE user_id = ?";
-        $params = [$userId];
+        try {
+            error_log("PublicationTemplateRepository::findByUserId: userId={$userId}, activeOnly=" . ($activeOnly ? 'true' : 'false'));
+            
+            // Проверяем существование таблицы
+            $tableExists = $this->db->query("SHOW TABLES LIKE '{$this->table}'")->rowCount() > 0;
+            if (!$tableExists) {
+                error_log("PublicationTemplateRepository::findByUserId: Table {$this->table} does not exist");
+                return [];
+            }
+            
+            $sql = "SELECT * FROM {$this->table} WHERE user_id = ?";
+            $params = [$userId];
 
-        if ($activeOnly) {
-            $sql .= " AND is_active = 1";
+            if ($activeOnly) {
+                $sql .= " AND is_active = 1";
+            }
+
+            $sql .= " ORDER BY created_at DESC";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            $result = $stmt->fetchAll();
+            
+            error_log("PublicationTemplateRepository::findByUserId: Found " . count($result) . " templates");
+            return $result;
+        } catch (\Exception $e) {
+            error_log("PublicationTemplateRepository::findByUserId: Exception - " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+            return [];
         }
-
-        $sql .= " ORDER BY created_at DESC";
-
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchAll();
     }
 
     /**
