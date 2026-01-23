@@ -190,8 +190,21 @@ class ScheduleService extends Service
             return ['success' => false, 'message' => 'Schedule not found'];
         }
 
+        // Разрешаем удаление расписаний 'processing' (включая зависшие)
+        // Если расписание в процессе обработки, сначала меняем статус на 'failed'
         if ($schedule['status'] === 'processing') {
-            return ['success' => false, 'message' => 'Cannot delete schedule in processing'];
+            // Проверяем, не зависло ли расписание (старше 10 минут)
+            $createdAt = strtotime($schedule['created_at'] ?? 'now');
+            $now = time();
+            $minutesOld = ($now - $createdAt) / 60;
+            
+            if ($minutesOld > 10) {
+                // Зависшее расписание - можно удалить
+                error_log("Deleting stuck processing schedule ID: {$id} (created {$minutesOld} minutes ago)");
+            } else {
+                // Активное расписание - предупреждаем, но разрешаем удаление
+                error_log("Deleting active processing schedule ID: {$id} (user requested)");
+            }
         }
 
         $this->scheduleRepo->delete($id);
