@@ -596,6 +596,66 @@ class SmartScheduleController extends Controller
     }
 
     /**
+     * Приостановить умное расписание
+     */
+    public function pause($id): void
+    {
+        $id = (int)$id;
+        $userId = $_SESSION['user_id'] ?? null;
+        
+        if (!$userId) {
+            $this->error('Необходима авторизация', 401);
+            return;
+        }
+        
+        try {
+            $scheduleRepo = new \App\Repositories\ScheduleRepository();
+            $schedule = $scheduleRepo->findById($id);
+            
+            if (!$schedule || $schedule['user_id'] !== $userId) {
+                $this->error('Расписание не найдено', 404);
+                return;
+            }
+            
+            $scheduleRepo->update($id, ['status' => 'paused']);
+            $this->success([], 'Расписание приостановлено');
+        } catch (\Exception $e) {
+            error_log("SmartScheduleController::pause: Exception - " . $e->getMessage());
+            $this->error('Произошла ошибка при приостановке расписания: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Возобновить умное расписание
+     */
+    public function resume($id): void
+    {
+        $id = (int)$id;
+        $userId = $_SESSION['user_id'] ?? null;
+        
+        if (!$userId) {
+            $this->error('Необходима авторизация', 401);
+            return;
+        }
+        
+        try {
+            $scheduleRepo = new \App\Repositories\ScheduleRepository();
+            $schedule = $scheduleRepo->findById($id);
+            
+            if (!$schedule || $schedule['user_id'] !== $userId) {
+                $this->error('Расписание не найдено', 404);
+                return;
+            }
+            
+            $scheduleRepo->update($id, ['status' => 'pending']);
+            $this->success([], 'Расписание возобновлено');
+        } catch (\Exception $e) {
+            error_log("SmartScheduleController::resume: Exception - " . $e->getMessage());
+            $this->error('Произошла ошибка при возобновлении расписания: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
      * Удалить умное расписание
      */
     public function delete(int $id): void

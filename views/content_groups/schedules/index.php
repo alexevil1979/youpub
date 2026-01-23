@@ -79,14 +79,33 @@ if (!isset($groups)) {
                             <?php endif; ?>
                         </td>
                         <td style="padding: 0.75rem;">
-                            <?php if (isset($schedule['publish_at']) && $schedule['publish_at']): ?>
-                                <?php 
-                                $publishTime = strtotime($schedule['publish_at']);
+                            <?php 
+                            // Для интервальных расписаний вычисляем следующее время публикации
+                            $nextPublishAt = null;
+                            if (isset($schedule['schedule_type']) && $schedule['schedule_type'] === 'interval' && !empty($schedule['interval_minutes'])) {
+                                $baseTime = strtotime($schedule['publish_at'] ?? 'now');
+                                $interval = (int)$schedule['interval_minutes'] * 60;
                                 $now = time();
-                                if ($publishTime !== false && $publishTime > $now):
-                                ?>
+                                
+                                // Вычисляем следующее время публикации
+                                if ($baseTime <= $now) {
+                                    // Если базовое время прошло, вычисляем следующее
+                                    $elapsed = $now - $baseTime;
+                                    $intervalsPassed = floor($elapsed / $interval);
+                                    $nextPublishAt = $baseTime + (($intervalsPassed + 1) * $interval);
+                                } else {
+                                    $nextPublishAt = $baseTime;
+                                }
+                            } elseif (isset($schedule['publish_at']) && $schedule['publish_at']) {
+                                $nextPublishAt = strtotime($schedule['publish_at']);
+                            }
+                            
+                            if ($nextPublishAt !== null):
+                                $now = time();
+                                if ($nextPublishAt > $now):
+                            ?>
                                     <span style="color: #3498db; font-weight: 500;">
-                                        <?= date('d.m.Y H:i', $publishTime) ?>
+                                        <?= date('d.m.Y H:i', $nextPublishAt) ?>
                                     </span>
                                 <?php else: ?>
                                     <span style="color: #e74c3c;">Просрочено</span>
@@ -99,23 +118,45 @@ if (!isset($groups)) {
                             <span class="badge badge-<?= 
                                 (isset($schedule['status']) && $schedule['status'] === 'pending') ? 'warning' : 
                                 ((isset($schedule['status']) && $schedule['status'] === 'published') ? 'success' : 
-                                ((isset($schedule['status']) && $schedule['status'] === 'failed') ? 'danger' : 'secondary')) 
+                                ((isset($schedule['status']) && $schedule['status'] === 'failed') ? 'danger' : 
+                                ((isset($schedule['status']) && $schedule['status'] === 'paused') ? 'info' : 
+                                ((isset($schedule['status']) && $schedule['status'] === 'processing') ? 'primary' : 'secondary')))) 
                             ?>">
-                                <?= isset($schedule['status']) ? ucfirst($schedule['status']) : 'Неизвестно' ?>
+                                <?php 
+                                $statusNames = [
+                                    'pending' => 'Ожидает',
+                                    'published' => 'Опубликовано',
+                                    'failed' => 'Ошибка',
+                                    'paused' => 'Приостановлено',
+                                    'processing' => 'Обработка'
+                                ];
+                                echo $statusNames[$schedule['status'] ?? ''] ?? ucfirst($schedule['status'] ?? 'Неизвестно');
+                                ?>
                             </span>
                         </td>
-                        <td style="padding: 0.75rem;">
-                            <?php if (isset($schedule['id'])): ?>
-                                <a href="/content-groups/schedules/<?= (int)$schedule['id'] ?>" class="btn btn-sm btn-primary" style="margin-right: 0.5rem;">
-                                    <?= \App\Helpers\IconHelper::render('view', 16, 'icon-inline') ?> Просмотр
-                                </a>
-                                <a href="/content-groups/schedules/<?= (int)$schedule['id'] ?>/edit" class="btn btn-sm btn-secondary" style="margin-right: 0.5rem;">
-                                    <?= \App\Helpers\IconHelper::render('edit', 16, 'icon-inline') ?> Редактировать
-                                </a>
-                                <button type="button" class="btn btn-sm btn-danger" onclick="deleteSchedule(<?= (int)$schedule['id'] ?>)">
-                                    <?= \App\Helpers\IconHelper::render('delete', 16, 'icon-inline') ?> Удалить
-                                </button>
-                            <?php endif; ?>
+                        <td style="padding: 0.5rem;">
+                            <div style="display: flex; gap: 0.25rem; flex-wrap: wrap;">
+                                <?php if (isset($schedule['id'])): ?>
+                                    <a href="/content-groups/schedules/<?= (int)$schedule['id'] ?>" class="btn btn-xs btn-primary" title="Просмотр">
+                                        <?= \App\Helpers\IconHelper::render('view', 14, 'icon-inline') ?>
+                                    </a>
+                                    <a href="/content-groups/schedules/<?= (int)$schedule['id'] ?>/edit" class="btn btn-xs btn-secondary" title="Редактировать">
+                                        <?= \App\Helpers\IconHelper::render('edit', 14, 'icon-inline') ?>
+                                    </a>
+                                    <?php if (isset($schedule['status']) && $schedule['status'] === 'pending'): ?>
+                                        <button type="button" class="btn btn-xs btn-warning" onclick="toggleSchedulePause(<?= (int)$schedule['id'] ?>, 'pause')" title="Приостановить">
+                                            <?= \App\Helpers\IconHelper::render('pause', 14, 'icon-inline') ?>
+                                        </button>
+                                    <?php elseif (isset($schedule['status']) && $schedule['status'] === 'paused'): ?>
+                                        <button type="button" class="btn btn-xs btn-success" onclick="toggleSchedulePause(<?= (int)$schedule['id'] ?>, 'resume')" title="Возобновить">
+                                            <?= \App\Helpers\IconHelper::render('play', 14, 'icon-inline') ?>
+                                        </button>
+                                    <?php endif; ?>
+                                    <button type="button" class="btn btn-xs btn-danger" onclick="deleteSchedule(<?= (int)$schedule['id'] ?>)" title="Удалить">
+                                        <?= \App\Helpers\IconHelper::render('delete', 14, 'icon-inline') ?>
+                                    </button>
+                                <?php endif; ?>
+                            </div>
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -143,6 +184,33 @@ function deleteSchedule(id) {
             window.location.reload();
         } else {
             alert('Ошибка: ' + (data.message || 'Не удалось удалить расписание'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Произошла ошибка');
+    });
+}
+
+function toggleSchedulePause(id, action) {
+    const actionText = action === 'pause' ? 'приостановить' : 'возобновить';
+    if (!confirm('Вы уверены, что хотите ' + actionText + ' это расписание?')) {
+        return;
+    }
+    
+    fetch('/content-groups/schedules/' + id + '/' + action, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Ошибка: ' + (data.message || 'Не удалось изменить статус расписания'));
         }
     })
     .catch(error => {

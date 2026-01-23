@@ -106,6 +106,8 @@ $router->post('/content-groups/schedules/create', [SmartScheduleController::clas
 $router->get('/content-groups/schedules/{id}', [SmartScheduleController::class, 'show'], [AuthMiddleware::class]);
 $router->get('/content-groups/schedules/{id}/edit', [SmartScheduleController::class, 'showEdit'], [AuthMiddleware::class]);
 $router->post('/content-groups/schedules/{id}/edit', [SmartScheduleController::class, 'update'], [AuthMiddleware::class]);
+$router->post('/content-groups/schedules/{id}/pause', [SmartScheduleController::class, 'pause'], [AuthMiddleware::class]);
+$router->post('/content-groups/schedules/{id}/resume', [SmartScheduleController::class, 'resume'], [AuthMiddleware::class]);
 $router->delete('/content-groups/schedules/{id}', [SmartScheduleController::class, 'delete'], [AuthMiddleware::class]);
 
 // Маршруты для конкретных групп (должны быть ПОСЛЕ специфичных маршрутов)

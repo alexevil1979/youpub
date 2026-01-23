@@ -622,6 +622,20 @@ footer {
     font-size: 0.875rem;
 }
 
+.btn-xs {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    min-width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-xs .icon-inline {
+    margin-right: 0;
+}
+
 .btn-info {
     background-color: #3498db;
     color: white;
