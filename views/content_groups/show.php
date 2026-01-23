@@ -9,66 +9,70 @@ ob_start();
     <p><?= htmlspecialchars($group['description']) ?></p>
 <?php endif; ?>
 
-<div class="group-stats" style="margin: 1.5rem 0; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+<div class="info-card group-stats">
     <h3>Статистика группы</h3>
     <?php if (isset($group['stats'])): ?>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-top: 1rem;">
-            <div>
-                <strong>Всего файлов:</strong>
-                <div style="font-size: 1.5rem; color: #3498db;"><?= $group['stats']['total_files'] ?? 0 ?></div>
+        <div class="group-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-top: 1rem;">
+            <div class="stat-item">
+                <div class="stat-label">Всего файлов:</div>
+                <div class="stat-value" style="font-size: 1.5rem; color: #3498db;"><?= $group['stats']['total_files'] ?? 0 ?></div>
             </div>
-            <div>
-                <strong>Опубликовано:</strong>
-                <div style="font-size: 1.5rem; color: #27ae60;"><?= $group['stats']['published_count'] ?? 0 ?></div>
+            <div class="stat-item stat-success">
+                <div class="stat-label">Опубликовано:</div>
+                <div class="stat-value" style="font-size: 1.5rem; color: #27ae60;"><?= $group['stats']['published_count'] ?? 0 ?></div>
             </div>
-            <div>
-                <strong>В очереди:</strong>
-                <div style="font-size: 1.5rem; color: #f39c12;"><?= $group['stats']['queued_count'] ?? 0 ?></div>
+            <div class="stat-item stat-warning">
+                <div class="stat-label">В очереди:</div>
+                <div class="stat-value" style="font-size: 1.5rem; color: #f39c12;"><?= $group['stats']['queued_count'] ?? 0 ?></div>
             </div>
-            <div>
-                <strong>Ошибки:</strong>
-                <div style="font-size: 1.5rem; color: #e74c3c;"><?= $group['stats']['error_count'] ?? 0 ?></div>
+            <div class="stat-item stat-danger">
+                <div class="stat-label">Ошибки:</div>
+                <div class="stat-value" style="font-size: 1.5rem; color: #e74c3c;"><?= $group['stats']['error_count'] ?? 0 ?></div>
             </div>
-            <div>
-                <strong>Новых:</strong>
-                <div style="font-size: 1.5rem; color: #95a5a6;"><?= $group['stats']['new_count'] ?? 0 ?></div>
+            <div class="stat-item">
+                <div class="stat-label">Новых:</div>
+                <div class="stat-value" style="font-size: 1.5rem; color: #95a5a6;"><?= $group['stats']['new_count'] ?? 0 ?></div>
             </div>
         </div>
     <?php endif; ?>
 </div>
 
-<div class="group-info" style="margin: 1.5rem 0; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+<div class="info-card group-info">
     <h3>Информация о группе</h3>
-    <div style="margin-top: 0.5rem;">
-        <strong>Текущий шаблон:</strong>
-        <?php if ($group['template_id']): ?>
-            <?php 
-            $currentTemplate = null;
-            foreach ($templates as $template) {
-                if ($template['id'] == $group['template_id']) {
-                    $currentTemplate = $template;
-                    break;
+    <div class="info-card-grid">
+        <div class="info-card-item">
+            <div class="info-card-label">Текущий шаблон:</div>
+            <?php if ($group['template_id']): ?>
+                <?php 
+                $currentTemplate = null;
+                foreach ($templates as $template) {
+                    if ($template['id'] == $group['template_id']) {
+                        $currentTemplate = $template;
+                        break;
+                    }
                 }
-            }
-            ?>
-            <?php if ($currentTemplate): ?>
-                <span style="color: #27ae60;"><?= htmlspecialchars($currentTemplate['name']) ?></span>
+                ?>
+                <?php if ($currentTemplate): ?>
+                    <div class="info-card-value" style="color: #27ae60;"><?= htmlspecialchars($currentTemplate['name']) ?></div>
+                <?php else: ?>
+                    <div class="info-card-value" style="color: #e74c3c;">Шаблон не найден (ID: <?= $group['template_id'] ?>)</div>
+                <?php endif; ?>
             <?php else: ?>
-                <span style="color: #e74c3c;">Шаблон не найден (ID: <?= $group['template_id'] ?>)</span>
+                <div class="info-card-value" style="color: #95a5a6;">Без шаблона</div>
             <?php endif; ?>
-        <?php else: ?>
-            <span style="color: #95a5a6;">Без шаблона</span>
-        <?php endif; ?>
-    </div>
-    <div style="margin-top: 0.5rem;">
-        <strong>Статус:</strong> 
-        <span class="badge badge-<?= $group['status'] === 'active' ? 'success' : ($group['status'] === 'paused' ? 'warning' : 'secondary') ?>">
-            <?= ucfirst($group['status']) ?>
-        </span>
+        </div>
+        <div class="info-card-item">
+            <div class="info-card-label">Статус:</div>
+            <div class="info-card-value">
+                <span class="badge badge-<?= $group['status'] === 'active' ? 'success' : ($group['status'] === 'paused' ? 'warning' : 'secondary') ?>">
+                    <?= ucfirst($group['status']) ?>
+                </span>
+            </div>
+        </div>
     </div>
 </div>
 
-<div class="group-actions" style="margin: 1.5rem 0;">
+<div class="form-actions group-actions">
     <a href="/content-groups" class="btn btn-secondary">Назад к списку</a>
     <a href="/content-groups/<?= $group['id'] ?>/edit" class="btn btn-primary">Редактировать группу</a>
     <button type="button" class="btn btn-info" onclick="shuffleGroup(<?= $group['id'] ?>)">Перемешать видео</button>
@@ -79,42 +83,43 @@ ob_start();
     <h2>Видео в группе</h2>
     
     <?php if (empty($files)): ?>
-        <p>В группе пока нет видео. <a href="/videos">Добавить видео</a></p>
+        <div class="empty-state">
+            <div class="empty-state-icon"><?= \App\Helpers\IconHelper::render('video', 64) ?></div>
+            <h3>Нет видео в группе</h3>
+            <p>Добавьте видео в эту группу для автоматической публикации</p>
+            <a href="/videos" class="btn btn-primary">Добавить видео</a>
+        </div>
     <?php else: ?>
-        <table style="width: 100%; border-collapse: collapse;">
+        <table class="data-table">
             <thead>
-                <tr style="background: #f8f9fa;">
-                    <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Название</th>
-                    <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Статус</th>
-                    <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Порядок</th>
-                    <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Опубликовано</th>
+                <tr>
+                    <th>Название</th>
+                    <th>Статус</th>
+                    <th>Порядок</th>
+                    <th>Опубликовано</th>
                     <?php if ($group['status'] === 'active'): ?>
-                        <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Следующая публикация</th>
+                        <th>Следующая публикация</th>
                     <?php endif; ?>
-                    <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Действия</th>
+                    <th>Действия</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($files as $file): ?>
-                    <tr style="border-bottom: 1px solid #dee2e6;">
-                        <td style="padding: 0.75rem;">
+                    <tr>
+                        <td>
                             <a href="/videos/<?= $file['video_id'] ?>"><?= htmlspecialchars($file['title'] ?? $file['file_name'] ?? 'Без названия') ?></a>
                         </td>
-                        <td style="padding: 0.75rem;">
-                            <span class="badge badge-<?= 
-                                $file['status'] === 'published' ? 'success' : 
-                                ($file['status'] === 'error' ? 'danger' : 
-                                ($file['status'] === 'queued' ? 'warning' : 'secondary')) 
-                            ?>">
+                        <td>
+                            <span class="status-badge status-<?= $file['status'] ?>">
                                 <?= ucfirst($file['status']) ?>
                             </span>
                         </td>
-                        <td style="padding: 0.75rem;"><?= $file['order_index'] ?></td>
-                        <td style="padding: 0.75rem;">
+                        <td><?= $file['order_index'] ?></td>
+                        <td>
                             <?= $file['published_at'] ? date('d.m.Y H:i', strtotime($file['published_at'])) : '-' ?>
                         </td>
                         <?php if ($group['status'] === 'active'): ?>
-                            <td style="padding: 0.75rem;">
+                            <td>
                                 <?php if (isset($nextPublishDates[$file['id']])): ?>
                                     <span style="color: #3498db; font-weight: 500;">
                                         <?= date('d.m.Y H:i', strtotime($nextPublishDates[$file['id']])) ?>
@@ -124,7 +129,8 @@ ob_start();
                                 <?php endif; ?>
                             </td>
                         <?php endif; ?>
-                        <td style="padding: 0.75rem;">
+                        <td>
+                            <div class="action-buttons">
                             <a href="/videos/<?= $file['video_id'] ?>" class="btn btn-sm btn-primary">Просмотр</a>
                             <?php if (isset($filePublications[$file['video_id']])): 
                                 $pub = $filePublications[$file['video_id']];
