@@ -21,6 +21,16 @@ ob_start();
 
 <a href="/content-groups/schedules/create" class="btn btn-primary">Создать умное расписание</a>
 
+<?php 
+// Убеждаемся, что переменные определены
+if (!isset($smartSchedules)) {
+    $smartSchedules = [];
+}
+if (!isset($groups)) {
+    $groups = [];
+}
+?>
+
 <?php if (empty($smartSchedules)): ?>
     <p style="margin-top: 2rem;">Нет созданных умных расписаний. <a href="/content-groups/schedules/create">Создать расписание</a></p>
 <?php else: ?>
@@ -38,7 +48,8 @@ ob_start();
             </thead>
             <tbody>
                 <?php foreach ($smartSchedules as $schedule): 
-                    $group = $groups[$schedule['content_group_id']] ?? null;
+                    $groupId = isset($schedule['content_group_id']) ? (int)$schedule['content_group_id'] : 0;
+                    $group = isset($groups[$groupId]) ? $groups[$groupId] : null;
                     $scheduleTypeNames = [
                         'fixed' => 'Фиксированное',
                         'interval' => 'Интервальное',
@@ -46,18 +57,20 @@ ob_start();
                         'random' => 'Случайное',
                         'wave' => 'Волновое'
                     ];
-                    $scheduleType = $scheduleTypeNames[$schedule['schedule_type']] ?? $schedule['schedule_type'];
+                    $scheduleType = isset($schedule['schedule_type']) && isset($scheduleTypeNames[$schedule['schedule_type']]) 
+                        ? $scheduleTypeNames[$schedule['schedule_type']] 
+                        : ($schedule['schedule_type'] ?? 'Неизвестно');
                 ?>
                     <tr style="border-bottom: 1px solid #dee2e6;">
                         <td style="padding: 0.75rem;">
-                            <?php if ($group): ?>
-                                <a href="/content-groups/<?= $group['id'] ?>"><?= htmlspecialchars($group['name']) ?></a>
+                            <?php if ($group && isset($group['id']) && isset($group['name'])): ?>
+                                <a href="/content-groups/<?= (int)$group['id'] ?>"><?= htmlspecialchars($group['name']) ?></a>
                             <?php else: ?>
-                                <span style="color: #95a5a6;">Группа не найдена</span>
+                                <span style="color: #95a5a6;">Группа не найдена (ID: <?= $groupId ?>)</span>
                             <?php endif; ?>
                         </td>
                         <td style="padding: 0.75rem;">
-                            <span class="badge badge-info"><?= ucfirst($schedule['platform']) ?></span>
+                            <span class="badge badge-info"><?= isset($schedule['platform']) ? ucfirst($schedule['platform']) : 'Неизвестно' ?></span>
                         </td>
                         <td style="padding: 0.75rem;">
                             <?= htmlspecialchars($scheduleType) ?>
