@@ -331,7 +331,7 @@ foreach ($allGroups as $group) {
                     <select id="group_id" name="group_id" required>
                         <option value="">Выберите группу</option>
                         <?php foreach ($groups as $group): ?>
-                            <option value="<?= $group['id'] ?>"><?= htmlspecialchars($group['name']) ?></option>
+                            <option value="<?= $group['id'] ?? '' ?>"><?= htmlspecialchars($group['name'] ?? 'Без названия') ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>

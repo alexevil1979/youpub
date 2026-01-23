@@ -74,6 +74,15 @@ class GroupController extends Controller
      */
     public function show(int $id): void
     {
+        // Приводим к int, если передана строка
+        $id = (int)$id;
+        
+        if ($id <= 0) {
+            http_response_code(404);
+            echo "Группа не найдена";
+            return;
+        }
+        
         $userId = $_SESSION['user_id'];
         $group = $this->groupService->getGroupWithStats($id, $userId);
 
