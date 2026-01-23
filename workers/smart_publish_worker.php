@@ -143,7 +143,36 @@ try {
 
         foreach ($regularSchedules as $schedule) {
             try {
-                logMessage("Processing regular schedule ID: {$schedule['id']}, Platform: {$schedule['platform']}", $logFile);
+                // Вычисляем время до публикации для логирования
+                $timeUntilPublish = '';
+                if (!empty($schedule['publish_at'])) {
+                    $publishAt = strtotime($schedule['publish_at']);
+                    $now = time();
+                    $diff = $publishAt - $now;
+                    
+                    if ($diff > 0) {
+                        $days = floor($diff / 86400);
+                        $hours = floor(($diff % 86400) / 3600);
+                        $minutes = floor(($diff % 3600) / 60);
+                        $seconds = $diff % 60;
+                        
+                        $timeUntilPublish = ' (осталось: ';
+                        if ($days > 0) {
+                            $timeUntilPublish .= "{$days}д ";
+                        }
+                        if ($hours > 0) {
+                            $timeUntilPublish .= "{$hours}ч ";
+                        }
+                        if ($minutes > 0) {
+                            $timeUntilPublish .= "{$minutes}м ";
+                        }
+                        $timeUntilPublish .= "{$seconds}с)";
+                    } elseif ($diff <= 0) {
+                        $timeUntilPublish = ' (время наступило, готово к публикации)';
+                    }
+                }
+                
+                logMessage("Processing regular schedule ID: {$schedule['id']}, Platform: {$schedule['platform']}, Publish_at: " . ($schedule['publish_at'] ?? 'NULL') . $timeUntilPublish, $logFile);
 
                 $result = null;
                 if ($schedule['platform'] === 'youtube') {
