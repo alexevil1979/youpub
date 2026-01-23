@@ -224,8 +224,63 @@ $groupRepo = new \App\Modules\ContentGroups\Repositories\ContentGroupRepository(
                         <div class="date-info">
                             <div class="date-main"><?= date('d.m.Y', strtotime($schedule['publish_at'])) ?></div>
                             <div class="date-time"><?= date('H:i', strtotime($schedule['publish_at'])) ?></div>
-                            <?php if ($schedule['status'] === 'pending'): ?>
-                                <div class="countdown-timer" data-publish-at="<?= $schedule['publish_at'] ?>" style="margin-top: 0.5rem; font-size: 0.85rem; color: #3498db; font-weight: 500;">
+                            <?php if ($schedule['status'] === 'pending'): 
+                                // Определяем причину просрочки, если время прошло
+                                $overdueReason = null;
+                                $publishAt = strtotime($schedule['publish_at']);
+                                $now = time();
+                                
+                                if ($publishAt <= $now) {
+                                    $reasons = [];
+                                    
+                                    // Проверяем наличие видео
+                                    if (!empty($schedule['video_id'])) {
+                                        $videoRepo = new \App\Repositories\VideoRepository();
+                                        $video = $videoRepo->findById($schedule['video_id']);
+                                        if (!$video || ($video['status'] ?? '') !== 'ready') {
+                                            $reasons[] = 'Видео не готово';
+                                        }
+                                    }
+                                    
+                                    // Проверяем интеграцию
+                                    $platform = $schedule['platform'] ?? 'youtube';
+                                    $integrationRepo = null;
+                                    switch ($platform) {
+                                        case 'youtube':
+                                            $integrationRepo = new \App\Repositories\YoutubeIntegrationRepository();
+                                            break;
+                                        case 'telegram':
+                                            $integrationRepo = new \App\Repositories\TelegramIntegrationRepository();
+                                            break;
+                                        case 'tiktok':
+                                            $integrationRepo = new \App\Repositories\TiktokIntegrationRepository();
+                                            break;
+                                        case 'instagram':
+                                            $integrationRepo = new \App\Repositories\InstagramIntegrationRepository();
+                                            break;
+                                        case 'pinterest':
+                                            $integrationRepo = new \App\Repositories\PinterestIntegrationRepository();
+                                            break;
+                                    }
+                                    
+                                    if ($integrationRepo) {
+                                        $integration = $integrationRepo->findDefaultByUserId($schedule['user_id'] ?? 0);
+                                        if (!$integration || ($integration['status'] ?? '') !== 'connected') {
+                                            $reasons[] = 'Интеграция не подключена';
+                                        }
+                                    }
+                                    
+                                    if (empty($reasons)) {
+                                        $reasons[] = 'Время публикации прошло';
+                                    }
+                                    
+                                    $overdueReason = implode(', ', $reasons);
+                                }
+                            ?>
+                                <div class="countdown-timer" 
+                                     data-publish-at="<?= $schedule['publish_at'] ?>" 
+                                     data-overdue-reason="<?= htmlspecialchars($overdueReason ?? '', ENT_QUOTES) ?>"
+                                     style="margin-top: 0.5rem; font-size: 0.85rem; color: #3498db; font-weight: 500;">
                                     <span class="countdown-text">Осталось: </span>
                                     <span class="countdown-value">-</span>
                                 </div>
