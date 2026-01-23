@@ -50,10 +50,10 @@ ob_start();
         <div id="time-points-container">
             <div class="time-point-item">
                 <input type="time" class="time-point-input" name="daily_time_points[]" placeholder="HH:MM">
-                <button type="button" class="btn-remove-time" onclick="removeTimePoint(this)" title="Удалить">🗑</button>
+                <button type="button" class="btn-remove-time" onclick="removeTimePoint(this)" title="Удалить"><?= \App\Helpers\IconHelper::render('delete', 16) ?></button>
             </div>
         </div>
-        <button type="button" class="btn btn-sm btn-secondary" onclick="addTimePoint()" style="margin-top: 0.5rem;">➕ Добавить время</button>
+        <button type="button" class="btn btn-sm btn-secondary" onclick="addTimePoint()" style="margin-top: 0.5rem;"><?= \App\Helpers\IconHelper::render('add', 16, 'icon-inline') ?> Добавить время</button>
         <div class="form-group" style="margin-top: 1rem;">
             <label for="daily_points_start_date">Начальная дата</label>
             <input type="date" id="daily_points_start_date" name="daily_points_start_date">
@@ -110,9 +110,10 @@ function addTimePoint() {
     const container = document.getElementById('time-points-container');
     const newItem = document.createElement('div');
     newItem.className = 'time-point-item';
+    const deleteIcon = '<?= str_replace("'", "\\'", \App\Helpers\IconHelper::render('delete', 16)) ?>';
     newItem.innerHTML = `
         <input type="time" class="time-point-input" name="daily_time_points[]" placeholder="HH:MM">
-        <button type="button" class="btn-remove-time" onclick="removeTimePoint(this)" title="Удалить">🗑</button>
+        <button type="button" class="btn-remove-time" onclick="removeTimePoint(this)" title="Удалить">${deleteIcon}</button>
     `;
     container.appendChild(newItem);
 }

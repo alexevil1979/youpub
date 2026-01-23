@@ -259,7 +259,7 @@ $groupRepo = new \App\Modules\ContentGroups\Repositories\ContentGroupRepository(
                             
                             <?php if ($schedule['status'] === 'pending' || $schedule['status'] === 'paused'): ?>
                                 <button type="button" class="btn-action btn-copy" onclick="duplicateSchedule(<?= $schedule['id'] ?>)" title="Копировать"><?= \App\Helpers\IconHelper::render('copy', 20) ?></button>
-                                <button type="button" class="btn-action btn-edit" onclick="editSchedule(<?= $schedule['id'] ?>)" title="Редактировать">✏️</button>
+                                <button type="button" class="btn-action btn-edit" onclick="editSchedule(<?= $schedule['id'] ?>)" title="Редактировать"><?= \App\Helpers\IconHelper::render('edit', 20) ?></button>
                             <?php endif; ?>
                             
                             <button type="button" class="btn-action btn-delete" onclick="deleteSchedule(<?= $schedule['id'] ?>)" title="Удалить">🗑</button>

@@ -137,7 +137,7 @@ foreach ($allGroups as $group) {
                                             }
                                             if ($pubUrl):
                                         ?>
-                                            <a href="<?= htmlspecialchars($pubUrl) ?>" target="_blank" class="btn-action btn-action-publish" title="Перейти к публикации на <?= ucfirst($pub['platform']) ?>">🚀</a>
+                                            <a href="<?= htmlspecialchars($pubUrl) ?>" target="_blank" class="btn-action btn-action-publish" title="Перейти к публикации на <?= ucfirst($pub['platform']) ?>"><?= \App\Helpers\IconHelper::render('publish', 20) ?></a>
                                         <?php endif; endif; ?>
                                         <a href="/schedules/create?video_id=<?= $video['id'] ?>" class="btn-action" title="Запланировать"><?= \App\Helpers\IconHelper::render('calendar', 20) ?></a>
                                         <button type="button" class="btn-action" onclick="showAddToGroupModal(<?= $video['id'] ?>)" title="В группу"><?= \App\Helpers\IconHelper::render('folder', 20) ?></button>
