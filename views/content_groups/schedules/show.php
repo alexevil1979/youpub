@@ -19,14 +19,14 @@ ob_start();
     <?php unset($_SESSION['success']); ?>
 <?php endif; ?>
 
-<div style="margin-bottom: 2rem;">
+<div class="form-actions" style="margin-bottom: 2rem;">
     <a href="/content-groups/schedules" class="btn btn-secondary">← Назад к списку</a>
     <a href="/content-groups/schedules/<?= (int)$schedule['id'] ?>/edit" class="btn btn-primary">Редактировать</a>
 </div>
 
-<div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
-    <h2 style="margin-top: 0;">Информация о расписании</h2>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+<div class="info-card">
+    <h2>Информация о расписании</h2>
+    <div class="info-card-grid">
         <div>
             <strong>Группа:</strong><br>
             <?php if ($group): ?>
