@@ -14,7 +14,30 @@ if (!is_dir($logDir)) {
     @mkdir($logDir, 0755, true);
 }
 $errorLogFile = $logDir . '/error.log';
+
+// Создаем файл, если его нет
+if (!file_exists($errorLogFile)) {
+    @touch($errorLogFile);
+    @chmod($errorLogFile, 0664);
+}
+
+// Устанавливаем владельца файла (если возможно)
+$phpUser = get_current_user();
+if (function_exists('posix_getpwuid') && function_exists('posix_geteuid')) {
+    $processUser = posix_getpwuid(posix_geteuid());
+    $phpUser = $processUser['name'] ?? 'www-data';
+}
+
+// Пытаемся установить права через chown (только если запущено от root)
+if (posix_geteuid() === 0 && file_exists($errorLogFile)) {
+    @chown($errorLogFile, $phpUser);
+    @chgrp($errorLogFile, $phpUser);
+}
+
 ini_set('error_log', $errorLogFile);
+
+// Тестовое логирование
+error_log("=== Application started at " . date('Y-m-d H:i:s') . " ===");
 
 // Включить буферизацию вывода
 ob_start();

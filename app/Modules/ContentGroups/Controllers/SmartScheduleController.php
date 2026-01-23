@@ -29,6 +29,8 @@ class SmartScheduleController extends Controller
      */
     public function index(): void
     {
+        error_log("SmartScheduleController::index: START - " . date('Y-m-d H:i:s'));
+        
         try {
             // Проверяем сессию
             if (session_status() === PHP_SESSION_NONE) {
@@ -36,8 +38,10 @@ class SmartScheduleController extends Controller
             }
             
             $userId = $_SESSION['user_id'] ?? null;
+            error_log("SmartScheduleController::index: userId = " . ($userId ?? 'NULL'));
             
             if (!$userId) {
+                error_log("SmartScheduleController::index: No user ID, redirecting to login");
                 header('Location: /login');
                 exit;
             }
@@ -47,6 +51,7 @@ class SmartScheduleController extends Controller
             $groups = [];
             
             try {
+                error_log("SmartScheduleController::index: Loading schedules for user {$userId}");
                 $scheduleRepo = new \App\Repositories\ScheduleRepository();
                 
                 // Получаем все умные расписания (с группами контента) для пользователя

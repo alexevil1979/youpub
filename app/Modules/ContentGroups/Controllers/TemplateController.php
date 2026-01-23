@@ -23,6 +23,8 @@ class TemplateController extends Controller
      */
     public function index(): void
     {
+        error_log("TemplateController::index: START - " . date('Y-m-d H:i:s'));
+        
         try {
             // Проверяем сессию
             if (session_status() === PHP_SESSION_NONE) {
@@ -30,8 +32,10 @@ class TemplateController extends Controller
             }
             
             $userId = $_SESSION['user_id'] ?? null;
+            error_log("TemplateController::index: userId = " . ($userId ?? 'NULL'));
             
             if (!$userId) {
+                error_log("TemplateController::index: No user ID, redirecting to login");
                 header('Location: /login');
                 exit;
             }
@@ -40,13 +44,15 @@ class TemplateController extends Controller
             $templates = [];
             
             try {
+                error_log("TemplateController::index: Loading templates for user {$userId}");
                 $templates = $this->templateService->getUserTemplates($userId);
+                error_log("TemplateController::index: Loaded " . count($templates) . " templates");
                 
                 if (!isset($templates) || !is_array($templates)) {
                     $templates = [];
                 }
             } catch (\Exception $e) {
-                error_log("TemplateController::index: Error loading templates: " . $e->getMessage());
+                error_log("TemplateController::index: Error loading templates: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
                 $templates = [];
             }
             
