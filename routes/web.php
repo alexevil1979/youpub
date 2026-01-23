@@ -111,8 +111,10 @@ $router->post('/content-groups/templates/{id}/preview', [TemplateController::cla
 $router->delete('/content-groups/templates/{id}', [TemplateController::class, 'delete'], [AuthMiddleware::class]);
 
 // Умные расписания
+$router->get('/content-groups/schedules', [SmartScheduleController::class, 'index'], [AuthMiddleware::class]);
 $router->get('/content-groups/schedules/create', [SmartScheduleController::class, 'showCreate'], [AuthMiddleware::class]);
 $router->post('/content-groups/schedules/create', [SmartScheduleController::class, 'create'], [AuthMiddleware::class]);
+$router->delete('/content-groups/schedules/{id}', [SmartScheduleController::class, 'delete'], [AuthMiddleware::class]);
 
 // Поиск
 $router->get('/search', [SearchController::class, 'search'], [AuthMiddleware::class]);

@@ -25,6 +25,50 @@ class SmartScheduleController extends Controller
     }
 
     /**
+     * Список умных расписаний
+     */
+    public function index(): void
+    {
+        try {
+            $userId = $_SESSION['user_id'] ?? null;
+            
+            if (!$userId) {
+                header('Location: /login');
+                exit;
+            }
+            
+            $scheduleRepo = new \App\Repositories\ScheduleRepository();
+            
+            // Получаем все умные расписания (с группами контента) для пользователя
+            $allSchedules = $scheduleRepo->findByUserId($userId);
+            $smartSchedules = array_filter($allSchedules, function($schedule) {
+                return !empty($schedule['content_group_id']);
+            });
+            
+            // Получаем информацию о группах для расписаний
+            $groupIds = array_unique(array_column($smartSchedules, 'content_group_id'));
+            $groups = [];
+            if (!empty($groupIds)) {
+                foreach ($groupIds as $groupId) {
+                    $group = $this->groupService->getGroup($groupId, $userId);
+                    if ($group) {
+                        $groups[$groupId] = $group;
+                    }
+                }
+            }
+            
+            include __DIR__ . '/../../../../views/content_groups/schedules/index.php';
+        } catch (\Exception $e) {
+            error_log("SmartScheduleController::index: Exception - " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode([
+                'error' => 'Internal Server Error',
+                'message' => 'Произошла ошибка при загрузке расписаний: ' . $e->getMessage()
+            ], JSON_UNESCAPED_UNICODE);
+        }
+    }
+
+    /**
      * Показать форму создания умного расписания
      */
     public function showCreate(): void

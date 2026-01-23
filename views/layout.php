@@ -16,6 +16,8 @@
                 <a href="/videos">Видео</a>
                 <a href="/schedules">Расписания</a>
                 <a href="/content-groups">Группы</a>
+                <a href="/content-groups/templates">Шаблоны</a>
+                <a href="/content-groups/schedules">Умные расписания</a>
                 <a href="/integrations">Интеграции</a>
                 <a href="/statistics">Статистика</a>
                 <?php if ($_SESSION['user_role'] === 'admin'): ?>
