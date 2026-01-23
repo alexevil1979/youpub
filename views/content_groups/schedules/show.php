@@ -119,6 +119,20 @@ ob_start();
             <?= htmlspecialchars($template['name'] ?? 'Без названия') ?>
         </div>
         <?php endif; ?>
+        <?php if (($schedule['schedule_type'] ?? '') === 'fixed'): ?>
+        <div>
+            <strong>Параметры:</strong><br>
+            <?php if (!empty($schedule['delay_between_posts'])): ?>
+                <small>Задержка: <?= (int)$schedule['delay_between_posts'] ?> мин.</small><br>
+            <?php endif; ?>
+            <?php if (!empty($schedule['daily_limit'])): ?>
+                <small>Дневной лимит: <?= (int)$schedule['daily_limit'] ?> видео</small><br>
+            <?php endif; ?>
+            <?php if (!empty($schedule['hourly_limit'])): ?>
+                <small>Часовой лимит: <?= (int)$schedule['hourly_limit'] ?> видео</small>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
 
