@@ -117,8 +117,42 @@ class VideoController extends Controller
             // Проверка размера POST запроса
             if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST) && empty($_FILES)) {
                 $postMaxSize = ini_get('post_max_size');
+                $uploadMaxSize = ini_get('upload_max_filesize');
+                $maxFileUploads = ini_get('max_file_uploads');
                 error_log('Upload error: POST data is empty. Check post_max_size: ' . $postMaxSize);
-                $this->error('Размер запроса превышает лимит. Увеличьте post_max_size в настройках PHP (текущее значение: ' . $postMaxSize . ')', 400);
+                $this->error(
+                    'Размер запроса превышает лимит PHP. ' .
+                    'Текущие настройки: post_max_size=' . $postMaxSize . ', upload_max_filesize=' . $uploadMaxSize . ', max_file_uploads=' . $maxFileUploads . '. ' .
+                    'Рекомендуется установить: post_max_size=5120M, upload_max_filesize=5120M, max_file_uploads=50. ' .
+                    'См. инструкцию: FIX_PHP_UPLOAD_SETTINGS.md',
+                    400
+                );
+                return;
+            }
+            
+            // Проверка размера загружаемых файлов перед обработкой
+            $totalSize = 0;
+            $postMaxSizeBytes = $this->parseSize(ini_get('post_max_size'));
+            $uploadMaxSizeBytes = $this->parseSize(ini_get('upload_max_filesize'));
+            
+            foreach ($_FILES['videos']['size'] as $size) {
+                $totalSize += $size;
+                if ($size > $uploadMaxSizeBytes) {
+                    $this->error(
+                        'Один из файлов превышает upload_max_filesize (' . ini_get('upload_max_filesize') . '). ' .
+                        'Увеличьте upload_max_filesize в настройках PHP.',
+                        400
+                    );
+                    return;
+                }
+            }
+            
+            if ($totalSize > $postMaxSizeBytes) {
+                $this->error(
+                    'Общий размер файлов (' . $this->formatBytes($totalSize) . ') превышает post_max_size (' . ini_get('post_max_size') . '). ' .
+                    'Увеличьте post_max_size в настройках PHP. См. FIX_PHP_UPLOAD_SETTINGS.md',
+                    400
+                );
                 return;
             }
 
@@ -184,6 +218,41 @@ class VideoController extends Controller
             error_log('Exception in uploadMultiple: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
             $this->error('Произошла ошибка при загрузке: ' . $e->getMessage(), 500);
         }
+    }
+    
+    /**
+     * Преобразовать размер из строки (например, "8M") в байты
+     */
+    private function parseSize(string $size): int
+    {
+        $size = trim($size);
+        $last = strtolower($size[strlen($size) - 1]);
+        $value = (int)$size;
+        
+        switch ($last) {
+            case 'g':
+                $value *= 1024;
+            case 'm':
+                $value *= 1024;
+            case 'k':
+                $value *= 1024;
+        }
+        
+        return $value;
+    }
+    
+    /**
+     * Форматировать байты в читаемый формат
+     */
+    private function formatBytes(int $bytes, int $precision = 2): string
+    {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        
+        for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
+            $bytes /= 1024;
+        }
+        
+        return round($bytes, $precision) . ' ' . $units[$i];
     }
     
     /**
