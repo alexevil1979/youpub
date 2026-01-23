@@ -49,8 +49,11 @@ class SmartQueueService extends Service
         // Получаем группу
         $group = $this->groupRepo->findById($schedule['content_group_id']);
         if (!$group || $group['status'] !== 'active') {
+            error_log("SmartQueueService::processGroupSchedule: Group not found or inactive. Group ID: " . ($schedule['content_group_id'] ?? 'NULL') . ", Group status: " . ($group['status'] ?? 'not found'));
             return ['success' => false, 'message' => 'Group not found or inactive'];
         }
+        
+        error_log("SmartQueueService::processGroupSchedule: Group found. Group ID: {$group['id']}, Status: {$group['status']}");
 
         // Проверяем, нужно ли пропускать опубликованные
         $skipPublished = $schedule['skip_published'] ?? true;
@@ -59,6 +62,8 @@ class SmartQueueService extends Service
         $groupFile = $this->fileRepo->findNextUnpublished($schedule['content_group_id']);
         
         if (!$groupFile) {
+            error_log("SmartQueueService::processGroupSchedule: No unpublished file found. Group ID: {$schedule['content_group_id']}, Skip published: " . ($skipPublished ? 'true' : 'false'));
+            
             // Все видео опубликованы или нет доступных
             if ($skipPublished) {
                 return ['success' => false, 'message' => 'No unpublished videos in group'];
@@ -67,12 +72,17 @@ class SmartQueueService extends Service
             // Если не пропускаем, берем любое видео из группы
             $files = $this->fileRepo->findByGroupId($schedule['content_group_id'], ['order_index' => 'ASC']);
             if (empty($files)) {
+                error_log("SmartQueueService::processGroupSchedule: No files in group. Group ID: {$schedule['content_group_id']}");
                 return ['success' => false, 'message' => 'No videos in group'];
             }
             $groupFile = $files[0];
+            error_log("SmartQueueService::processGroupSchedule: Using first file from group. File ID: {$groupFile['id']}, Video ID: {$groupFile['video_id']}, Status: {$groupFile['status']}");
+        } else {
+            error_log("SmartQueueService::processGroupSchedule: Found unpublished file. File ID: {$groupFile['id']}, Video ID: {$groupFile['video_id']}, File status: {$groupFile['status']}, Video status: {$groupFile['video_status'] ?? 'unknown'}");
         }
 
         // Обновляем статус файла в группе
+        error_log("SmartQueueService::processGroupSchedule: Updating file status to 'queued'. File ID: {$groupFile['id']}");
         $this->fileRepo->updateFileStatus($groupFile['id'], 'queued');
 
         // Применяем шаблон, если есть
