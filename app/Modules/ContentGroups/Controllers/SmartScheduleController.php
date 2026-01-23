@@ -378,6 +378,200 @@ class SmartScheduleController extends Controller
     }
 
     /**
+     * Показать умное расписание с каталогом файлов
+     */
+    public function show($id): void
+    {
+        $id = (int)$id;
+        $userId = $_SESSION['user_id'] ?? null;
+        
+        if (!$userId) {
+            header('Location: /login');
+            exit;
+        }
+        
+        try {
+            $scheduleRepo = new \App\Repositories\ScheduleRepository();
+            $schedule = $scheduleRepo->findById($id);
+            
+            if (!$schedule || $schedule['user_id'] !== $userId) {
+                $_SESSION['error'] = 'Расписание не найдено';
+                header('Location: /content-groups/schedules');
+                exit;
+            }
+            
+            // Получаем группу
+            $group = null;
+            $files = [];
+            $scheduledFiles = [];
+            
+            if (!empty($schedule['content_group_id'])) {
+                $group = $this->groupService->getGroupWithStats((int)$schedule['content_group_id'], $userId);
+                if ($group) {
+                    $files = $this->groupService->getGroupFiles((int)$schedule['content_group_id'], $userId);
+                    
+                    // Получаем все расписания для этой группы
+                    $allSchedules = $scheduleRepo->findByGroupId((int)$schedule['content_group_id']);
+                    
+                    // Сортируем расписания по времени публикации
+                    usort($allSchedules, function($a, $b) {
+                        return strtotime($a['publish_at']) <=> strtotime($b['publish_at']);
+                    });
+                    
+                    // Связываем файлы с расписаниями
+                    $fileIndex = 0;
+                    foreach ($allSchedules as $sched) {
+                        if ($fileIndex < count($files)) {
+                            $scheduledFiles[] = [
+                                'file' => $files[$fileIndex],
+                                'schedule' => $sched,
+                                'publish_at' => $sched['publish_at']
+                            ];
+                            $fileIndex++;
+                        }
+                    }
+                    
+                    // Добавляем оставшиеся файлы без расписания
+                    while ($fileIndex < count($files)) {
+                        $scheduledFiles[] = [
+                            'file' => $files[$fileIndex],
+                            'schedule' => null,
+                            'publish_at' => null
+                        ];
+                        $fileIndex++;
+                    }
+                }
+            }
+            
+            // Получаем шаблон, если есть
+            $template = null;
+            if (!empty($schedule['template_id'])) {
+                $templateRepo = new \App\Modules\ContentGroups\Repositories\PublicationTemplateRepository();
+                $template = $templateRepo->findById((int)$schedule['template_id']);
+            }
+            
+            include __DIR__ . '/../../../../views/content_groups/schedules/show.php';
+        } catch (\Exception $e) {
+            error_log("SmartScheduleController::show: Error - " . $e->getMessage());
+            $_SESSION['error'] = 'Ошибка при загрузке расписания: ' . $e->getMessage();
+            header('Location: /content-groups/schedules');
+            exit;
+        }
+    }
+
+    /**
+     * Показать форму редактирования умного расписания
+     */
+    public function showEdit($id): void
+    {
+        $id = (int)$id;
+        $userId = $_SESSION['user_id'] ?? null;
+        
+        if (!$userId) {
+            header('Location: /login');
+            exit;
+        }
+        
+        try {
+            $scheduleRepo = new \App\Repositories\ScheduleRepository();
+            $schedule = $scheduleRepo->findById($id);
+            
+            if (!$schedule || $schedule['user_id'] !== $userId) {
+                $_SESSION['error'] = 'Расписание не найдено';
+                header('Location: /content-groups/schedules');
+                exit;
+            }
+            
+            $groups = $this->groupService->getUserGroups($userId);
+            $templates = $this->templateService->getUserTemplates($userId, true);
+            $csrfToken = (new \Core\Auth())->generateCsrfToken();
+            
+            if (!isset($groups)) {
+                $groups = [];
+            }
+            if (!isset($templates)) {
+                $templates = [];
+            }
+            
+            include __DIR__ . '/../../../../views/content_groups/schedules/edit.php';
+        } catch (\Exception $e) {
+            error_log("SmartScheduleController::showEdit: Error - " . $e->getMessage());
+            $_SESSION['error'] = 'Ошибка при загрузке формы редактирования: ' . $e->getMessage();
+            header('Location: /content-groups/schedules');
+            exit;
+        }
+    }
+
+    /**
+     * Обновить умное расписание
+     */
+    public function update($id): void
+    {
+        $id = (int)$id;
+        $userId = $_SESSION['user_id'] ?? null;
+        
+        if (!$userId) {
+            $_SESSION['error'] = 'Необходима авторизация';
+            header('Location: /content-groups/schedules');
+            exit;
+        }
+        
+        try {
+            $scheduleRepo = new \App\Repositories\ScheduleRepository();
+            $schedule = $scheduleRepo->findById($id);
+            
+            if (!$schedule || $schedule['user_id'] !== $userId) {
+                $_SESSION['error'] = 'Расписание не найдено';
+                header('Location: /content-groups/schedules');
+                exit;
+            }
+            
+            // Обработка weekdays
+            $weekdaysArray = $_POST['weekdays'] ?? [];
+            $weekdays = null;
+            if (!empty($weekdaysArray) && is_array($weekdaysArray)) {
+                $weekdays = implode(',', array_map('intval', $weekdaysArray));
+            }
+            
+            $updateData = [
+                'content_group_id' => $this->getParam('content_group_id') ? (int)$this->getParam('content_group_id') : null,
+                'template_id' => $this->getParam('template_id') ? (int)$this->getParam('template_id') : null,
+                'platform' => $this->getParam('platform', 'youtube'),
+                'schedule_type' => $this->getParam('schedule_type', 'fixed'),
+                'publish_at' => $this->getParam('publish_at') ? date('Y-m-d H:i:s', strtotime($this->getParam('publish_at'))) : null,
+                'interval_minutes' => $this->getParam('interval_minutes') ? (int)$this->getParam('interval_minutes') : null,
+                'batch_count' => $this->getParam('batch_count') ? (int)$this->getParam('batch_count') : null,
+                'batch_window_hours' => $this->getParam('batch_window_hours') ? (int)$this->getParam('batch_window_hours') : null,
+                'random_window_start' => $this->getParam('random_window_start') ?: null,
+                'random_window_end' => $this->getParam('random_window_end') ?: null,
+                'weekdays' => $weekdays,
+                'active_hours_start' => $this->getParam('active_hours_start') ?: null,
+                'active_hours_end' => $this->getParam('active_hours_end') ?: null,
+                'daily_limit' => $this->getParam('daily_limit') ? (int)$this->getParam('daily_limit') : null,
+                'hourly_limit' => $this->getParam('hourly_limit') ? (int)$this->getParam('hourly_limit') : null,
+                'delay_between_posts' => $this->getParam('delay_between_posts') ? (int)$this->getParam('delay_between_posts') : null,
+                'skip_published' => $this->getParam('skip_published', '1') === '1',
+            ];
+            
+            // Удаляем NULL значения
+            $updateData = array_filter($updateData, function($value) {
+                return $value !== null;
+            });
+            
+            $scheduleRepo->update($id, $updateData);
+            
+            $_SESSION['success'] = 'Расписание успешно обновлено';
+            header('Location: /content-groups/schedules/' . $id);
+            exit;
+        } catch (\Exception $e) {
+            error_log("SmartScheduleController::update: Error - " . $e->getMessage());
+            $_SESSION['error'] = 'Ошибка при обновлении расписания: ' . $e->getMessage();
+            header('Location: /content-groups/schedules/' . $id . '/edit');
+            exit;
+        }
+    }
+
+    /**
      * Удалить умное расписание
      */
     public function delete(int $id): void

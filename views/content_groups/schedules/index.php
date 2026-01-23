@@ -106,6 +106,12 @@ if (!isset($groups)) {
                         </td>
                         <td style="padding: 0.75rem;">
                             <?php if (isset($schedule['id'])): ?>
+                                <a href="/content-groups/schedules/<?= (int)$schedule['id'] ?>" class="btn btn-sm btn-primary" style="margin-right: 0.5rem;">
+                                    <?= \App\Helpers\IconHelper::render('view', 16, 'icon-inline') ?> Просмотр
+                                </a>
+                                <a href="/content-groups/schedules/<?= (int)$schedule['id'] ?>/edit" class="btn btn-sm btn-secondary" style="margin-right: 0.5rem;">
+                                    <?= \App\Helpers\IconHelper::render('edit', 16, 'icon-inline') ?> Редактировать
+                                </a>
                                 <button type="button" class="btn btn-sm btn-danger" onclick="deleteSchedule(<?= (int)$schedule['id'] ?>)">
                                     <?= \App\Helpers\IconHelper::render('delete', 16, 'icon-inline') ?> Удалить
                                 </button>
