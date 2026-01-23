@@ -8,6 +8,14 @@ error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 
+// Настройка логирования ошибок
+$logDir = __DIR__ . '/storage/logs';
+if (!is_dir($logDir)) {
+    @mkdir($logDir, 0755, true);
+}
+$errorLogFile = $logDir . '/error.log';
+ini_set('error_log', $errorLogFile);
+
 // Включить буферизацию вывода
 ob_start();
 
