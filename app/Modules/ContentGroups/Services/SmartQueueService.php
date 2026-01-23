@@ -92,15 +92,38 @@ class SmartQueueService extends Service
         $templated = $this->templateService->applyTemplate($templateId, $video, $context);
 
         // Проверяем, нет ли уже расписания 'processing' для этого видео
-        $existingProcessing = $this->scheduleRepo->findByUserId($schedule['user_id']);
-        $existingProcessing = array_filter($existingProcessing, function($s) use ($groupFile) {
-            return ($s['video_id'] ?? null) == $groupFile['video_id'] 
-                && ($s['status'] ?? '') === 'processing'
-                && !empty($s['content_group_id']);
-        });
+        // И очищаем старые зависшие расписания 'processing' (старше 10 минут)
+        $stmt = $this->db->prepare("
+            SELECT id FROM schedules 
+            WHERE video_id = ? 
+            AND status = 'processing' 
+            AND content_group_id IS NOT NULL
+            AND created_at < DATE_SUB(NOW(), INTERVAL 10 MINUTE)
+        ");
+        $stmt->execute([$groupFile['video_id']]);
+        $oldProcessing = $stmt->fetchAll();
         
-        if (!empty($existingProcessing)) {
-            // Уже есть расписание в обработке для этого видео, пропускаем
+        // Очищаем старые зависшие расписания
+        foreach ($oldProcessing as $old) {
+            $this->scheduleRepo->update($old['id'], [
+                'status' => 'failed',
+                'error_message' => 'Processing timeout (10 minutes)'
+            ]);
+        }
+        
+        // Проверяем активные расписания 'processing' для этого видео
+        $stmt = $this->db->prepare("
+            SELECT id FROM schedules 
+            WHERE video_id = ? 
+            AND status = 'processing' 
+            AND content_group_id IS NOT NULL
+            AND created_at >= DATE_SUB(NOW(), INTERVAL 10 MINUTE)
+        ");
+        $stmt->execute([$groupFile['video_id']]);
+        $activeProcessing = $stmt->fetchAll();
+        
+        if (!empty($activeProcessing)) {
+            // Уже есть активное расписание в обработке для этого видео, пропускаем
             return ['success' => false, 'message' => 'Video already being processed'];
         }
 

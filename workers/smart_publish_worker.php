@@ -39,6 +39,12 @@ try {
     $scheduleRepo = new ScheduleRepository();
     $smartQueue = new SmartQueueService();
     $scheduleEngine = new ScheduleEngineService();
+    
+    // Очищаем зависшие расписания 'processing' (старше 10 минут)
+    $cleaned = $scheduleRepo->cleanupStuckProcessing(10);
+    if ($cleaned > 0) {
+        logMessage("Cleaned up {$cleaned} stuck processing schedules", $logFile);
+    }
 
     // Найти расписания с группами, готовые к публикации
     $schedules = $scheduleRepo->findActiveGroupSchedules();
