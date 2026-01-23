@@ -88,6 +88,9 @@ ob_start();
                     <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Статус</th>
                     <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Порядок</th>
                     <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Опубликовано</th>
+                    <?php if ($group['status'] === 'active'): ?>
+                        <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Следующая публикация</th>
+                    <?php endif; ?>
                     <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Действия</th>
                 </tr>
             </thead>
@@ -110,6 +113,17 @@ ob_start();
                         <td style="padding: 0.75rem;">
                             <?= $file['published_at'] ? date('d.m.Y H:i', strtotime($file['published_at'])) : '-' ?>
                         </td>
+                        <?php if ($group['status'] === 'active'): ?>
+                            <td style="padding: 0.75rem;">
+                                <?php if (isset($nextPublishDates[$file['id']])): ?>
+                                    <span style="color: #3498db; font-weight: 500;">
+                                        <?= date('d.m.Y H:i', strtotime($nextPublishDates[$file['id']])) ?>
+                                    </span>
+                                <?php else: ?>
+                                    <span style="color: #95a5a6;">-</span>
+                                <?php endif; ?>
+                            </td>
+                        <?php endif; ?>
                         <td style="padding: 0.75rem;">
                             <a href="/videos/<?= $file['video_id'] ?>" class="btn btn-sm btn-primary">Просмотр</a>
                             <?php if (isset($filePublications[$file['video_id']])): 

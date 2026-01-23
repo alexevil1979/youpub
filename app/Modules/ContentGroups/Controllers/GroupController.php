@@ -96,6 +96,30 @@ class GroupController extends Controller
             }
         }
         
+        // Получаем следующую дату публикации для каждого файла (только если группа активна)
+        $nextPublishDates = [];
+        if ($group['status'] === 'active' && !empty($files)) {
+            $scheduleRepo = new \App\Repositories\ScheduleRepository();
+            
+            // Получаем все активные расписания для этой группы
+            $schedules = $scheduleRepo->findByGroupId($id);
+            
+            // Для каждого файла находим следующее расписание
+            // Для групп контента расписание обычно для всей группы, а не для конкретного видео
+            if (!empty($schedules)) {
+                // Берем ближайшее расписание для группы
+                $nextSchedule = $schedules[0];
+                $nextPublishDate = $nextSchedule['publish_at'];
+                
+                // Присваиваем эту дату всем файлам, которые еще не опубликованы или в очереди
+                foreach ($files as $file) {
+                    if (in_array($file['status'], ['new', 'queued', 'paused'])) {
+                        $nextPublishDates[$file['id']] = $nextPublishDate;
+                    }
+                }
+            }
+        }
+        
         $templates = $this->templateService->getUserTemplates($userId, true);
         
         include __DIR__ . '/../../../../views/content_groups/show.php';

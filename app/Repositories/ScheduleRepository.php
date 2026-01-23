@@ -120,4 +120,20 @@ class ScheduleRepository extends Repository
         $stmt->execute([$userId, $searchTerm, $searchTerm, $searchTerm, $searchTerm, $limit]);
         return $stmt->fetchAll();
     }
+
+    /**
+     * Найти расписания для группы контента
+     */
+    public function findByGroupId(int $groupId): array
+    {
+        $stmt = $this->db->prepare("
+            SELECT * FROM {$this->table} 
+            WHERE content_group_id = ? 
+            AND status = 'pending'
+            AND publish_at >= NOW()
+            ORDER BY publish_at ASC
+        ");
+        $stmt->execute([$groupId]);
+        return $stmt->fetchAll();
+    }
 }
