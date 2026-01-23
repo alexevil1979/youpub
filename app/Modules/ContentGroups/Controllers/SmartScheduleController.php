@@ -210,11 +210,15 @@ class SmartScheduleController extends Controller
                 $weekdays = implode(',', array_map('intval', $weekdaysArray));
             }
             
+            // Подготавливаем данные, исключая NULL значения для video_id
+            $contentGroupId = $this->getParam('content_group_id') ? (int)$this->getParam('content_group_id') : null;
+            $videoId = $this->getParam('video_id') ? (int)$this->getParam('video_id') : null;
+            $templateId = $this->getParam('template_id') ? (int)$this->getParam('template_id') : null;
+            
             $data = [
                 'user_id' => $userId,
-                'content_group_id' => $this->getParam('content_group_id') ? (int)$this->getParam('content_group_id') : null,
-                'video_id' => $this->getParam('video_id') ? (int)$this->getParam('video_id') : null,
-                'template_id' => $this->getParam('template_id') ? (int)$this->getParam('template_id') : null,
+                'content_group_id' => $contentGroupId,
+                'template_id' => $templateId,
                 'platform' => $this->getParam('platform', 'youtube'),
                 'schedule_type' => $this->getParam('schedule_type', 'fixed'),
                 'publish_at' => $this->getParam('publish_at') ? date('Y-m-d H:i:s', strtotime($this->getParam('publish_at'))) : date('Y-m-d H:i:s'),
@@ -232,6 +236,11 @@ class SmartScheduleController extends Controller
                 'skip_published' => $this->getParam('skip_published', '1') === '1',
                 'status' => 'pending',
             ];
+            
+            // Добавляем video_id только если он указан (для расписаний групп контента video_id должен быть NULL)
+            if ($videoId !== null) {
+                $data['video_id'] = $videoId;
+            }
             
             error_log("SmartScheduleController::create: Data prepared - content_group_id: {$data['content_group_id']}, video_id: {$data['video_id']}, platform: {$data['platform']}, schedule_type: {$data['schedule_type']}");
 

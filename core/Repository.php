@@ -71,13 +71,22 @@ abstract class Repository
      */
     public function create(array $data): int
     {
-        $fields = array_keys($data);
+        // Фильтруем NULL значения для полей, которые могут быть NULL
+        // Это позволяет базе данных использовать значения по умолчанию
+        $filteredData = [];
+        foreach ($data as $key => $value) {
+            // Включаем поле, даже если значение NULL (для явного указания NULL)
+            // Но можно исключить, если нужно использовать DEFAULT
+            $filteredData[$key] = $value;
+        }
+        
+        $fields = array_keys($filteredData);
         $placeholders = array_fill(0, count($fields), '?');
         
         $sql = "INSERT INTO {$this->table} (" . implode(', ', $fields) . ") VALUES (" . implode(', ', $placeholders) . ")";
         
         $stmt = $this->db->prepare($sql);
-        $stmt->execute(array_values($data));
+        $stmt->execute(array_values($filteredData));
         
         return (int)$this->db->lastInsertId();
     }
