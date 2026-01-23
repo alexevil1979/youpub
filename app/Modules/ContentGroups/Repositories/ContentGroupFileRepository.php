@@ -123,14 +123,30 @@ class ContentGroupFileRepository extends Repository
      */
     public function updateFileStatus(int $id, string $status, ?int $publicationId = null): bool
     {
-        $data = ['status' => $status];
-        if ($status === 'published') {
-            $data['published_at'] = date('Y-m-d H:i:s');
+        try {
+            error_log("ContentGroupFileRepository::updateFileStatus: id={$id}, status={$status}, publicationId=" . ($publicationId ?? 'null'));
+            
+            $data = ['status' => $status];
+            if ($status === 'published') {
+                $data['published_at'] = date('Y-m-d H:i:s');
+            }
+            if ($publicationId) {
+                $data['publication_id'] = $publicationId;
+            }
+            
+            $result = $this->update($id, $data);
+            
+            if ($result) {
+                error_log("ContentGroupFileRepository::updateFileStatus: Success - file {$id} status updated to {$status}");
+            } else {
+                error_log("ContentGroupFileRepository::updateFileStatus: Failed - update returned false for file {$id}");
+            }
+            
+            return $result;
+        } catch (\Exception $e) {
+            error_log("ContentGroupFileRepository::updateFileStatus: Exception - " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+            return false;
         }
-        if ($publicationId) {
-            $data['publication_id'] = $publicationId;
-        }
-        return $this->update($id, $data);
     }
 
     /**
