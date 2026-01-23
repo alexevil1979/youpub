@@ -559,6 +559,8 @@ class SmartScheduleController extends Controller
                             $delayMinutes = isset($schedule['delay_between_posts']) ? (int)$schedule['delay_between_posts'] : 0;
                             $dailyLimit = isset($schedule['daily_limit']) ? (int)$schedule['daily_limit'] : 0;
                             $hourlyLimit = isset($schedule['hourly_limit']) ? (int)$schedule['hourly_limit'] : 0;
+                            $activeHoursStart = $schedule['active_hours_start'] ?? null;
+                            $activeHoursEnd = $schedule['active_hours_end'] ?? null;
                             
                             // Базовое время первой публикации
                             $currentPublishTime = $baseTime;
@@ -567,49 +569,98 @@ class SmartScheduleController extends Controller
                             if ($unpublishedIndex > 0 && $delayMinutes > 0) {
                                 // Добавляем задержку для каждого следующего файла
                                 $currentPublishTime = $baseTime + ($unpublishedIndex * $delayMinutes * 60);
+                            }
+                            
+                            // Учитываем активные часы
+                            if ($activeHoursStart && $activeHoursEnd) {
+                                $currentHour = (int)date('H', $currentPublishTime);
+                                $currentMinute = (int)date('i', $currentPublishTime);
+                                $currentTimeMinutes = $currentHour * 60 + $currentMinute;
                                 
-                                // Учитываем часовой лимит
-                                if ($hourlyLimit > 0) {
-                                    // Если превышен часовой лимит, переносим на следующий час
-                                    $hourStart = strtotime(date('Y-m-d H:00:00', $currentPublishTime));
-                                    $hourEnd = $hourStart + 3600;
-                                    
-                                    // Подсчитываем, сколько файлов уже запланировано в этом часе
-                                    $filesInThisHour = 0;
-                                    foreach ($scheduledFiles as $prevItem) {
-                                        if (isset($prevItem['publish_at'])) {
-                                            $prevTime = strtotime($prevItem['publish_at']);
-                                            if ($prevTime >= $hourStart && $prevTime < $hourEnd) {
-                                                $filesInThisHour++;
-                                            }
-                                        }
+                                list($startHour, $startMinute) = explode(':', $activeHoursStart);
+                                list($endHour, $endMinute) = explode(':', $activeHoursEnd);
+                                $startTimeMinutes = (int)$startHour * 60 + (int)$startMinute;
+                                $endTimeMinutes = (int)$endHour * 60 + (int)$endMinute;
+                                
+                                // Если текущее время вне активных часов, переносим на начало активных часов
+                                if ($currentTimeMinutes < $startTimeMinutes || $currentTimeMinutes >= $endTimeMinutes) {
+                                    // Если время до начала активных часов, переносим на начало
+                                    if ($currentTimeMinutes < $startTimeMinutes) {
+                                        $currentPublishTime = strtotime(date('Y-m-d', $currentPublishTime) . ' ' . $activeHoursStart . ':00');
+                                    } else {
+                                        // Если время после окончания активных часов, переносим на начало следующего дня
+                                        $currentPublishTime = strtotime(date('Y-m-d', $currentPublishTime) . ' ' . $activeHoursStart . ':00');
+                                        $currentPublishTime = strtotime('+1 day', $currentPublishTime);
                                     }
-                                    
-                                    // Если в этом часе уже достигнут лимит, переносим на следующий час
-                                    if ($filesInThisHour >= $hourlyLimit) {
-                                        $currentPublishTime = $hourEnd;
+                                }
+                            }
+                            
+                            // Учитываем часовой лимит
+                            if ($hourlyLimit > 0) {
+                                $hourStart = strtotime(date('Y-m-d H:00:00', $currentPublishTime));
+                                $hourEnd = $hourStart + 3600;
+                                
+                                // Подсчитываем, сколько файлов уже запланировано в этом часе
+                                $filesInThisHour = 0;
+                                foreach ($scheduledFiles as $prevItem) {
+                                    if (isset($prevItem['publish_at'])) {
+                                        $prevTime = strtotime($prevItem['publish_at']);
+                                        if ($prevTime >= $hourStart && $prevTime < $hourEnd) {
+                                            $filesInThisHour++;
+                                        }
                                     }
                                 }
                                 
-                                // Учитываем дневной лимит
-                                if ($dailyLimit > 0) {
-                                    $dayStart = strtotime(date('Y-m-d 00:00:00', $currentPublishTime));
-                                    $dayEnd = $dayStart + 86400;
+                                // Если в этом часе уже достигнут лимит, переносим на следующий час
+                                if ($filesInThisHour >= $hourlyLimit) {
+                                    $currentPublishTime = $hourEnd;
                                     
-                                    // Подсчитываем, сколько файлов уже запланировано в этот день
-                                    $filesInThisDay = 0;
-                                    foreach ($scheduledFiles as $prevItem) {
-                                        if (isset($prevItem['publish_at'])) {
-                                            $prevTime = strtotime($prevItem['publish_at']);
-                                            if ($prevTime >= $dayStart && $prevTime < $dayEnd) {
-                                                $filesInThisDay++;
+                                    // Проверяем активные часы после переноса
+                                    if ($activeHoursStart && $activeHoursEnd) {
+                                        $newHour = (int)date('H', $currentPublishTime);
+                                        $newMinute = (int)date('i', $currentPublishTime);
+                                        $newTimeMinutes = $newHour * 60 + $newMinute;
+                                        
+                                        list($startHour, $startMinute) = explode(':', $activeHoursStart);
+                                        list($endHour, $endMinute) = explode(':', $activeHoursEnd);
+                                        $startTimeMinutes = (int)$startHour * 60 + (int)$startMinute;
+                                        $endTimeMinutes = (int)$endHour * 60 + (int)$endMinute;
+                                        
+                                        // Если новый час вне активных часов, переносим на начало активных часов
+                                        if ($newTimeMinutes < $startTimeMinutes || $newTimeMinutes >= $endTimeMinutes) {
+                                            $currentPublishTime = strtotime(date('Y-m-d', $currentPublishTime) . ' ' . $activeHoursStart . ':00');
+                                            // Если это уже следующий день, добавляем день
+                                            if ($newTimeMinutes >= $endTimeMinutes) {
+                                                $currentPublishTime = strtotime('+1 day', $currentPublishTime);
                                             }
                                         }
                                     }
+                                }
+                            }
+                            
+                            // Учитываем дневной лимит
+                            if ($dailyLimit > 0) {
+                                $dayStart = strtotime(date('Y-m-d 00:00:00', $currentPublishTime));
+                                $dayEnd = $dayStart + 86400;
+                                
+                                // Подсчитываем, сколько файлов уже запланировано в этот день
+                                $filesInThisDay = 0;
+                                foreach ($scheduledFiles as $prevItem) {
+                                    if (isset($prevItem['publish_at'])) {
+                                        $prevTime = strtotime($prevItem['publish_at']);
+                                        if ($prevTime >= $dayStart && $prevTime < $dayEnd) {
+                                            $filesInThisDay++;
+                                        }
+                                    }
+                                }
+                                
+                                // Если в этот день уже достигнут лимит, переносим на следующий день
+                                if ($filesInThisDay >= $dailyLimit) {
+                                    $currentPublishTime = $dayEnd;
                                     
-                                    // Если в этот день уже достигнут лимит, переносим на следующий день
-                                    if ($filesInThisDay >= $dailyLimit) {
-                                        $currentPublishTime = $dayEnd;
+                                    // Устанавливаем на начало активных часов следующего дня
+                                    if ($activeHoursStart) {
+                                        $currentPublishTime = strtotime(date('Y-m-d', $currentPublishTime) . ' ' . $activeHoursStart . ':00');
                                     }
                                 }
                             }

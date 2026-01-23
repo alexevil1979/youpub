@@ -121,9 +121,12 @@ ob_start();
         <?php endif; ?>
         <?php if (($schedule['schedule_type'] ?? '') === 'fixed'): ?>
         <div>
-            <strong>Параметры:</strong><br>
+            <strong>Параметры расписания:</strong><br>
+            <?php if (!empty($schedule['active_hours_start']) && !empty($schedule['active_hours_end'])): ?>
+                <small>Активные часы: <?= htmlspecialchars($schedule['active_hours_start']) ?> - <?= htmlspecialchars($schedule['active_hours_end']) ?></small><br>
+            <?php endif; ?>
             <?php if (!empty($schedule['delay_between_posts'])): ?>
-                <small>Задержка: <?= (int)$schedule['delay_between_posts'] ?> мин.</small><br>
+                <small>Задержка между публикациями: <?= (int)$schedule['delay_between_posts'] ?> мин.</small><br>
             <?php endif; ?>
             <?php if (!empty($schedule['daily_limit'])): ?>
                 <small>Дневной лимит: <?= (int)$schedule['daily_limit'] ?> видео</small><br>
