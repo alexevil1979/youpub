@@ -131,6 +131,67 @@ class GroupController extends Controller
         
         $templates = $this->templateService->getUserTemplates($userId, true);
         
+        // Находим следующее видео в очереди и применяем к нему шаблон для превью
+        $nextVideoPreview = null;
+        if ($group['status'] === 'active' && !empty($files)) {
+            $fileRepo = new \App\Modules\ContentGroups\Repositories\ContentGroupFileRepository();
+            $nextFile = $fileRepo->findNextUnpublished($id);
+            
+            if ($nextFile) {
+                $videoRepo = new \App\Repositories\VideoRepository();
+                $nextVideo = $videoRepo->findById($nextFile['video_id']);
+                
+                if ($nextVideo) {
+                    // Определяем шаблон (из расписания или группы)
+                    $templateId = null;
+                    if (!empty($schedules) && isset($schedules[0]['template_id'])) {
+                        $templateId = $schedules[0]['template_id'];
+                    } elseif ($group['template_id']) {
+                        $templateId = $group['template_id'];
+                    }
+                    
+                    // Определяем платформу (из расписания или по умолчанию)
+                    $platform = 'youtube';
+                    if (!empty($schedules) && isset($schedules[0]['platform'])) {
+                        $platform = $schedules[0]['platform'];
+                    }
+                    
+                    // Применяем шаблон для превью
+                    $context = [
+                        'group_name' => $group['name'],
+                        'index' => $nextFile['order_index'],
+                        'platform' => $platform,
+                    ];
+                    
+                    $preview = $this->templateService->applyTemplate($templateId, [
+                        'id' => $nextVideo['id'],
+                        'title' => $nextFile['title'] ?? $nextVideo['title'] ?? $nextVideo['file_name'] ?? '',
+                        'description' => $nextVideo['description'] ?? '',
+                        'tags' => $nextVideo['tags'] ?? '',
+                    ], $context);
+                    
+                    $nextVideoPreview = [
+                        'video' => $nextVideo,
+                        'file' => $nextFile,
+                        'template_id' => $templateId,
+                        'template_name' => null,
+                        'preview' => $preview,
+                        'platform' => $platform,
+                    ];
+                    
+                    // Получаем название шаблона
+                    if ($templateId) {
+                        foreach ($templates as $template) {
+                            if ($template['id'] == $templateId) {
+                                $nextVideoPreview['template_name'] = $template['name'];
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
         include __DIR__ . '/../../../../views/content_groups/show.php';
     }
 

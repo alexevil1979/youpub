@@ -72,6 +72,62 @@ ob_start();
     </div>
 </div>
 
+<?php if ($nextVideoPreview): ?>
+<div class="info-card next-video-preview" style="margin-top: 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
+    <h3 style="color: white; margin-bottom: 1rem;">
+        <?= \App\Helpers\IconHelper::render('video', 20, 'icon-inline') ?> 
+        Следующий ролик в очереди
+    </h3>
+    <div style="background: rgba(255, 255, 255, 0.1); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+        <div style="margin-bottom: 0.5rem;">
+            <strong style="color: #fff;">Видео:</strong> 
+            <span><?= htmlspecialchars($nextVideoPreview['file']['title'] ?? $nextVideoPreview['video']['title'] ?? $nextVideoPreview['video']['file_name'] ?? 'Без названия') ?></span>
+        </div>
+        <?php if ($nextVideoPreview['template_name']): ?>
+            <div style="margin-bottom: 0.5rem;">
+                <strong style="color: #fff;">Шаблон:</strong> 
+                <span><?= htmlspecialchars($nextVideoPreview['template_name']) ?></span>
+            </div>
+        <?php endif; ?>
+        <div style="margin-bottom: 0.5rem;">
+            <strong style="color: #fff;">Платформа:</strong> 
+            <span class="platform-badge platform-<?= $nextVideoPreview['platform'] ?>" style="background: rgba(255, 255, 255, 0.2); padding: 0.25rem 0.5rem; border-radius: 4px;">
+                <?= ucfirst($nextVideoPreview['platform']) ?>
+            </span>
+        </div>
+    </div>
+    
+    <div style="background: rgba(255, 255, 255, 0.95); color: #333; padding: 1rem; border-radius: 8px;">
+        <h4 style="margin-top: 0; margin-bottom: 0.75rem; color: #667eea;">Как будет оформлен:</h4>
+        
+        <div style="margin-bottom: 1rem;">
+            <div style="font-weight: 600; color: #555; margin-bottom: 0.25rem; font-size: 0.9rem;">Название:</div>
+            <div style="padding: 0.5rem; background: #f8f9fa; border-left: 3px solid #667eea; border-radius: 4px; word-break: break-word;">
+                <?= htmlspecialchars($nextVideoPreview['preview']['title'] ?? 'Без названия') ?>
+            </div>
+        </div>
+        
+        <?php if (!empty($nextVideoPreview['preview']['description'])): ?>
+        <div style="margin-bottom: 1rem;">
+            <div style="font-weight: 600; color: #555; margin-bottom: 0.25rem; font-size: 0.9rem;">Описание:</div>
+            <div style="padding: 0.5rem; background: #f8f9fa; border-left: 3px solid #667eea; border-radius: 4px; word-break: break-word; white-space: pre-wrap; max-height: 150px; overflow-y: auto;">
+                <?= htmlspecialchars($nextVideoPreview['preview']['description']) ?>
+            </div>
+        </div>
+        <?php endif; ?>
+        
+        <?php if (!empty($nextVideoPreview['preview']['tags'])): ?>
+        <div>
+            <div style="font-weight: 600; color: #555; margin-bottom: 0.25rem; font-size: 0.9rem;">Теги:</div>
+            <div style="padding: 0.5rem; background: #f8f9fa; border-left: 3px solid #667eea; border-radius: 4px; word-break: break-word;">
+                <?= htmlspecialchars($nextVideoPreview['preview']['tags']) ?>
+            </div>
+        </div>
+        <?php endif; ?>
+    </div>
+</div>
+<?php endif; ?>
+
 <div class="form-actions group-actions">
     <a href="/content-groups" class="btn btn-secondary">Назад к списку</a>
     <a href="/content-groups/<?= $group['id'] ?>/edit" class="btn btn-primary">Редактировать группу</a>
