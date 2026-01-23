@@ -42,16 +42,29 @@ class TemplateController extends Controller
             
             error_log("TemplateController::index: Found " . count($templates) . " templates");
             
-            include __DIR__ . '/../../../../views/content_groups/templates/index.php';
+            // Проверяем существование файла представления
+            $viewPath = __DIR__ . '/../../../../views/content_groups/templates/index.php';
+            if (!file_exists($viewPath)) {
+                throw new \Exception("View file not found: {$viewPath}");
+            }
+            
+            include $viewPath;
         } catch (\Exception $e) {
             error_log("TemplateController::index: Exception - " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
             error_log("TemplateController::index: Stack trace: " . $e->getTraceAsString());
             
-            http_response_code(500);
-            echo json_encode([
-                'error' => 'Internal Server Error',
-                'message' => 'Произошла ошибка при загрузке шаблонов: ' . $e->getMessage()
-            ], JSON_UNESCAPED_UNICODE);
+            // Показываем HTML страницу с ошибкой вместо JSON
+            $title = 'Ошибка';
+            ob_start();
+            ?>
+            <div class="alert alert-error">
+                <h2>Ошибка при загрузке шаблонов</h2>
+                <p><?= htmlspecialchars($e->getMessage()) ?></p>
+                <p><a href="/dashboard" class="btn btn-secondary">Вернуться на главную</a></p>
+            </div>
+            <?php
+            $content = ob_get_clean();
+            include __DIR__ . '/../../../../views/layout.php';
         }
     }
 
