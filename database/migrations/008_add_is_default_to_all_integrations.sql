@@ -1,5 +1,5 @@
--- Миграция: Добавление поля is_default во все таблицы интеграций
--- Если поле уже существует, миграция безопасно пропустит его добавление
+-- Миграция: Добавление полей account_name и is_default во все таблицы интеграций
+-- Если поля уже существуют, миграция безопасно пропустит их добавление
 
 DELIMITER $$
 
@@ -7,48 +7,133 @@ DROP PROCEDURE IF EXISTS add_is_default_to_integrations$$
 CREATE PROCEDURE add_is_default_to_integrations()
 BEGIN
     -- YouTube integrations
+    -- Сначала добавляем account_name, если его нет
+    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS 
+                   WHERE TABLE_SCHEMA = DATABASE() 
+                   AND TABLE_NAME = 'youtube_integrations' 
+                   AND COLUMN_NAME = 'account_name') THEN
+        ALTER TABLE `youtube_integrations` 
+        ADD COLUMN `account_name` varchar(255) DEFAULT NULL COMMENT 'Название аккаунта для идентификации' AFTER `channel_name`;
+    END IF;
+    -- Затем добавляем is_default
     IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS 
                    WHERE TABLE_SCHEMA = DATABASE() 
                    AND TABLE_NAME = 'youtube_integrations' 
                    AND COLUMN_NAME = 'is_default') THEN
-        ALTER TABLE `youtube_integrations` 
-        ADD COLUMN `is_default` tinyint(1) DEFAULT 0 COMMENT 'Аккаунт по умолчанию' AFTER `account_name`;
+        IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS 
+                   WHERE TABLE_SCHEMA = DATABASE() 
+                   AND TABLE_NAME = 'youtube_integrations' 
+                   AND COLUMN_NAME = 'account_name') THEN
+            ALTER TABLE `youtube_integrations` 
+            ADD COLUMN `is_default` tinyint(1) DEFAULT 0 COMMENT 'Аккаунт по умолчанию' AFTER `account_name`;
+        ELSE
+            ALTER TABLE `youtube_integrations` 
+            ADD COLUMN `is_default` tinyint(1) DEFAULT 0 COMMENT 'Аккаунт по умолчанию' AFTER `channel_name`;
+        END IF;
     END IF;
 
     -- Telegram integrations
+    -- Сначала добавляем account_name, если его нет
+    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS 
+                   WHERE TABLE_SCHEMA = DATABASE() 
+                   AND TABLE_NAME = 'telegram_integrations' 
+                   AND COLUMN_NAME = 'account_name') THEN
+        ALTER TABLE `telegram_integrations` 
+        ADD COLUMN `account_name` varchar(255) DEFAULT NULL COMMENT 'Название аккаунта для идентификации' AFTER `channel_username`;
+    END IF;
+    -- Затем добавляем is_default
     IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS 
                    WHERE TABLE_SCHEMA = DATABASE() 
                    AND TABLE_NAME = 'telegram_integrations' 
                    AND COLUMN_NAME = 'is_default') THEN
-        ALTER TABLE `telegram_integrations` 
-        ADD COLUMN `is_default` tinyint(1) DEFAULT 0 COMMENT 'Аккаунт по умолчанию' AFTER `account_name`;
+        IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS 
+                   WHERE TABLE_SCHEMA = DATABASE() 
+                   AND TABLE_NAME = 'telegram_integrations' 
+                   AND COLUMN_NAME = 'account_name') THEN
+            ALTER TABLE `telegram_integrations` 
+            ADD COLUMN `is_default` tinyint(1) DEFAULT 0 COMMENT 'Аккаунт по умолчанию' AFTER `account_name`;
+        ELSE
+            ALTER TABLE `telegram_integrations` 
+            ADD COLUMN `is_default` tinyint(1) DEFAULT 0 COMMENT 'Аккаунт по умолчанию' AFTER `channel_username`;
+        END IF;
     END IF;
 
     -- TikTok integrations
+    -- Сначала добавляем account_name, если его нет
+    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS 
+                   WHERE TABLE_SCHEMA = DATABASE() 
+                   AND TABLE_NAME = 'tiktok_integrations' 
+                   AND COLUMN_NAME = 'account_name') THEN
+        ALTER TABLE `tiktok_integrations` 
+        ADD COLUMN `account_name` varchar(255) DEFAULT NULL COMMENT 'Название аккаунта для идентификации' AFTER `username`;
+    END IF;
+    -- Затем добавляем is_default
     IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS 
                    WHERE TABLE_SCHEMA = DATABASE() 
                    AND TABLE_NAME = 'tiktok_integrations' 
                    AND COLUMN_NAME = 'is_default') THEN
-        ALTER TABLE `tiktok_integrations` 
-        ADD COLUMN `is_default` tinyint(1) DEFAULT 0 COMMENT 'Аккаунт по умолчанию' AFTER `account_name`;
+        IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS 
+                   WHERE TABLE_SCHEMA = DATABASE() 
+                   AND TABLE_NAME = 'tiktok_integrations' 
+                   AND COLUMN_NAME = 'account_name') THEN
+            ALTER TABLE `tiktok_integrations` 
+            ADD COLUMN `is_default` tinyint(1) DEFAULT 0 COMMENT 'Аккаунт по умолчанию' AFTER `account_name`;
+        ELSE
+            ALTER TABLE `tiktok_integrations` 
+            ADD COLUMN `is_default` tinyint(1) DEFAULT 0 COMMENT 'Аккаунт по умолчанию' AFTER `username`;
+        END IF;
     END IF;
 
     -- Instagram integrations
+    -- Сначала добавляем account_name, если его нет
+    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS 
+                   WHERE TABLE_SCHEMA = DATABASE() 
+                   AND TABLE_NAME = 'instagram_integrations' 
+                   AND COLUMN_NAME = 'account_name') THEN
+        ALTER TABLE `instagram_integrations` 
+        ADD COLUMN `account_name` varchar(255) DEFAULT NULL COMMENT 'Название аккаунта для идентификации' AFTER `username`;
+    END IF;
+    -- Затем добавляем is_default
     IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS 
                    WHERE TABLE_SCHEMA = DATABASE() 
                    AND TABLE_NAME = 'instagram_integrations' 
                    AND COLUMN_NAME = 'is_default') THEN
-        ALTER TABLE `instagram_integrations` 
-        ADD COLUMN `is_default` tinyint(1) DEFAULT 0 COMMENT 'Аккаунт по умолчанию' AFTER `account_name`;
+        IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS 
+                   WHERE TABLE_SCHEMA = DATABASE() 
+                   AND TABLE_NAME = 'instagram_integrations' 
+                   AND COLUMN_NAME = 'account_name') THEN
+            ALTER TABLE `instagram_integrations` 
+            ADD COLUMN `is_default` tinyint(1) DEFAULT 0 COMMENT 'Аккаунт по умолчанию' AFTER `account_name`;
+        ELSE
+            ALTER TABLE `instagram_integrations` 
+            ADD COLUMN `is_default` tinyint(1) DEFAULT 0 COMMENT 'Аккаунт по умолчанию' AFTER `username`;
+        END IF;
     END IF;
 
     -- Pinterest integrations
+    -- Сначала добавляем account_name, если его нет
+    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS 
+                   WHERE TABLE_SCHEMA = DATABASE() 
+                   AND TABLE_NAME = 'pinterest_integrations' 
+                   AND COLUMN_NAME = 'account_name') THEN
+        ALTER TABLE `pinterest_integrations` 
+        ADD COLUMN `account_name` varchar(255) DEFAULT NULL COMMENT 'Название аккаунта для идентификации' AFTER `username`;
+    END IF;
+    -- Затем добавляем is_default
     IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS 
                    WHERE TABLE_SCHEMA = DATABASE() 
                    AND TABLE_NAME = 'pinterest_integrations' 
                    AND COLUMN_NAME = 'is_default') THEN
-        ALTER TABLE `pinterest_integrations` 
-        ADD COLUMN `is_default` tinyint(1) DEFAULT 0 COMMENT 'Аккаунт по умолчанию' AFTER `account_name`;
+        IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS 
+                   WHERE TABLE_SCHEMA = DATABASE() 
+                   AND TABLE_NAME = 'pinterest_integrations' 
+                   AND COLUMN_NAME = 'account_name') THEN
+            ALTER TABLE `pinterest_integrations` 
+            ADD COLUMN `is_default` tinyint(1) DEFAULT 0 COMMENT 'Аккаунт по умолчанию' AFTER `account_name`;
+        ELSE
+            ALTER TABLE `pinterest_integrations` 
+            ADD COLUMN `is_default` tinyint(1) DEFAULT 0 COMMENT 'Аккаунт по умолчанию' AFTER `username`;
+        END IF;
     END IF;
 END$$
 
