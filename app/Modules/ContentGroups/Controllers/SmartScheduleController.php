@@ -125,6 +125,99 @@ class SmartScheduleController extends Controller
                 $groups = [];
             }
             
+            // Вычисляем следующие публикации для каждого расписания
+            $nextPublications = [];
+            $fileRepo = new \App\Modules\ContentGroups\Repositories\ContentGroupFileRepository();
+            
+            foreach ($smartSchedules as $schedule) {
+                $scheduleId = (int)($schedule['id'] ?? 0);
+                if (!$scheduleId) continue;
+                
+                $groupId = (int)($schedule['content_group_id'] ?? 0);
+                $scheduleType = $schedule['schedule_type'] ?? 'fixed';
+                $now = time();
+                
+                $publications = [];
+                
+                // Для интервальных расписаний вычисляем следующие 10 публикаций
+                if ($scheduleType === 'interval' && !empty($schedule['interval_minutes'])) {
+                    $baseTime = strtotime($schedule['publish_at'] ?? 'now');
+                    $interval = (int)$schedule['interval_minutes'] * 60;
+                    
+                    // Находим следующее время публикации
+                    if ($baseTime <= $now) {
+                        $elapsed = $now - $baseTime;
+                        $intervalsPassed = floor($elapsed / $interval);
+                        $nextTime = $baseTime + (($intervalsPassed + 1) * $interval);
+                    } else {
+                        $nextTime = $baseTime;
+                    }
+                    
+                    // Генерируем следующие 10 публикаций
+                    for ($i = 0; $i < 10; $i++) {
+                        $publishTime = $nextTime + ($i * $interval);
+                        if ($publishTime > $now) {
+                            $publications[] = [
+                                'time' => $publishTime,
+                                'date' => date('Y-m-d H:i:s', $publishTime),
+                                'formatted' => date('d.m.Y H:i', $publishTime)
+                            ];
+                        }
+                    }
+                }
+                // Для фиксированных расписаний с daily_time_points
+                elseif ($scheduleType === 'fixed' && !empty($schedule['daily_time_points'])) {
+                    $timePoints = json_decode($schedule['daily_time_points'], true);
+                    if (is_array($timePoints) && !empty($timePoints)) {
+                        $startDate = !empty($schedule['daily_points_start_date']) 
+                            ? strtotime($schedule['daily_points_start_date']) 
+                            : $now;
+                        $endDate = !empty($schedule['daily_points_end_date']) 
+                            ? strtotime($schedule['daily_points_end_date']) 
+                            : strtotime('+30 days', $now);
+                        
+                        $currentDate = max($startDate, $now);
+                        $count = 0;
+                        $maxCount = 10;
+                        
+                        while ($currentDate <= $endDate && $count < $maxCount) {
+                            foreach ($timePoints as $timePoint) {
+                                if ($count >= $maxCount) break;
+                                
+                                $timeStr = is_array($timePoint) ? ($timePoint['time'] ?? '') : $timePoint;
+                                if (empty($timeStr)) continue;
+                                
+                                $publishTime = strtotime(date('Y-m-d', $currentDate) . ' ' . $timeStr);
+                                
+                                if ($publishTime > $now) {
+                                    $publications[] = [
+                                        'time' => $publishTime,
+                                        'date' => date('Y-m-d H:i:s', $publishTime),
+                                        'formatted' => date('d.m.Y H:i', $publishTime)
+                                    ];
+                                    $count++;
+                                }
+                            }
+                            
+                            $currentDate = strtotime('+1 day', $currentDate);
+                        }
+                    }
+                }
+                // Для обычных фиксированных расписаний
+                elseif (!empty($schedule['publish_at'])) {
+                    $publishTime = strtotime($schedule['publish_at']);
+                    if ($publishTime > $now) {
+                        $publications[] = [
+                            'time' => $publishTime,
+                            'date' => date('Y-m-d H:i:s', $publishTime),
+                            'formatted' => date('d.m.Y H:i', $publishTime)
+                        ];
+                    }
+                }
+                
+                $nextPublications[$scheduleId] = $publications;
+            }
+            
             // Проверяем существование файла представления
             $viewPath = __DIR__ . '/../../../../views/content_groups/schedules/index.php';
             if (!file_exists($viewPath)) {
