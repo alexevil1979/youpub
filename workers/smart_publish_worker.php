@@ -96,7 +96,7 @@ try {
             
             logMessage("Schedule ID {$schedule['id']} is ready for publishing. Publish_at: " . ($schedule['publish_at'] ?? 'NULL') . $timeUntilPublish, $logFile);
 
-            logMessage("Processing group schedule ID: {$schedule['id']}, Group: {$schedule['group_name']}, Platform: {$schedule['platform']}", $logFile);
+            logMessage("Processing group schedule ID: {$schedule['id']}, Group: {$schedule['group_name']}, Platform: {$schedule['platform']}, Publish_at: " . ($schedule['publish_at'] ?? 'NULL') . $timeUntilPublish, $logFile);
 
             // Обрабатываем расписание с группой
             $result = $smartQueue->processGroupSchedule($schedule);
