@@ -78,12 +78,15 @@ class SmartQueueService extends Service
             $groupFile = $files[0];
             error_log("SmartQueueService::processGroupSchedule: Using first file from group. File ID: {$groupFile['id']}, Video ID: {$groupFile['video_id']}, Status: {$groupFile['status']}");
         } else {
-            error_log("SmartQueueService::processGroupSchedule: Found unpublished file. File ID: {$groupFile['id']}, Video ID: {$groupFile['video_id']}, File status: {$groupFile['status']}, Video status: {$groupFile['video_status'] ?? 'unknown'}");
+            error_log("SmartQueueService::processGroupSchedule: Found unpublished file. File ID: {$groupFile['id']}, Video ID: {$groupFile['video_id']}, File status: " . ($groupFile['status'] ?? 'unknown') . ", Video status: " . ($groupFile['video_status'] ?? 'unknown'));
         }
 
         // Обновляем статус файла в группе
         error_log("SmartQueueService::processGroupSchedule: Updating file status to 'queued'. File ID: {$groupFile['id']}");
-        $this->fileRepo->updateFileStatus($groupFile['id'], 'queued');
+        $updateResult = $this->fileRepo->updateFileStatus($groupFile['id'], 'queued');
+        if (!$updateResult) {
+            error_log("SmartQueueService::processGroupSchedule: Failed to update file status to 'queued'. File ID: {$groupFile['id']}");
+        }
 
         // Применяем шаблон, если есть
         $templateId = $schedule['template_id'] ?? $group['template_id'] ?? null;
