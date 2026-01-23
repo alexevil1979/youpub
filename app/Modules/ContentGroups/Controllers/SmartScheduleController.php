@@ -555,11 +555,67 @@ class SmartScheduleController extends Controller
                             $nextPublishAt = date('Y-m-d H:i:s', $publishTime);
                             $unpublishedIndex++; // Увеличиваем индекс для следующего неопубликованного файла
                         } elseif ($scheduleType === 'fixed' && !empty($schedule['publish_at'])) {
-                            // Для фиксированных расписаний берем время из publish_at
-                            $publishTime = strtotime($schedule['publish_at']);
-                            if ($publishTime > $now) {
-                                $nextPublishAt = $schedule['publish_at'];
+                            // Для фиксированных расписаний учитываем задержку между публикациями и лимиты
+                            $delayMinutes = isset($schedule['delay_between_posts']) ? (int)$schedule['delay_between_posts'] : 0;
+                            $dailyLimit = isset($schedule['daily_limit']) ? (int)$schedule['daily_limit'] : 0;
+                            $hourlyLimit = isset($schedule['hourly_limit']) ? (int)$schedule['hourly_limit'] : 0;
+                            
+                            // Базовое время первой публикации
+                            $currentPublishTime = $baseTime;
+                            
+                            // Если это не первый неопубликованный файл, добавляем задержку
+                            if ($unpublishedIndex > 0 && $delayMinutes > 0) {
+                                // Добавляем задержку для каждого следующего файла
+                                $currentPublishTime = $baseTime + ($unpublishedIndex * $delayMinutes * 60);
+                                
+                                // Учитываем часовой лимит
+                                if ($hourlyLimit > 0) {
+                                    // Если превышен часовой лимит, переносим на следующий час
+                                    $hourStart = strtotime(date('Y-m-d H:00:00', $currentPublishTime));
+                                    $hourEnd = $hourStart + 3600;
+                                    
+                                    // Подсчитываем, сколько файлов уже запланировано в этом часе
+                                    $filesInThisHour = 0;
+                                    foreach ($scheduledFiles as $prevItem) {
+                                        if (isset($prevItem['publish_at'])) {
+                                            $prevTime = strtotime($prevItem['publish_at']);
+                                            if ($prevTime >= $hourStart && $prevTime < $hourEnd) {
+                                                $filesInThisHour++;
+                                            }
+                                        }
+                                    }
+                                    
+                                    // Если в этом часе уже достигнут лимит, переносим на следующий час
+                                    if ($filesInThisHour >= $hourlyLimit) {
+                                        $currentPublishTime = $hourEnd;
+                                    }
+                                }
+                                
+                                // Учитываем дневной лимит
+                                if ($dailyLimit > 0) {
+                                    $dayStart = strtotime(date('Y-m-d 00:00:00', $currentPublishTime));
+                                    $dayEnd = $dayStart + 86400;
+                                    
+                                    // Подсчитываем, сколько файлов уже запланировано в этот день
+                                    $filesInThisDay = 0;
+                                    foreach ($scheduledFiles as $prevItem) {
+                                        if (isset($prevItem['publish_at'])) {
+                                            $prevTime = strtotime($prevItem['publish_at']);
+                                            if ($prevTime >= $dayStart && $prevTime < $dayEnd) {
+                                                $filesInThisDay++;
+                                            }
+                                        }
+                                    }
+                                    
+                                    // Если в этот день уже достигнут лимит, переносим на следующий день
+                                    if ($filesInThisDay >= $dailyLimit) {
+                                        $currentPublishTime = $dayEnd;
+                                    }
+                                }
                             }
+                            
+                            $nextPublishAt = date('Y-m-d H:i:s', $currentPublishTime);
+                            $unpublishedIndex++; // Увеличиваем индекс для следующего неопубликованного файла
                         }
                         
                         $scheduledFiles[] = [
