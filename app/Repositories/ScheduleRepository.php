@@ -110,8 +110,10 @@ class ScheduleRepository extends Repository
             FROM {$this->table} s
             JOIN content_groups cg ON cg.id = s.content_group_id
             WHERE s.status = 'pending'
+            AND s.status != 'paused'
             AND cg.status = 'active'
             AND s.content_group_id IS NOT NULL
+            AND (s.publish_at <= NOW() OR s.publish_at IS NULL)
             ORDER BY s.publish_at ASC
         ";
 

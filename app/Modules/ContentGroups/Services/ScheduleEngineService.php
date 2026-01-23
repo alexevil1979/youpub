@@ -67,8 +67,15 @@ class ScheduleEngineService extends Service
     private function checkFixedSchedule(array $schedule): bool
     {
         $now = time();
+        
+        // Проверяем наличие времени публикации
+        if (empty($schedule['publish_at'])) {
+            return false;
+        }
+        
         $publishAt = strtotime($schedule['publish_at']);
 
+        // Для фиксированных расписаний время должно наступить
         if ($publishAt > $now) {
             return false;
         }
