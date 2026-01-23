@@ -104,11 +104,12 @@ class SmartQueueService extends Service
         ];
 
         $templated = $this->templateService->applyTemplate($templateId, $video, $context);
+        error_log("SmartQueueService::processGroupSchedule: Template applied. Template ID: " . ($templateId ?? 'null'));
 
-        // Проверяем, нет ли уже расписания 'processing' для этого видео
-        // И очищаем старые зависшие расписания 'processing' (старше 10 минут)
+        // Очищаем старые зависшие расписания 'processing' (старше 10 минут) ДО проверки активных
+        error_log("SmartQueueService::processGroupSchedule: Checking for old stuck processing schedules for video {$groupFile['video_id']}");
         $stmt = $this->db->prepare("
-            SELECT id FROM schedules 
+            SELECT id, created_at FROM schedules 
             WHERE video_id = ? 
             AND status = 'processing' 
             AND content_group_id IS NOT NULL
@@ -117,31 +118,45 @@ class SmartQueueService extends Service
         $stmt->execute([$groupFile['video_id']]);
         $oldProcessing = $stmt->fetchAll();
         
+        if (!empty($oldProcessing)) {
+            error_log("SmartQueueService::processGroupSchedule: Found " . count($oldProcessing) . " old stuck processing schedules, cleaning up");
+        }
+        
         // Очищаем старые зависшие расписания
         foreach ($oldProcessing as $old) {
+            error_log("SmartQueueService::processGroupSchedule: Cleaning up stuck schedule ID: {$old['id']}, Created at: {$old['created_at']}");
             $this->scheduleRepo->update($old['id'], [
                 'status' => 'failed',
                 'error_message' => 'Processing timeout (10 minutes)'
             ]);
         }
         
-        // Проверяем активные расписания 'processing' для этого видео
+        // Проверяем активные расписания 'processing' для этого видео (младше 10 минут, но старше 5 секунд)
+        // Исключаем очень свежие расписания (младше 5 секунд), чтобы не блокировать текущую попытку
         $stmt = $this->db->prepare("
-            SELECT id FROM schedules 
+            SELECT id, created_at FROM schedules 
             WHERE video_id = ? 
             AND status = 'processing' 
             AND content_group_id IS NOT NULL
             AND created_at >= DATE_SUB(NOW(), INTERVAL 10 MINUTE)
+            AND created_at < DATE_SUB(NOW(), INTERVAL 5 SECOND)
         ");
         $stmt->execute([$groupFile['video_id']]);
         $activeProcessing = $stmt->fetchAll();
         
         if (!empty($activeProcessing)) {
             // Уже есть активное расписание в обработке для этого видео, пропускаем
+            error_log("SmartQueueService::processGroupSchedule: Video {$groupFile['video_id']} already being processed. Active processing schedules: " . count($activeProcessing));
+            foreach ($activeProcessing as $proc) {
+                error_log("SmartQueueService::processGroupSchedule: Processing schedule ID: {$proc['id']}, Created at: " . ($proc['created_at'] ?? 'unknown'));
+            }
             return ['success' => false, 'message' => 'Video already being processed'];
         }
+        
+        error_log("SmartQueueService::processGroupSchedule: No active processing schedules found for video {$groupFile['video_id']}, proceeding with publication");
 
         // Создаем временное расписание для публикации
+        error_log("SmartQueueService::processGroupSchedule: Creating temporary schedule for video {$groupFile['video_id']}, platform: {$schedule['platform']}");
         $tempScheduleId = $this->scheduleRepo->create([
             'user_id' => $schedule['user_id'],
             'video_id' => $groupFile['video_id'],
@@ -150,6 +165,13 @@ class SmartQueueService extends Service
             'publish_at' => date('Y-m-d H:i:s'),
             'status' => 'processing',
         ]);
+        
+        if (!$tempScheduleId) {
+            error_log("SmartQueueService::processGroupSchedule: Failed to create temporary schedule");
+            return ['success' => false, 'message' => 'Failed to create temporary schedule'];
+        }
+        
+        error_log("SmartQueueService::processGroupSchedule: Temporary schedule created. ID: {$tempScheduleId}");
 
         // Публикуем
         $result = $this->publishVideo($schedule['platform'], $tempScheduleId, $templated);
