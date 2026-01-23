@@ -24,6 +24,11 @@ class TemplateController extends Controller
     public function index(): void
     {
         try {
+            // Проверяем сессию
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+            
             $userId = $_SESSION['user_id'] ?? null;
             
             if (!$userId) {
@@ -31,16 +36,19 @@ class TemplateController extends Controller
                 exit;
             }
             
-            error_log("TemplateController::index: Loading templates for user {$userId}");
+            // Инициализируем переменные
+            $templates = [];
             
-            $templates = $this->templateService->getUserTemplates($userId);
-            
-            if (!isset($templates) || !is_array($templates)) {
-                error_log("TemplateController::index: getUserTemplates returned invalid result, setting to empty array");
+            try {
+                $templates = $this->templateService->getUserTemplates($userId);
+                
+                if (!isset($templates) || !is_array($templates)) {
+                    $templates = [];
+                }
+            } catch (\Exception $e) {
+                error_log("TemplateController::index: Error loading templates: " . $e->getMessage());
                 $templates = [];
             }
-            
-            error_log("TemplateController::index: Found " . count($templates) . " templates");
             
             // Проверяем существование файла представления
             $viewPath = __DIR__ . '/../../../../views/content_groups/templates/index.php';
@@ -48,12 +56,18 @@ class TemplateController extends Controller
                 throw new \Exception("View file not found: {$viewPath}");
             }
             
+            // Включаем представление
             include $viewPath;
+            
         } catch (\Exception $e) {
             error_log("TemplateController::index: Exception - " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
-            error_log("TemplateController::index: Stack trace: " . $e->getTraceAsString());
             
-            // Показываем HTML страницу с ошибкой вместо JSON
+            // Очищаем буфер вывода, если он был начат
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+            
+            // Показываем HTML страницу с ошибкой
             $title = 'Ошибка';
             ob_start();
             ?>
@@ -64,7 +78,17 @@ class TemplateController extends Controller
             </div>
             <?php
             $content = ob_get_clean();
-            include __DIR__ . '/../../../../views/layout.php';
+            
+            $layoutPath = __DIR__ . '/../../../../views/layout.php';
+            if (file_exists($layoutPath)) {
+                include $layoutPath;
+            } else {
+                echo $content;
+            }
+        } catch (\Throwable $e) {
+            error_log("TemplateController::index: FATAL - " . $e->getMessage());
+            http_response_code(500);
+            echo "Internal Server Error. Please check server logs.";
         }
     }
 

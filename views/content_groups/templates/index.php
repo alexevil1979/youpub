@@ -21,6 +21,13 @@ ob_start();
 
 <a href="/content-groups/templates/create" class="btn btn-primary">Создать шаблон</a>
 
+<?php 
+// Убеждаемся, что переменная определена
+if (!isset($templates)) {
+    $templates = [];
+}
+?>
+
 <?php if (empty($templates)): ?>
     <p style="margin-top: 2rem;">Нет созданных шаблонов</p>
 <?php else: ?>
