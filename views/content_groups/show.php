@@ -153,6 +153,7 @@ ob_start();
                     <th>Опубликовано</th>
                     <?php if ($group['status'] === 'active'): ?>
                         <th>Следующая публикация</th>
+                        <th>Оформление</th>
                     <?php endif; ?>
                     <th>Действия</th>
                 </tr>
@@ -180,6 +181,38 @@ ob_start();
                                     </span>
                                 <?php else: ?>
                                     <span style="color: #95a5a6;">-</span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <?php if (isset($filePreviews[$file['id']])): 
+                                    $preview = $filePreviews[$file['id']];
+                                ?>
+                                    <div style="max-width: 300px;">
+                                        <div style="font-size: 0.85rem; margin-bottom: 0.25rem;">
+                                            <strong style="color: #555;">Название:</strong>
+                                            <div style="color: #2c3e50; word-break: break-word;">
+                                                <?= htmlspecialchars($preview['title'] ?? 'Без названия') ?>
+                                            </div>
+                                        </div>
+                                        <?php if (!empty($preview['description'])): ?>
+                                            <div style="font-size: 0.85rem; margin-bottom: 0.25rem;">
+                                                <strong style="color: #555;">Описание:</strong>
+                                                <div style="color: #666; word-break: break-word; max-height: 60px; overflow: hidden; text-overflow: ellipsis; white-space: pre-wrap;">
+                                                    <?= htmlspecialchars(mb_substr($preview['description'], 0, 100)) ?><?= mb_strlen($preview['description']) > 100 ? '...' : '' ?>
+                                                </div>
+                                            </div>
+                                        <?php endif; ?>
+                                        <?php if (!empty($preview['tags'])): ?>
+                                            <div style="font-size: 0.85rem;">
+                                                <strong style="color: #555;">Теги:</strong>
+                                                <div style="color: #666; word-break: break-word;">
+                                                    <?= htmlspecialchars(mb_substr($preview['tags'], 0, 80)) ?><?= mb_strlen($preview['tags']) > 80 ? '...' : '' ?>
+                                                </div>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php else: ?>
+                                    <span style="color: #95a5a6; font-size: 0.85rem;">-</span>
                                 <?php endif; ?>
                             </td>
                         <?php endif; ?>

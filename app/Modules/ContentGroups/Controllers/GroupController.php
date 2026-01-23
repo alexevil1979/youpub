@@ -131,6 +131,50 @@ class GroupController extends Controller
         
         $templates = $this->templateService->getUserTemplates($userId, true);
         
+        // Применяем шаблон для превью каждого файла в группе
+        $filePreviews = [];
+        if ($group['status'] === 'active' && !empty($files)) {
+            // Определяем шаблон (из расписания или группы)
+            $templateId = null;
+            if (!empty($schedules) && isset($schedules[0]['template_id'])) {
+                $templateId = $schedules[0]['template_id'];
+            } elseif ($group['template_id']) {
+                $templateId = $group['template_id'];
+            }
+            
+            // Определяем платформу (из расписания или по умолчанию)
+            $platform = 'youtube';
+            if (!empty($schedules) && isset($schedules[0]['platform'])) {
+                $platform = $schedules[0]['platform'];
+            }
+            
+            $videoRepo = new \App\Repositories\VideoRepository();
+            
+            foreach ($files as $file) {
+                // Применяем шаблон только для неопубликованных видео
+                if (in_array($file['status'], ['new', 'queued', 'paused'])) {
+                    $video = $videoRepo->findById($file['video_id']);
+                    
+                    if ($video) {
+                        $context = [
+                            'group_name' => $group['name'],
+                            'index' => $file['order_index'],
+                            'platform' => $platform,
+                        ];
+                        
+                        $preview = $this->templateService->applyTemplate($templateId, [
+                            'id' => $video['id'],
+                            'title' => $file['title'] ?? $video['title'] ?? $video['file_name'] ?? '',
+                            'description' => $video['description'] ?? '',
+                            'tags' => $video['tags'] ?? '',
+                        ], $context);
+                        
+                        $filePreviews[$file['id']] = $preview;
+                    }
+                }
+            }
+        }
+        
         // Находим следующее видео в очереди и применяем к нему шаблон для превью
         $nextVideoPreview = null;
         if ($group['status'] === 'active' && !empty($files)) {
