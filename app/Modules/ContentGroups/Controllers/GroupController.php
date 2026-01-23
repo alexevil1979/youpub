@@ -107,6 +107,7 @@ class GroupController extends Controller
         
         // Получаем следующую дату публикации для каждого файла (только если группа активна)
         $nextPublishDates = [];
+        $nextPublishInfo = []; // Дополнительная информация о следующей публикации
         if ($group['status'] === 'active' && !empty($files)) {
             $scheduleRepo = new \App\Repositories\ScheduleRepository();
             
@@ -119,11 +120,17 @@ class GroupController extends Controller
                 // Берем ближайшее расписание для группы
                 $nextSchedule = $schedules[0];
                 $nextPublishDate = $nextSchedule['publish_at'];
+                $platform = $nextSchedule['platform'] ?? 'youtube';
                 
                 // Присваиваем эту дату всем файлам, которые еще не опубликованы или в очереди
                 foreach ($files as $file) {
                     if (in_array($file['status'], ['new', 'queued', 'paused'])) {
                         $nextPublishDates[$file['id']] = $nextPublishDate;
+                        $nextPublishInfo[$file['id']] = [
+                            'date' => $nextPublishDate,
+                            'platform' => $platform,
+                            'schedule_id' => $nextSchedule['id'] ?? null
+                        ];
                     }
                 }
             }

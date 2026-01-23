@@ -171,14 +171,103 @@ ob_start();
                         </td>
                         <td><?= $file['order_index'] ?></td>
                         <td>
-                            <?= $file['published_at'] ? date('d.m.Y H:i', strtotime($file['published_at'])) : '-' ?>
+                            <?php if (isset($filePublications[$file['video_id']])): 
+                                $pub = $filePublications[$file['video_id']];
+                            ?>
+                                <div style="font-size: 0.9rem;">
+                                    <div style="color: #27ae60; font-weight: 500; margin-bottom: 0.25rem;">
+                                        <?= date('d.m.Y H:i', strtotime($pub['published_at'] ?? $file['published_at'])) ?>
+                                    </div>
+                                    <div style="margin-bottom: 0.25rem;">
+                                        <span class="platform-badge platform-<?= $pub['platform'] ?? 'youtube' ?>" style="font-size: 0.75rem;">
+                                            <?php
+                                            $platformIcons = [
+                                                'youtube' => \App\Helpers\IconHelper::render('youtube', 12, 'icon-inline'),
+                                                'telegram' => \App\Helpers\IconHelper::render('telegram', 12, 'icon-inline'),
+                                                'tiktok' => \App\Helpers\IconHelper::render('tiktok', 12, 'icon-inline'),
+                                                'instagram' => \App\Helpers\IconHelper::render('instagram', 12, 'icon-inline'),
+                                                'pinterest' => \App\Helpers\IconHelper::render('pinterest', 12, 'icon-inline')
+                                            ];
+                                            echo $platformIcons[$pub['platform'] ?? 'youtube'] ?? '';
+                                            ?>
+                                            <?= ucfirst($pub['platform'] ?? 'youtube') ?>
+                                        </span>
+                                    </div>
+                                    <?php 
+                                    $pubUrl = $pub['platform_url'] ?? '';
+                                    if (!$pubUrl && $pub['platform_id']) {
+                                        switch ($pub['platform']) {
+                                            case 'youtube':
+                                                $pubUrl = 'https://youtube.com/watch?v=' . $pub['platform_id'];
+                                                break;
+                                            case 'telegram':
+                                                $pubUrl = 'https://t.me/' . $pub['platform_id'];
+                                                break;
+                                            case 'tiktok':
+                                                $pubUrl = 'https://www.tiktok.com/@' . $pub['platform_id'];
+                                                break;
+                                            case 'instagram':
+                                                $pubUrl = 'https://www.instagram.com/p/' . $pub['platform_id'];
+                                                break;
+                                            case 'pinterest':
+                                                $pubUrl = 'https://www.pinterest.com/pin/' . $pub['platform_id'];
+                                                break;
+                                        }
+                                    }
+                                    if ($pubUrl):
+                                    ?>
+                                        <a href="<?= htmlspecialchars($pubUrl) ?>" target="_blank" style="font-size: 0.75rem; color: #3498db; text-decoration: none;">
+                                            <?= \App\Helpers\IconHelper::render('publish', 12, 'icon-inline') ?> Перейти
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
+                            <?php elseif ($file['published_at']): ?>
+                                <div style="font-size: 0.9rem; color: #27ae60;">
+                                    <?= date('d.m.Y H:i', strtotime($file['published_at'])) ?>
+                                </div>
+                            <?php else: ?>
+                                <span style="color: #95a5a6;">-</span>
+                            <?php endif; ?>
                         </td>
                         <?php if ($group['status'] === 'active'): ?>
                             <td>
-                                <?php if (isset($nextPublishDates[$file['id']])): ?>
-                                    <span style="color: #3498db; font-weight: 500;">
-                                        <?= date('d.m.Y H:i', strtotime($nextPublishDates[$file['id']])) ?>
-                                    </span>
+                                <?php if (isset($nextPublishInfo[$file['id']])): 
+                                    $nextInfo = $nextPublishInfo[$file['id']];
+                                    $publishAt = strtotime($nextInfo['date']);
+                                    $now = time();
+                                ?>
+                                    <div style="font-size: 0.9rem;">
+                                        <div style="color: #3498db; font-weight: 500; margin-bottom: 0.25rem;">
+                                            <?= date('d.m.Y H:i', $publishAt) ?>
+                                        </div>
+                                        <div style="margin-bottom: 0.25rem;">
+                                            <span class="platform-badge platform-<?= $nextInfo['platform'] ?>" style="font-size: 0.75rem;">
+                                                <?php
+                                                $platformIcons = [
+                                                    'youtube' => \App\Helpers\IconHelper::render('youtube', 12, 'icon-inline'),
+                                                    'telegram' => \App\Helpers\IconHelper::render('telegram', 12, 'icon-inline'),
+                                                    'tiktok' => \App\Helpers\IconHelper::render('tiktok', 12, 'icon-inline'),
+                                                    'instagram' => \App\Helpers\IconHelper::render('instagram', 12, 'icon-inline'),
+                                                    'pinterest' => \App\Helpers\IconHelper::render('pinterest', 12, 'icon-inline')
+                                                ];
+                                                echo $platformIcons[$nextInfo['platform']] ?? '';
+                                                ?>
+                                                <?= ucfirst($nextInfo['platform']) ?>
+                                            </span>
+                                        </div>
+                                        <?php if ($publishAt > $now): ?>
+                                            <div class="countdown-timer" 
+                                                 data-publish-at="<?= date('Y-m-d H:i:s', $publishAt) ?>" 
+                                                 style="font-size: 0.75rem; color: #3498db; font-weight: 500;">
+                                                <span class="countdown-text">Осталось: </span>
+                                                <span class="countdown-value">-</span>
+                                            </div>
+                                        <?php else: ?>
+                                            <div style="font-size: 0.75rem; color: #e74c3c;">
+                                                Время прошло
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
                                 <?php else: ?>
                                     <span style="color: #95a5a6;">-</span>
                                 <?php endif; ?>
