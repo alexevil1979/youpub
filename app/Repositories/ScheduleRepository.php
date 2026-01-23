@@ -91,7 +91,6 @@ class ScheduleRepository extends Repository
         $sql = "
             SELECT * FROM {$this->table}
             WHERE status = 'pending'
-            AND status <> 'paused'
             AND publish_at <= NOW()
             ORDER BY publish_at ASC
         ";
@@ -111,7 +110,6 @@ class ScheduleRepository extends Repository
             FROM {$this->table} s
             JOIN content_groups cg ON cg.id = s.content_group_id
             WHERE s.status = 'pending'
-            AND s.status <> 'paused'
             AND cg.status = 'active'
             AND s.content_group_id IS NOT NULL
             ORDER BY s.publish_at ASC
