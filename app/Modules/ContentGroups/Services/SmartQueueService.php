@@ -91,6 +91,19 @@ class SmartQueueService extends Service
 
         $templated = $this->templateService->applyTemplate($templateId, $video, $context);
 
+        // Проверяем, нет ли уже расписания 'processing' для этого видео
+        $existingProcessing = $this->scheduleRepo->findByUserId($schedule['user_id']);
+        $existingProcessing = array_filter($existingProcessing, function($s) use ($groupFile) {
+            return ($s['video_id'] ?? null) == $groupFile['video_id'] 
+                && ($s['status'] ?? '') === 'processing'
+                && !empty($s['content_group_id']);
+        });
+        
+        if (!empty($existingProcessing)) {
+            // Уже есть расписание в обработке для этого видео, пропускаем
+            return ['success' => false, 'message' => 'Video already being processed'];
+        }
+
         // Создаем временное расписание для публикации
         $tempScheduleId = $this->scheduleRepo->create([
             'user_id' => $schedule['user_id'],
@@ -104,13 +117,23 @@ class SmartQueueService extends Service
         // Публикуем
         $result = $this->publishVideo($schedule['platform'], $tempScheduleId, $templated);
 
-        // Обновляем статус файла в группе
+        // Обновляем статус временного расписания и файла в группе
         if ($result['success']) {
             $publicationId = $result['data']['publication_id'] ?? null;
             $this->fileRepo->updateFileStatus($groupFile['id'], 'published', $publicationId);
+            // Обновляем статус временного расписания на 'published'
+            $this->scheduleRepo->update($tempScheduleId, [
+                'status' => 'published',
+                'error_message' => null
+            ]);
         } else {
             $this->fileRepo->updateFileStatus($groupFile['id'], 'error');
             $this->fileRepo->update($groupFile['id'], ['error_message' => $result['message'] ?? 'Unknown error']);
+            // Обновляем статус временного расписания на 'failed'
+            $this->scheduleRepo->update($tempScheduleId, [
+                'status' => 'failed',
+                'error_message' => $result['message'] ?? 'Unknown error'
+            ]);
         }
 
         // Обновляем время следующей публикации для интервальных расписаний

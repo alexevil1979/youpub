@@ -47,6 +47,12 @@ try {
 
     foreach ($schedules as $schedule) {
         try {
+            // Пропускаем приостановленные расписания
+            if (($schedule['status'] ?? '') === 'paused') {
+                logMessage("Schedule ID {$schedule['id']} is paused, skipping", $logFile);
+                continue;
+            }
+            
             // Проверяем, готово ли расписание (с учетом типа и лимитов)
             if (!$scheduleEngine->isScheduleReady($schedule)) {
                 logMessage("Schedule ID {$schedule['id']} not ready (limits or timing)", $logFile);
@@ -61,24 +67,28 @@ try {
             if ($result['success']) {
                 logMessage("Schedule ID {$schedule['id']} published successfully", $logFile);
                 
-                // Обновляем статус расписания
-                $scheduleRepo->update($schedule['id'], ['status' => 'published']);
+                // Для интервальных расписаний обновляем время следующей публикации, но не меняем статус на 'published'
+                // Статус остается 'pending' для продолжения работы
+                if (($schedule['schedule_type'] ?? '') === 'interval' || ($schedule['schedule_type'] ?? '') === 'batch') {
+                    $nextTime = $scheduleEngine->getNextPublishTime($schedule);
+                    if ($nextTime) {
+                        $scheduleRepo->update($schedule['id'], ['publish_at' => $nextTime]);
+                        logMessage("Schedule ID {$schedule['id']} next publish time updated to {$nextTime}", $logFile);
+                    }
+                } else {
+                    // Для фиксированных расписаний меняем статус на 'published'
+                    $scheduleRepo->update($schedule['id'], ['status' => 'published']);
+                }
             } else {
                 logMessage("Schedule ID {$schedule['id']} failed: " . ($result['message'] ?? 'Unknown error'), $logFile);
                 
-                // Обновляем статус расписания
-                $scheduleRepo->update($schedule['id'], [
-                    'status' => 'failed',
-                    'error_message' => $result['message'] ?? 'Unknown error'
-                ]);
+                // Не меняем статус основного расписания при ошибке, чтобы оно могло повторить попытку
+                // Только логируем ошибку
             }
 
         } catch (\Exception $e) {
             logMessage("Error processing schedule ID {$schedule['id']}: " . $e->getMessage(), $logFile);
-            $scheduleRepo->update($schedule['id'], [
-                'status' => 'failed',
-                'error_message' => $e->getMessage()
-            ]);
+            // Не меняем статус при исключении, чтобы не блокировать повторные попытки
         }
     }
 
