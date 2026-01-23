@@ -410,36 +410,60 @@ class SmartScheduleController extends Controller
                 if ($group) {
                     $files = $this->groupService->getGroupFiles((int)$schedule['content_group_id'], $userId);
                     
-                    // Получаем все расписания для этой группы
+                    // Получаем все расписания для этой группы (только pending и будущие)
                     $allSchedules = $scheduleRepo->findByGroupId((int)$schedule['content_group_id']);
                     
                     // Сортируем расписания по времени публикации
                     usort($allSchedules, function($a, $b) {
-                        return strtotime($a['publish_at']) <=> strtotime($b['publish_at']);
+                        $timeA = strtotime($a['publish_at'] ?? '9999-12-31');
+                        $timeB = strtotime($b['publish_at'] ?? '9999-12-31');
+                        return $timeA <=> $timeB;
                     });
                     
-                    // Связываем файлы с расписаниями
-                    $fileIndex = 0;
-                    foreach ($allSchedules as $sched) {
-                        if ($fileIndex < count($files)) {
-                            $scheduledFiles[] = [
-                                'file' => $files[$fileIndex],
-                                'schedule' => $sched,
-                                'publish_at' => $sched['publish_at']
-                            ];
-                            $fileIndex++;
+                    // Создаем массив для связи файлов с расписаниями
+                    // Для каждого файла находим следующее расписание
+                    foreach ($files as $file) {
+                        $nextSchedule = null;
+                        $nextPublishAt = null;
+                        
+                        // Ищем следующее расписание для этого файла
+                        // Если расписание интервальное, вычисляем время на основе интервала
+                        foreach ($allSchedules as $sched) {
+                            if ($sched['schedule_type'] === 'interval' && !empty($sched['interval_minutes'])) {
+                                // Для интервальных расписаний вычисляем время для каждого файла
+                                $baseTime = strtotime($sched['publish_at'] ?? 'now');
+                                $fileIndex = array_search($file, $files);
+                                $publishTime = $baseTime + ($fileIndex * (int)$sched['interval_minutes'] * 60);
+                                
+                                if ($publishTime > time()) {
+                                    $nextSchedule = $sched;
+                                    $nextPublishAt = date('Y-m-d H:i:s', $publishTime);
+                                    break;
+                                }
+                            } else {
+                                // Для фиксированных расписаний берем время из publish_at
+                                $publishTime = strtotime($sched['publish_at'] ?? '9999-12-31');
+                                if ($publishTime > time()) {
+                                    $nextSchedule = $sched;
+                                    $nextPublishAt = $sched['publish_at'];
+                                    break;
+                                }
+                            }
                         }
+                        
+                        $scheduledFiles[] = [
+                            'file' => $file,
+                            'schedule' => $nextSchedule,
+                            'publish_at' => $nextPublishAt
+                        ];
                     }
                     
-                    // Добавляем оставшиеся файлы без расписания
-                    while ($fileIndex < count($files)) {
-                        $scheduledFiles[] = [
-                            'file' => $files[$fileIndex],
-                            'schedule' => null,
-                            'publish_at' => null
-                        ];
-                        $fileIndex++;
-                    }
+                    // Сортируем файлы по времени публикации
+                    usort($scheduledFiles, function($a, $b) {
+                        $timeA = $a['publish_at'] ? strtotime($a['publish_at']) : 9999999999;
+                        $timeB = $b['publish_at'] ? strtotime($b['publish_at']) : 9999999999;
+                        return $timeA <=> $timeB;
+                    });
                 }
             }
             
