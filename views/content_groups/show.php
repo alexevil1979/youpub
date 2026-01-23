@@ -39,9 +39,9 @@ ob_start();
 
 <div class="info-card group-info">
     <h3>Информация о группе</h3>
-    <div class="info-card-grid">
-        <div class="info-card-item">
-            <div class="info-card-label">Текущий шаблон:</div>
+    <div class="group-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-top: 1rem;">
+        <div class="stat-item">
+            <div class="stat-label">Текущий шаблон:</div>
             <?php if ($group['template_id']): ?>
                 <?php 
                 $currentTemplate = null;
@@ -53,20 +53,18 @@ ob_start();
                 }
                 ?>
                 <?php if ($currentTemplate): ?>
-                    <div class="info-card-value" style="color: #27ae60;"><?= htmlspecialchars($currentTemplate['name']) ?></div>
+                    <div class="stat-value" style="font-size: 1.1rem; color: #27ae60; word-break: break-word;"><?= htmlspecialchars($currentTemplate['name']) ?></div>
                 <?php else: ?>
-                    <div class="info-card-value" style="color: #e74c3c;">Шаблон не найден (ID: <?= $group['template_id'] ?>)</div>
+                    <div class="stat-value" style="font-size: 1rem; color: #e74c3c;">Шаблон не найден</div>
                 <?php endif; ?>
             <?php else: ?>
-                <div class="info-card-value" style="color: #95a5a6;">Без шаблона</div>
+                <div class="stat-value" style="font-size: 1rem; color: #95a5a6;">Без шаблона</div>
             <?php endif; ?>
         </div>
-        <div class="info-card-item">
-            <div class="info-card-label">Статус:</div>
-            <div class="info-card-value">
-                <span class="badge badge-<?= $group['status'] === 'active' ? 'success' : ($group['status'] === 'paused' ? 'warning' : 'secondary') ?>">
-                    <?= ucfirst($group['status']) ?>
-                </span>
+        <div class="stat-item <?= $group['status'] === 'active' ? 'stat-success' : ($group['status'] === 'paused' ? 'stat-warning' : '') ?>">
+            <div class="stat-label">Статус:</div>
+            <div class="stat-value" style="font-size: 1.1rem;">
+                <?= ucfirst($group['status']) ?>
             </div>
         </div>
     </div>
