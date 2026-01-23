@@ -29,55 +29,81 @@ class SmartScheduleController extends Controller
      */
     public function index(): void
     {
+        // Логируем начало выполнения
+        error_log("SmartScheduleController::index: START");
+        
         try {
+            // Проверяем сессию
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+            
             $userId = $_SESSION['user_id'] ?? null;
+            error_log("SmartScheduleController::index: userId = " . ($userId ?? 'NULL'));
             
             if (!$userId) {
+                error_log("SmartScheduleController::index: No user ID, redirecting to login");
                 header('Location: /login');
                 exit;
             }
             
             error_log("SmartScheduleController::index: Loading smart schedules for user {$userId}");
             
-            $scheduleRepo = new \App\Repositories\ScheduleRepository();
-            
-            // Получаем все умные расписания (с группами контента) для пользователя
-            $allSchedules = $scheduleRepo->findByUserId($userId);
-            if (!is_array($allSchedules)) {
-                $allSchedules = [];
-            }
-            
-            $smartSchedules = array_filter($allSchedules, function($schedule) {
-                return !empty($schedule['content_group_id']) && is_numeric($schedule['content_group_id']);
-            });
-            
-            // Преобразуем в массив с числовыми индексами
-            $smartSchedules = array_values($smartSchedules);
-            
-            error_log("SmartScheduleController::index: Found " . count($smartSchedules) . " smart schedules");
-            
-            // Получаем информацию о группах для расписаний
-            $groupIds = [];
-            foreach ($smartSchedules as $schedule) {
-                if (!empty($schedule['content_group_id']) && is_numeric($schedule['content_group_id'])) {
-                    $groupIds[] = (int)$schedule['content_group_id'];
-                }
-            }
-            $groupIds = array_unique($groupIds);
-            
+            // Инициализируем переменные
+            $smartSchedules = [];
             $groups = [];
-            if (!empty($groupIds)) {
-                foreach ($groupIds as $groupId) {
-                    try {
-                        $group = $this->groupService->getGroupWithStats($groupId, $userId);
-                        if ($group && is_array($group)) {
-                            $groups[$groupId] = $group;
-                        }
-                    } catch (\Exception $e) {
-                        error_log("SmartScheduleController::index: Error loading group {$groupId}: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
-                        // Продолжаем работу, даже если группа не найдена
+            
+            try {
+                $scheduleRepo = new \App\Repositories\ScheduleRepository();
+                error_log("SmartScheduleController::index: ScheduleRepository created");
+                
+                // Получаем все умные расписания (с группами контента) для пользователя
+                $allSchedules = $scheduleRepo->findByUserId($userId);
+                error_log("SmartScheduleController::index: Found " . (is_array($allSchedules) ? count($allSchedules) : 0) . " total schedules");
+                
+                if (!is_array($allSchedules)) {
+                    $allSchedules = [];
+                }
+                
+                $smartSchedules = array_filter($allSchedules, function($schedule) {
+                    return !empty($schedule['content_group_id']) && is_numeric($schedule['content_group_id']);
+                });
+                
+                // Преобразуем в массив с числовыми индексами
+                $smartSchedules = array_values($smartSchedules);
+                
+                error_log("SmartScheduleController::index: Found " . count($smartSchedules) . " smart schedules");
+                
+                // Получаем информацию о группах для расписаний
+                $groupIds = [];
+                foreach ($smartSchedules as $schedule) {
+                    if (!empty($schedule['content_group_id']) && is_numeric($schedule['content_group_id'])) {
+                        $groupIds[] = (int)$schedule['content_group_id'];
                     }
                 }
+                $groupIds = array_unique($groupIds);
+                error_log("SmartScheduleController::index: Found " . count($groupIds) . " unique group IDs");
+                
+                if (!empty($groupIds)) {
+                    foreach ($groupIds as $groupId) {
+                        try {
+                            error_log("SmartScheduleController::index: Loading group {$groupId}");
+                            $group = $this->groupService->getGroupWithStats($groupId, $userId);
+                            if ($group && is_array($group)) {
+                                $groups[$groupId] = $group;
+                                error_log("SmartScheduleController::index: Group {$groupId} loaded successfully");
+                            } else {
+                                error_log("SmartScheduleController::index: Group {$groupId} not found or access denied");
+                            }
+                        } catch (\Exception $e) {
+                            error_log("SmartScheduleController::index: Error loading group {$groupId}: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+                            // Продолжаем работу, даже если группа не найдена
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                error_log("SmartScheduleController::index: Error in data loading: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+                // Продолжаем с пустыми массивами
             }
             
             // Убеждаемся, что переменные определены
@@ -88,16 +114,28 @@ class SmartScheduleController extends Controller
                 $groups = [];
             }
             
+            error_log("SmartScheduleController::index: Final counts - schedules: " . count($smartSchedules) . ", groups: " . count($groups));
+            
             // Проверяем существование файла представления
             $viewPath = __DIR__ . '/../../../../views/content_groups/schedules/index.php';
+            error_log("SmartScheduleController::index: View path: {$viewPath}");
+            
             if (!file_exists($viewPath)) {
                 throw new \Exception("View file not found: {$viewPath}");
             }
             
+            error_log("SmartScheduleController::index: Including view file");
             include $viewPath;
+            error_log("SmartScheduleController::index: View file included successfully");
+            
         } catch (\Exception $e) {
-            error_log("SmartScheduleController::index: Exception - " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+            error_log("SmartScheduleController::index: FATAL EXCEPTION - " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
             error_log("SmartScheduleController::index: Stack trace: " . $e->getTraceAsString());
+            
+            // Очищаем буфер вывода, если он был начат
+            if (ob_get_level() > 0) {
+                ob_clean();
+            }
             
             // Показываем HTML страницу с ошибкой вместо JSON
             $title = 'Ошибка';
@@ -105,12 +143,24 @@ class SmartScheduleController extends Controller
             ?>
             <div class="alert alert-error">
                 <h2>Ошибка при загрузке умных расписаний</h2>
-                <p><?= htmlspecialchars($e->getMessage()) ?></p>
+                <p><strong>Сообщение:</strong> <?= htmlspecialchars($e->getMessage()) ?></p>
+                <p><strong>Файл:</strong> <?= htmlspecialchars($e->getFile()) ?></p>
+                <p><strong>Строка:</strong> <?= $e->getLine() ?></p>
                 <p><a href="/dashboard" class="btn btn-secondary">Вернуться на главную</a></p>
             </div>
             <?php
             $content = ob_get_clean();
-            include __DIR__ . '/../../../../views/layout.php';
+            
+            $layoutPath = __DIR__ . '/../../../../views/layout.php';
+            if (file_exists($layoutPath)) {
+                include $layoutPath;
+            } else {
+                echo $content;
+            }
+        } catch (\Throwable $e) {
+            error_log("SmartScheduleController::index: FATAL THROWABLE - " . $e->getMessage());
+            http_response_code(500);
+            echo "Internal Server Error. Please check server logs.";
         }
     }
 
