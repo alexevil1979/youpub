@@ -23,14 +23,36 @@ class TemplateController extends Controller
      */
     public function index(): void
     {
-        $userId = $_SESSION['user_id'];
-        $templates = $this->templateService->getUserTemplates($userId);
-        
-        if (!isset($templates)) {
-            $templates = [];
+        try {
+            $userId = $_SESSION['user_id'] ?? null;
+            
+            if (!$userId) {
+                header('Location: /login');
+                exit;
+            }
+            
+            error_log("TemplateController::index: Loading templates for user {$userId}");
+            
+            $templates = $this->templateService->getUserTemplates($userId);
+            
+            if (!isset($templates) || !is_array($templates)) {
+                error_log("TemplateController::index: getUserTemplates returned invalid result, setting to empty array");
+                $templates = [];
+            }
+            
+            error_log("TemplateController::index: Found " . count($templates) . " templates");
+            
+            include __DIR__ . '/../../../../views/content_groups/templates/index.php';
+        } catch (\Exception $e) {
+            error_log("TemplateController::index: Exception - " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+            error_log("TemplateController::index: Stack trace: " . $e->getTraceAsString());
+            
+            http_response_code(500);
+            echo json_encode([
+                'error' => 'Internal Server Error',
+                'message' => 'Произошла ошибка при загрузке шаблонов: ' . $e->getMessage()
+            ], JSON_UNESCAPED_UNICODE);
         }
-        
-        include __DIR__ . '/../../../../views/content_groups/templates/index.php';
     }
 
     /**

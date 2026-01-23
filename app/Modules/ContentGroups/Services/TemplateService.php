@@ -148,7 +148,22 @@ class TemplateService extends Service
      */
     public function getUserTemplates(int $userId, bool $activeOnly = false): array
     {
-        return $this->templateRepo->findByUserId($userId, $activeOnly);
+        try {
+            error_log("TemplateService::getUserTemplates: userId={$userId}, activeOnly=" . ($activeOnly ? 'true' : 'false'));
+            
+            $templates = $this->templateRepo->findByUserId($userId, $activeOnly);
+            
+            if (!is_array($templates)) {
+                error_log("TemplateService::getUserTemplates: Repository returned non-array, returning empty array");
+                return [];
+            }
+            
+            error_log("TemplateService::getUserTemplates: Found " . count($templates) . " templates");
+            return $templates;
+        } catch (\Exception $e) {
+            error_log("TemplateService::getUserTemplates: Exception - " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+            return [];
+        }
     }
 
     /**
