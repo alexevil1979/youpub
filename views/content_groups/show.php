@@ -187,7 +187,7 @@ ob_start();
                         <?php endif; ?>
                         <td>
                             <div class="action-buttons">
-                                <a href="/videos/<?= $file['video_id'] ?>" class="btn btn-sm btn-primary">Просмотр</a>
+                                <a href="/videos/<?= $file['video_id'] ?>" class="btn btn-xs btn-primary" title="Просмотр"><?= \App\Helpers\IconHelper::render('view', 14, 'icon-inline') ?></a>
                                 <?php if (isset($filePublications[$file['video_id']])): 
                                     $pub = $filePublications[$file['video_id']];
                                     $pubUrl = $pub['platform_url'] ?? '';
@@ -212,13 +212,14 @@ ob_start();
                                     }
                                     if ($pubUrl):
                                 ?>
-                                    <a href="<?= htmlspecialchars($pubUrl) ?>" target="_blank" class="btn btn-sm btn-success" title="Перейти к публикации на <?= ucfirst($pub['platform']) ?>"><?= \App\Helpers\IconHelper::render('publish', 16, 'icon-inline') ?> Перейти</a>
+                                    <a href="<?= htmlspecialchars($pubUrl) ?>" target="_blank" class="btn btn-xs btn-success" title="Перейти к публикации на <?= ucfirst($pub['platform']) ?>"><?= \App\Helpers\IconHelper::render('publish', 14, 'icon-inline') ?></a>
                                 <?php endif; endif; ?>
-                                <button type="button" class="btn btn-sm <?= ($file['status'] === 'new' || $file['status'] === 'queued') ? 'btn-warning' : 'btn-success' ?>" 
-                                        onclick="toggleFileStatus(<?= $group['id'] ?>, <?= $file['id'] ?>, '<?= $file['status'] ?>')">
-                                    <?= ($file['status'] === 'new' || $file['status'] === 'queued') ? \App\Helpers\IconHelper::render('pause', 16, 'icon-inline') . ' Выкл' : \App\Helpers\IconHelper::render('play', 16, 'icon-inline') . ' Вкл' ?>
+                                <button type="button" class="btn btn-xs <?= ($file['status'] === 'new' || $file['status'] === 'queued') ? 'btn-warning' : 'btn-success' ?>" 
+                                        onclick="toggleFileStatus(<?= $group['id'] ?>, <?= $file['id'] ?>, '<?= $file['status'] ?>')"
+                                        title="<?= ($file['status'] === 'new' || $file['status'] === 'queued') ? 'Приостановить' : 'Возобновить' ?>">
+                                    <?= ($file['status'] === 'new' || $file['status'] === 'queued') ? \App\Helpers\IconHelper::render('pause', 14, 'icon-inline') : \App\Helpers\IconHelper::render('play', 14, 'icon-inline') ?>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-danger" onclick="removeFromGroup(<?= $group['id'] ?>, <?= $file['video_id'] ?>)"><?= \App\Helpers\IconHelper::render('delete', 16, 'icon-inline') ?> Удалить</button>
+                                <button type="button" class="btn btn-xs btn-danger" onclick="removeFromGroup(<?= $group['id'] ?>, <?= $file['video_id'] ?>)" title="Удалить из группы"><?= \App\Helpers\IconHelper::render('delete', 14, 'icon-inline') ?></button>
                             </div>
                         </td>
                     </tr>
