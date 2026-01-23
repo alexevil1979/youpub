@@ -43,8 +43,12 @@ class SmartScheduleController extends Controller
             
             // Получаем все умные расписания (с группами контента) для пользователя
             $allSchedules = $scheduleRepo->findByUserId($userId);
+            if (!is_array($allSchedules)) {
+                $allSchedules = [];
+            }
+            
             $smartSchedules = array_filter($allSchedules, function($schedule) {
-                return !empty($schedule['content_group_id']);
+                return !empty($schedule['content_group_id']) && is_numeric($schedule['content_group_id']);
             });
             
             // Преобразуем в массив с числовыми индексами
@@ -53,20 +57,35 @@ class SmartScheduleController extends Controller
             error_log("SmartScheduleController::index: Found " . count($smartSchedules) . " smart schedules");
             
             // Получаем информацию о группах для расписаний
-            $groupIds = array_unique(array_filter(array_column($smartSchedules, 'content_group_id')));
+            $groupIds = [];
+            foreach ($smartSchedules as $schedule) {
+                if (!empty($schedule['content_group_id']) && is_numeric($schedule['content_group_id'])) {
+                    $groupIds[] = (int)$schedule['content_group_id'];
+                }
+            }
+            $groupIds = array_unique($groupIds);
+            
             $groups = [];
             if (!empty($groupIds)) {
                 foreach ($groupIds as $groupId) {
                     try {
                         $group = $this->groupService->getGroupWithStats($groupId, $userId);
-                        if ($group) {
+                        if ($group && is_array($group)) {
                             $groups[$groupId] = $group;
                         }
                     } catch (\Exception $e) {
-                        error_log("SmartScheduleController::index: Error loading group {$groupId}: " . $e->getMessage());
+                        error_log("SmartScheduleController::index: Error loading group {$groupId}: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
                         // Продолжаем работу, даже если группа не найдена
                     }
                 }
+            }
+            
+            // Убеждаемся, что переменные определены
+            if (!isset($smartSchedules)) {
+                $smartSchedules = [];
+            }
+            if (!isset($groups)) {
+                $groups = [];
             }
             
             // Проверяем существование файла представления
