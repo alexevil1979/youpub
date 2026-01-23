@@ -52,12 +52,27 @@ class SmartScheduleController extends Controller
             
             try {
                 error_log("SmartScheduleController::index: Loading schedules for user {$userId}");
-                $scheduleRepo = new \App\Repositories\ScheduleRepository();
+                
+                // Проверяем, что репозиторий может быть создан
+                try {
+                    $scheduleRepo = new \App\Repositories\ScheduleRepository();
+                    error_log("SmartScheduleController::index: ScheduleRepository created successfully");
+                } catch (\Exception $e) {
+                    error_log("SmartScheduleController::index: Error creating ScheduleRepository: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+                    throw $e;
+                }
                 
                 // Получаем все умные расписания (с группами контента) для пользователя
-                $allSchedules = $scheduleRepo->findByUserId($userId);
+                try {
+                    $allSchedules = $scheduleRepo->findByUserId($userId);
+                    error_log("SmartScheduleController::index: Found " . (is_array($allSchedules) ? count($allSchedules) : 0) . " schedules");
+                } catch (\Exception $e) {
+                    error_log("SmartScheduleController::index: Error in findByUserId: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+                    $allSchedules = [];
+                }
                 
                 if (!is_array($allSchedules)) {
+                    error_log("SmartScheduleController::index: findByUserId returned non-array: " . gettype($allSchedules));
                     $allSchedules = [];
                 }
                 
@@ -67,6 +82,7 @@ class SmartScheduleController extends Controller
                 
                 // Преобразуем в массив с числовыми индексами
                 $smartSchedules = array_values($smartSchedules);
+                error_log("SmartScheduleController::index: Filtered to " . count($smartSchedules) . " smart schedules");
                 
                 // Получаем информацию о группах для расписаний
                 $groupIds = [];
@@ -76,22 +92,28 @@ class SmartScheduleController extends Controller
                     }
                 }
                 $groupIds = array_unique($groupIds);
+                error_log("SmartScheduleController::index: Found " . count($groupIds) . " unique group IDs");
                 
                 if (!empty($groupIds)) {
                     foreach ($groupIds as $groupId) {
                         try {
+                            error_log("SmartScheduleController::index: Loading group {$groupId}");
                             $group = $this->groupService->getGroupWithStats($groupId, $userId);
                             if ($group && is_array($group)) {
                                 $groups[$groupId] = $group;
+                                error_log("SmartScheduleController::index: Group {$groupId} loaded successfully");
+                            } else {
+                                error_log("SmartScheduleController::index: Group {$groupId} returned null or non-array");
                             }
                         } catch (\Exception $e) {
-                            error_log("SmartScheduleController::index: Error loading group {$groupId}: " . $e->getMessage());
+                            error_log("SmartScheduleController::index: Error loading group {$groupId}: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
                             // Продолжаем работу, даже если группа не найдена
                         }
                     }
                 }
             } catch (\Exception $e) {
-                error_log("SmartScheduleController::index: Error in data loading: " . $e->getMessage());
+                error_log("SmartScheduleController::index: Error in data loading: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+                error_log("SmartScheduleController::index: Stack trace: " . $e->getTraceAsString());
                 // Продолжаем с пустыми массивами
             }
             

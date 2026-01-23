@@ -19,22 +19,44 @@ class ScheduleRepository extends Repository
      */
     public function findByUserId(int $userId, array $orderBy = []): array
     {
-        $sql = "SELECT * FROM {$this->table} WHERE user_id = ?";
-        $params = [$userId];
+        try {
+            $sql = "SELECT * FROM {$this->table} WHERE user_id = ?";
+            $params = [$userId];
 
-        if (!empty($orderBy)) {
-            $order = [];
-            foreach ($orderBy as $field => $direction) {
-                $order[] = "{$field} " . strtoupper($direction);
+            if (!empty($orderBy)) {
+                $order = [];
+                foreach ($orderBy as $field => $direction) {
+                    $order[] = "{$field} " . strtoupper($direction);
+                }
+                $sql .= " ORDER BY " . implode(", ", $order);
+            } else {
+                $sql .= " ORDER BY publish_at ASC";
             }
-            $sql .= " ORDER BY " . implode(", ", $order);
-        } else {
-            $sql .= " ORDER BY publish_at ASC";
-        }
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchAll();
+            $stmt = $this->db->prepare($sql);
+            if (!$stmt) {
+                error_log("ScheduleRepository::findByUserId: Failed to prepare statement. SQL: {$sql}");
+                return [];
+            }
+            
+            $result = $stmt->execute($params);
+            if (!$result) {
+                $errorInfo = $stmt->errorInfo();
+                error_log("ScheduleRepository::findByUserId: Execute failed: " . print_r($errorInfo, true));
+                return [];
+            }
+            
+            $data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            if (!is_array($data)) {
+                error_log("ScheduleRepository::findByUserId: fetchAll returned non-array: " . gettype($data));
+                return [];
+            }
+            
+            return $data;
+        } catch (\Exception $e) {
+            error_log("ScheduleRepository::findByUserId: Exception - " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+            return [];
+        }
     }
 
     /**
