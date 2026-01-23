@@ -203,6 +203,44 @@ if (!isset($groups)) {
                             <?php endif; ?>
                         </td>
                         <td style="padding: 0.75rem;">
+                            <?php 
+                            $scheduleId = (int)($schedule['id'] ?? 0);
+                            $publications = isset($nextPublications[$scheduleId]) ? $nextPublications[$scheduleId] : [];
+                            if (!empty($publications)):
+                            ?>
+                                <div style="font-size: 0.85rem; max-width: 300px;">
+                                    <?php 
+                                    // Показываем первые 5 публикаций
+                                    $showCount = min(5, count($publications));
+                                    for ($i = 0; $i < $showCount; $i++):
+                                        $pub = $publications[$i];
+                                        $isNext = ($i === 0);
+                                    ?>
+                                        <div style="margin-bottom: 0.5rem; padding: 0.25rem 0.5rem; background: <?= $isNext ? '#e3f2fd' : '#f5f5f5' ?>; border-radius: 4px; <?= $isNext ? 'border-left: 3px solid #3498db;' : '' ?>">
+                                            <div style="font-weight: <?= $isNext ? '500' : '400' ?>; color: <?= $isNext ? '#3498db' : '#555' ?>;">
+                                                <?= htmlspecialchars($pub['formatted']) ?>
+                                            </div>
+                                            <?php if ($isNext && $pub['time'] > time()): ?>
+                                                <div class="countdown-timer-small" 
+                                                     data-publish-at="<?= htmlspecialchars($pub['date']) ?>" 
+                                                     style="font-size: 0.75rem; color: #3498db; margin-top: 0.25rem;">
+                                                    <span class="countdown-text-small">Осталось: </span>
+                                                    <span class="countdown-value-small">-</span>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endfor; ?>
+                                    <?php if (count($publications) > 5): ?>
+                                        <div style="font-size: 0.75rem; color: #95a5a6; margin-top: 0.5rem;">
+                                            И еще <?= count($publications) - 5 ?> публикаций...
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            <?php else: ?>
+                                <span style="color: #95a5a6; font-size: 0.85rem;">Нет запланированных публикаций</span>
+                            <?php endif; ?>
+                        </td>
+                        <td style="padding: 0.75rem;">
                             <span class="badge badge-<?= 
                                 (isset($schedule['status']) && $schedule['status'] === 'pending') ? 'warning' : 
                                 ((isset($schedule['status']) && $schedule['status'] === 'published') ? 'success' : 
