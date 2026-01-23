@@ -61,7 +61,7 @@ try {
             
             // Проверяем, готово ли расписание (с учетом типа и лимитов)
             if (!$scheduleEngine->isScheduleReady($schedule)) {
-                logMessage("Schedule ID {$schedule['id']} not ready (limits or timing)", $logFile);
+                logMessage("Schedule ID {$schedule['id']} not ready (limits or timing). Publish_at: " . ($schedule['publish_at'] ?? 'NULL') . ", Status: " . ($schedule['status'] ?? 'NULL') . ", Type: " . ($schedule['schedule_type'] ?? 'NULL'), $logFile);
                 continue;
             }
 

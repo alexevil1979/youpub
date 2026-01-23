@@ -81,6 +81,7 @@ class ScheduleEngineService extends Service
         
         // Проверяем наличие времени публикации
         if (empty($schedule['publish_at'])) {
+            error_log("ScheduleEngineService::checkFixedSchedule: No publish_at for schedule ID " . ($schedule['id'] ?? 'unknown'));
             return false;
         }
         
@@ -88,25 +89,24 @@ class ScheduleEngineService extends Service
 
         // Для фиксированных расписаний время должно наступить
         if ($publishAt > $now) {
+            error_log("ScheduleEngineService::checkFixedSchedule: Publish time not reached for schedule ID " . ($schedule['id'] ?? 'unknown') . ", publish_at: " . $schedule['publish_at'] . ", now: " . date('Y-m-d H:i:s', $now));
             return false;
         }
 
-        // Проверка дней недели
+        // Проверка дней недели - проверяем день, когда должно было быть опубликовано
         if (!empty($schedule['weekdays'])) {
-            $currentDay = (int)date('N'); // 1-7 (пн-вс)
+            $publishDay = (int)date('N', $publishAt); // День недели времени публикации
             $allowedDays = array_map('intval', explode(',', $schedule['weekdays']));
-            if (!in_array($currentDay, $allowedDays)) {
+            if (!in_array($publishDay, $allowedDays)) {
+                error_log("ScheduleEngineService::checkFixedSchedule: Publish day {$publishDay} not in allowed days for schedule ID " . ($schedule['id'] ?? 'unknown'));
                 return false;
             }
         }
 
-        // Проверка часов активности
-        if (!empty($schedule['active_hours_start']) && !empty($schedule['active_hours_end'])) {
-            $currentTime = date('H:i:s');
-            if ($currentTime < $schedule['active_hours_start'] || $currentTime > $schedule['active_hours_end']) {
-                return false;
-            }
-        }
+        // Для фиксированных расписаний НЕ проверяем активные часы при публикации,
+        // так как время публикации уже было рассчитано с учетом активных часов.
+        // Активные часы используются только при расчете времени публикации, а не при проверке готовности.
+        // Если время публикации наступило, публикуем независимо от текущего времени.
 
         return $this->checkLimits($schedule);
     }

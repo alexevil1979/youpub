@@ -42,6 +42,7 @@ class SmartQueueService extends Service
 
         // Проверяем, готово ли расписание (проверка времени и лимитов)
         if (!$this->scheduleEngine->isScheduleReady($schedule)) {
+            error_log("SmartQueueService::processGroupSchedule: Schedule ID {$schedule['id']} not ready. Publish_at: " . ($schedule['publish_at'] ?? 'NULL') . ", Status: " . ($schedule['status'] ?? 'NULL'));
             return ['success' => false, 'message' => 'Schedule not ready (limits or timing)'];
         }
 
