@@ -53,10 +53,13 @@ try {
     
 } catch (\Throwable $e) {
     // Очистить буфер при ошибке
-    ob_clean();
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
     
     // Логирование ошибки
     error_log('Fatal error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+    error_log('Stack trace: ' . $e->getTraceAsString());
     
     // Вывод ошибки (в production лучше показывать общее сообщение)
     http_response_code(500);
@@ -66,15 +69,52 @@ try {
         $debug = $config['APP_DEBUG'] ?? false;
     }
     
-    if ($debug) {
-        echo json_encode([
-            'error' => 'Internal Server Error',
-            'message' => $e->getMessage(),
-            'file' => $e->getFile(),
-            'line' => $e->getLine(),
-        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    // Проверяем, это AJAX запрос или обычный?
+    $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+    
+    if ($isAjax || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false)) {
+        // AJAX запрос - возвращаем JSON
+        if ($debug) {
+            echo json_encode([
+                'error' => 'Internal Server Error',
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        } else {
+            echo json_encode(['error' => 'Internal Server Error'], JSON_UNESCAPED_UNICODE);
+        }
     } else {
-        echo json_encode(['error' => 'Internal Server Error'], JSON_UNESCAPED_UNICODE);
+        // Обычный запрос - показываем HTML
+        $title = 'Ошибка';
+        ob_start();
+        ?>
+        <!DOCTYPE html>
+        <html lang="ru">
+        <head>
+            <meta charset="UTF-8">
+            <title>Ошибка</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 2rem; }
+                .error { background: #fee; border: 1px solid #fcc; padding: 1rem; border-radius: 4px; }
+            </style>
+        </head>
+        <body>
+            <div class="error">
+                <h1>Ошибка сервера</h1>
+                <?php if ($debug): ?>
+                    <p><strong>Сообщение:</strong> <?= htmlspecialchars($e->getMessage()) ?></p>
+                    <p><strong>Файл:</strong> <?= htmlspecialchars($e->getFile()) ?></p>
+                    <p><strong>Строка:</strong> <?= $e->getLine() ?></p>
+                <?php else: ?>
+                    <p>Произошла внутренняя ошибка сервера. Пожалуйста, попробуйте позже.</p>
+                <?php endif; ?>
+                <p><a href="/dashboard">Вернуться на главную</a></p>
+            </div>
+        </body>
+        </html>
+        <?php
+        echo ob_get_clean();
     }
 }
 
