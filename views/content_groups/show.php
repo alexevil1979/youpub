@@ -460,6 +460,59 @@ function showToast(message, type) {
         setTimeout(() => toast.remove(), 300);
     }, 3000);
 }
+
+// Обратный отсчет до публикации для видео в группе
+function updateCountdowns() {
+    const countdowns = document.querySelectorAll('.countdown-timer');
+    
+    countdowns.forEach(timer => {
+        const publishAtStr = timer.getAttribute('data-publish-at');
+        if (!publishAtStr) return;
+        
+        const publishAt = new Date(publishAtStr.replace(' ', 'T'));
+        const now = new Date();
+        const diff = publishAt - now;
+        
+        if (diff <= 0) {
+            timer.querySelector('.countdown-text').textContent = '';
+            timer.querySelector('.countdown-value').textContent = 'Время прошло';
+            timer.style.color = '#e74c3c';
+            return;
+        }
+        
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+        
+        let countdownText = '';
+        if (days > 0) {
+            countdownText = `${days}д ${hours}ч ${minutes}м`;
+        } else if (hours > 0) {
+            countdownText = `${hours}ч ${minutes}м ${seconds}с`;
+        } else if (minutes > 0) {
+            countdownText = `${minutes}м ${seconds}с`;
+        } else {
+            countdownText = `${seconds}с`;
+        }
+        
+        timer.querySelector('.countdown-text').textContent = 'Осталось: ';
+        timer.querySelector('.countdown-value').textContent = countdownText;
+        
+        // Меняем цвет при приближении времени
+        if (diff < 3600000) { // Меньше часа
+            timer.style.color = '#e74c3c';
+        } else if (diff < 86400000) { // Меньше суток
+            timer.style.color = '#f39c12';
+        } else {
+            timer.style.color = '#3498db';
+        }
+    });
+}
+
+// Обновляем обратный отсчет каждую секунду
+setInterval(updateCountdowns, 1000);
+updateCountdowns(); // Первый запуск сразу
 </script>
 
 <?php
