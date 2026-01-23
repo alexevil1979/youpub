@@ -93,58 +93,115 @@ class VideoController extends Controller
      */
     public function uploadMultiple(): void
     {
-        $userId = $_SESSION['user_id'];
-
-        if (!isset($_FILES['videos']) || !is_array($_FILES['videos']['name'])) {
-            $this->error('No files uploaded');
-            return;
-        }
-
-        // Преобразуем массив файлов в удобный формат
-        $files = [];
-        $fileCount = count($_FILES['videos']['name']);
-        
-        for ($i = 0; $i < $fileCount; $i++) {
-            if ($_FILES['videos']['error'][$i] === UPLOAD_ERR_NO_FILE) {
-                continue; // Пропускаем пустые файлы
-            }
+        try {
+            $userId = $_SESSION['user_id'] ?? null;
             
-            $files[] = [
-                'name' => $_FILES['videos']['name'][$i],
-                'type' => $_FILES['videos']['type'][$i],
-                'tmp_name' => $_FILES['videos']['tmp_name'][$i],
-                'error' => $_FILES['videos']['error'][$i],
-                'size' => $_FILES['videos']['size'][$i],
-            ];
-        }
+            if (!$userId) {
+                $this->error('Необходима авторизация', 401);
+                return;
+            }
 
-        if (empty($files)) {
-            $this->error('No valid files selected');
-            return;
-        }
+            // Проверка наличия файлов
+            if (!isset($_FILES['videos'])) {
+                error_log('Upload error: $_FILES[videos] not set');
+                $this->error('Файлы не загружены. Проверьте настройки PHP (upload_max_filesize, post_max_size, max_file_uploads)', 400);
+                return;
+            }
 
-        $groupId = $this->getParam('group_id', null);
-        $groupId = $groupId ? (int)$groupId : null;
+            if (!is_array($_FILES['videos']['name'])) {
+                error_log('Upload error: $_FILES[videos][name] is not an array. Structure: ' . print_r($_FILES, true));
+                $this->error('Неверный формат загружаемых файлов', 400);
+                return;
+            }
+
+            // Проверка размера POST запроса
+            if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST) && empty($_FILES)) {
+                $postMaxSize = ini_get('post_max_size');
+                error_log('Upload error: POST data is empty. Check post_max_size: ' . $postMaxSize);
+                $this->error('Размер запроса превышает лимит. Увеличьте post_max_size в настройках PHP (текущее значение: ' . $postMaxSize . ')', 400);
+                return;
+            }
+
+            // Преобразуем массив файлов в удобный формат
+            $files = [];
+            $fileCount = count($_FILES['videos']['name']);
+            
+            error_log("Processing {$fileCount} files for upload");
+            
+            for ($i = 0; $i < $fileCount; $i++) {
+                // Пропускаем файлы с ошибкой UPLOAD_ERR_NO_FILE
+                if ($_FILES['videos']['error'][$i] === UPLOAD_ERR_NO_FILE) {
+                    continue;
+                }
+                
+                // Логируем ошибки загрузки
+                if ($_FILES['videos']['error'][$i] !== UPLOAD_ERR_OK) {
+                    $errorMsg = $this->getUploadErrorMessage($_FILES['videos']['error'][$i]);
+                    error_log("File upload error for {$_FILES['videos']['name'][$i]}: {$errorMsg} (code: {$_FILES['videos']['error'][$i]})");
+                }
+                
+                $files[] = [
+                    'name' => $_FILES['videos']['name'][$i] ?? 'unknown',
+                    'type' => $_FILES['videos']['type'][$i] ?? '',
+                    'tmp_name' => $_FILES['videos']['tmp_name'][$i] ?? '',
+                    'error' => $_FILES['videos']['error'][$i] ?? UPLOAD_ERR_NO_FILE,
+                    'size' => $_FILES['videos']['size'][$i] ?? 0,
+                ];
+            }
+
+            if (empty($files)) {
+                error_log('Upload error: No valid files after processing');
+                $this->error('Не выбрано ни одного файла для загрузки', 400);
+                return;
+            }
+
+            $groupId = $this->getParam('group_id', null);
+            $groupId = $groupId ? (int)$groupId : null;
+            
+            $titleTemplate = $this->getParam('title_template', '');
+            $description = $this->getParam('description', '');
+            $tags = $this->getParam('tags', '');
+
+            error_log("Calling uploadMultipleVideos with " . count($files) . " files");
+
+            $result = $this->videoService->uploadMultipleVideos(
+                $userId,
+                $files,
+                $groupId,
+                $titleTemplate,
+                $description,
+                $tags
+            );
+
+            // Всегда возвращаем JSON для множественной загрузки
+            if ($result['success']) {
+                $this->success($result['data'], $result['message']);
+            } else {
+                error_log('Upload failed: ' . $result['message']);
+                $this->error($result['message'], 400);
+            }
+        } catch (\Exception $e) {
+            error_log('Exception in uploadMultiple: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            $this->error('Произошла ошибка при загрузке: ' . $e->getMessage(), 500);
+        }
+    }
+    
+    /**
+     * Получить сообщение об ошибке загрузки
+     */
+    private function getUploadErrorMessage(int $errorCode): string
+    {
+        $messages = [
+            UPLOAD_ERR_INI_SIZE => 'Файл превышает upload_max_filesize',
+            UPLOAD_ERR_FORM_SIZE => 'Файл превышает MAX_FILE_SIZE',
+            UPLOAD_ERR_PARTIAL => 'Файл загружен частично',
+            UPLOAD_ERR_NO_FILE => 'Файл не загружен',
+            UPLOAD_ERR_NO_TMP_DIR => 'Отсутствует временная папка',
+            UPLOAD_ERR_CANT_WRITE => 'Не удалось записать файл на диск',
+            UPLOAD_ERR_EXTENSION => 'Загрузка остановлена расширением',
+        ];
         
-        $titleTemplate = $this->getParam('title_template', '');
-        $description = $this->getParam('description', '');
-        $tags = $this->getParam('tags', '');
-
-        $result = $this->videoService->uploadMultipleVideos(
-            $userId,
-            $files,
-            $groupId,
-            $titleTemplate,
-            $description,
-            $tags
-        );
-
-        // Всегда возвращаем JSON для множественной загрузки
-        if ($result['success']) {
-            $this->success($result['data'], $result['message']);
-        } else {
-            $this->error($result['message'], 400);
-        }
+        return $messages[$errorCode] ?? 'Неизвестная ошибка загрузки (код: ' . $errorCode . ')';
     }
 
     /**
