@@ -52,7 +52,7 @@ class ContentGroupFileRepository extends Repository
             FROM {$this->table} cgf
             JOIN videos v ON v.id = cgf.video_id
             WHERE cgf.group_id = ? 
-            AND cgf.status IN ('new', 'queued')
+            AND cgf.status IN ('new', 'queued', 'paused')
             AND v.status IN ('uploaded', 'ready')
             ORDER BY cgf.order_index ASC, cgf.created_at ASC
             LIMIT 1
@@ -60,7 +60,22 @@ class ContentGroupFileRepository extends Repository
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$groupId]);
-        return $stmt->fetch() ?: null;
+        $result = $stmt->fetch() ?: null;
+        
+        if ($result) {
+            error_log("ContentGroupFileRepository::findNextUnpublished: Found file. Group ID: {$groupId}, File ID: {$result['id']}, Video ID: {$result['video_id']}, File status: {$result['status']}, Video status: {$result['video_status'] ?? 'unknown'}");
+        } else {
+            error_log("ContentGroupFileRepository::findNextUnpublished: No unpublished file found. Group ID: {$groupId}");
+            
+            // Логируем все файлы в группе для диагностики
+            $allFiles = $this->findByGroupId($groupId);
+            error_log("ContentGroupFileRepository::findNextUnpublished: Total files in group: " . count($allFiles));
+            foreach ($allFiles as $file) {
+                error_log("ContentGroupFileRepository::findNextUnpublished: File ID: {$file['id']}, Video ID: {$file['video_id']}, File status: {$file['status']}, Video status: {$file['video_status'] ?? 'unknown'}");
+            }
+        }
+        
+        return $result;
     }
 
     /**
