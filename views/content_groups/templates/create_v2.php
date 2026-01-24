@@ -19,7 +19,7 @@ ob_start();
     <?php unset($_SESSION['success']); ?>
 <?php endif; ?>
 
-<form method="POST" action="/content-groups/templates/create" class="template-form-shorts" id="templateForm">
+<form method="POST" action="/content-groups/templates/create-shorts" class="template-form-shorts" id="templateForm">
     <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">
 
     <!-- ОСНОВНАЯ ИНФОРМАЦИЯ -->

@@ -99,6 +99,7 @@ $router->get('/content-groups/templates', [TemplateController::class, 'index'], 
 $router->get('/content-groups/templates/create', [TemplateController::class, 'showCreate'], [AuthMiddleware::class]);
 $router->get('/content-groups/templates/create-shorts', [TemplateController::class, 'showCreateShorts'], [AuthMiddleware::class]);
 $router->post('/content-groups/templates/create', [TemplateController::class, 'create'], [AuthMiddleware::class]);
+$router->post('/content-groups/templates/create-shorts', [TemplateController::class, 'createShorts'], [AuthMiddleware::class]);
 $router->get('/content-groups/templates/{id}/edit', [TemplateController::class, 'showEdit'], [AuthMiddleware::class]);
 $router->post('/content-groups/templates/{id}/update', [TemplateController::class, 'update'], [AuthMiddleware::class]);
 $router->post('/content-groups/templates/{id}/preview', [TemplateController::class, 'preview'], [AuthMiddleware::class]);

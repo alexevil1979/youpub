@@ -365,6 +365,14 @@ class TemplateController extends Controller
     }
 
     /**
+     * Создать Shorts шаблон
+     */
+    public function createShorts(): void
+    {
+        $this->create(); // Используем существующую логику создания
+    }
+
+    /**
      * Удалить шаблон
      */
     public function delete(int $id): void
