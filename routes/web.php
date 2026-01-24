@@ -51,6 +51,8 @@ $router->get('/schedules', [ScheduleController::class, 'index'], [AuthMiddleware
 $router->get('/schedules/create', [ScheduleController::class, 'showCreate'], [AuthMiddleware::class]);
 $router->post('/schedules/create', [ScheduleController::class, 'create'], [AuthMiddleware::class]);
 $router->get('/schedules/{id}', [ScheduleController::class, 'show'], [AuthMiddleware::class]);
+$router->get('/schedules/{id}/edit', [ScheduleController::class, 'showEdit'], [AuthMiddleware::class]);
+$router->post('/schedules/{id}/update', [ScheduleController::class, 'update'], [AuthMiddleware::class]);
 $router->delete('/schedules/{id}', [ScheduleController::class, 'delete'], [AuthMiddleware::class]);
 $router->post('/schedules/{id}/pause', [ScheduleController::class, 'pause'], [AuthMiddleware::class]);
 $router->post('/schedules/{id}/resume', [ScheduleController::class, 'resume'], [AuthMiddleware::class]);

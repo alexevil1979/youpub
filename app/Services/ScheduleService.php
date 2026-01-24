@@ -180,6 +180,85 @@ class ScheduleService extends Service
     }
 
     /**
+     * Обновить расписание
+     */
+    public function updateSchedule(int $id, int $userId, array $data): array
+    {
+        $schedule = $this->getSchedule($id, $userId);
+        
+        if (!$schedule) {
+            return ['success' => false, 'message' => 'Schedule not found'];
+        }
+
+        // Нельзя редактировать опубликованные или обрабатываемые расписания
+        if (in_array($schedule['status'], ['published', 'processing'])) {
+            return ['success' => false, 'message' => 'Cannot edit published or processing schedules'];
+        }
+
+        $errors = [];
+
+        // Валидация
+        if (!empty($data['video_id'])) {
+            $video = $this->videoRepo->findById($data['video_id']);
+            if (!$video || $video['user_id'] !== $userId) {
+                $errors['video_id'] = 'Video not found';
+            }
+        }
+
+        if (!empty($data['platform'])) {
+            if (!in_array($data['platform'], ['youtube', 'telegram', 'tiktok', 'instagram', 'pinterest', 'both'])) {
+                $errors['platform'] = 'Invalid platform';
+            }
+        }
+
+        if (!empty($data['publish_at'])) {
+            $publishAt = strtotime($data['publish_at']);
+            if ($publishAt === false) {
+                $errors['publish_at'] = 'Invalid publish date';
+            }
+        }
+
+        if (!empty($errors)) {
+            return ['success' => false, 'message' => 'Validation failed', 'errors' => $errors];
+        }
+
+        // Подготавливаем данные для обновления
+        $updateData = [];
+        
+        if (isset($data['video_id'])) {
+            $updateData['video_id'] = $data['video_id'];
+        }
+        
+        if (isset($data['platform'])) {
+            $updateData['platform'] = $data['platform'];
+        }
+        
+        if (isset($data['publish_at'])) {
+            $updateData['publish_at'] = date('Y-m-d H:i:s', strtotime($data['publish_at']));
+        }
+        
+        if (isset($data['timezone'])) {
+            $updateData['timezone'] = $data['timezone'];
+        }
+        
+        if (isset($data['repeat_type'])) {
+            $updateData['repeat_type'] = $data['repeat_type'];
+        }
+        
+        if (isset($data['repeat_until'])) {
+            $updateData['repeat_until'] = !empty($data['repeat_until']) ? date('Y-m-d H:i:s', strtotime($data['repeat_until'])) : null;
+        }
+
+        $this->scheduleRepo->update($id, $updateData);
+
+        return [
+            'success' => true,
+            'message' => 'Schedule updated successfully',
+            'data' => ['id' => $id]
+        ];
+    }
+
+    /**
      * Удалить расписание
      */
     public function deleteSchedule(int $id, int $userId): array

@@ -124,6 +124,92 @@ class ScheduleController extends Controller
     }
 
     /**
+     * Показать форму редактирования расписания
+     */
+    public function showEdit($id): void
+    {
+        try {
+            $id = (int)$id;
+            if ($id <= 0) {
+                http_response_code(404);
+                echo 'Schedule not found';
+                return;
+            }
+            
+            $userId = $_SESSION['user_id'] ?? null;
+            if (!$userId) {
+                header('Location: /login');
+                exit;
+            }
+            
+            $schedule = $this->scheduleService->getSchedule($id, $userId);
+
+            if (!$schedule) {
+                http_response_code(404);
+                echo 'Schedule not found';
+                return;
+            }
+
+            $videos = (new \App\Repositories\VideoRepository())->findByUserId($userId);
+            $csrfToken = (new \Core\Auth())->generateCsrfToken();
+            
+            include __DIR__ . '/../../views/schedules/edit.php';
+        } catch (\Exception $e) {
+            error_log("ScheduleController::showEdit: Error - " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+            http_response_code(500);
+            echo 'Internal Server Error';
+        }
+    }
+
+    /**
+     * Обновить расписание
+     */
+    public function update($id): void
+    {
+        try {
+            $id = (int)$id;
+            if ($id <= 0) {
+                $this->error('Invalid schedule ID', 400);
+                return;
+            }
+            
+            $userId = $_SESSION['user_id'] ?? null;
+            if (!$userId) {
+                $this->error('Unauthorized', 401);
+                return;
+            }
+            
+            $data = $this->getRequestData();
+            
+            if (empty($data)) {
+                $data = [
+                    'video_id' => $this->getParam('video_id'),
+                    'platform' => $this->getParam('platform'),
+                    'publish_at' => $this->getParam('publish_at'),
+                    'timezone' => $this->getParam('timezone', 'UTC'),
+                    'repeat_type' => $this->getParam('repeat_type', 'once'),
+                    'repeat_until' => $this->getParam('repeat_until'),
+                ];
+            }
+
+            $result = $this->scheduleService->updateSchedule($id, $userId, $data);
+
+            if ($result['success']) {
+                if (strpos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false) {
+                    $this->success($result['data'], $result['message']);
+                } else {
+                    header('Location: /schedules/' . $id);
+                }
+            } else {
+                $this->error($result['message'], 400, $result['errors'] ?? []);
+            }
+        } catch (\Exception $e) {
+            error_log("ScheduleController::update: Error - " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+            $this->error('Internal Server Error', 500);
+        }
+    }
+
+    /**
      * Удалить расписание
      */
     public function delete(int $id): void
