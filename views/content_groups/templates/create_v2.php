@@ -651,16 +651,42 @@ function toggleAutoGeneration() {
         }
 
         const checked = useAutoGen.checked;
-        console.log('📋 Auto generation:', checked);
+        console.log('📋 Auto generation checked:', checked);
+        console.log('📋 Current displays before change:', {
+            manualFields: manualFields.style.display,
+            ideaField: ideaField.style.display
+        });
 
         if (checked) {
             manualFields.style.display = 'none';
             ideaField.style.display = 'block';
+            ideaField.style.opacity = '1';
+            ideaField.style.visibility = 'visible';
             console.log('✅ Switched to auto-generation mode');
+            console.log('📋 New displays:', {
+                manualFields: manualFields.style.display,
+                ideaField: ideaField.style.display,
+                ideaFieldOpacity: ideaField.style.opacity,
+                ideaFieldVisibility: ideaField.style.visibility
+            });
+            // Добавим визуальную индикацию
+            ideaField.style.border = '2px solid #007bff';
+            setTimeout(() => { ideaField.style.border = ''; }, 1000);
         } else {
             manualFields.style.display = 'block';
+            manualFields.style.opacity = '1';
+            manualFields.style.visibility = 'visible';
             ideaField.style.display = 'none';
             console.log('✅ Switched to manual mode');
+            console.log('📋 New displays:', {
+                manualFields: manualFields.style.display,
+                ideaField: ideaField.style.display,
+                manualFieldsOpacity: manualFields.style.opacity,
+                manualFieldsVisibility: manualFields.style.visibility
+            });
+            // Добавим визуальную индикацию
+            manualFields.style.border = '2px solid #28a745';
+            setTimeout(() => { manualFields.style.border = ''; }, 1000);
         }
     } catch (error) {
         console.error('💥 Error in toggleAutoGeneration:', error);
@@ -670,11 +696,33 @@ function toggleAutoGeneration() {
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Page loaded, initializing toggleAutoGeneration');
+    console.log('📋 Current URL:', window.location.href);
+
     const checkbox = document.getElementById('use_auto_generation');
+    const manualFields = document.getElementById('manual_fields');
+    const ideaField = document.getElementById('idea_field');
+
+    console.log('🔍 Elements found:', {
+        checkbox: !!checkbox,
+        manualFields: !!manualFields,
+        ideaField: !!ideaField
+    });
+
     if (checkbox) {
         // Добавляем обработчик события
         checkbox.addEventListener('change', function() {
+            console.log('📝 Checkbox changed, checked:', checkbox.checked, 'calling toggleAutoGeneration');
             toggleAutoGeneration();
+        });
+
+        // Также добавим обработчик клика для надежности
+        checkbox.addEventListener('click', function() {
+            console.log('🖱️ Checkbox clicked, checked:', checkbox.checked);
+            // Небольшая задержка чтобы дать браузеру обновить состояние
+            setTimeout(() => {
+                console.log('🖱️ After timeout, checked:', checkbox.checked);
+                toggleAutoGeneration();
+            }, 10);
         });
         // Вызываем функцию один раз при загрузке для корректного начального состояния
         toggleAutoGeneration();
