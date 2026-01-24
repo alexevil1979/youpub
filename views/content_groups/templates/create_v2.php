@@ -814,6 +814,15 @@ function fillFormWithSuggestion(data) {
     console.log(`📝 Уникальных описаний: ${content.unique_descriptions || 1}`);
     console.log(`🏷️ Уникальных тегов: ${content.unique_tags || 1}`);
 
+    // Используем асинхронную обработку для предотвращения зависания
+    setTimeout(() => fillFormStep1(data), 10);
+}
+
+function fillFormStep1(data) {
+    try {
+        console.log('🔄 Шаг 1: Заполняем основные поля');
+        const content = data.content;
+
     try {
         // Заполняем основные поля с проверками
     // Название шаблона (первое поле title_variants)
@@ -856,7 +865,7 @@ function fillFormWithSuggestion(data) {
     if (content.title_variants && Array.isArray(content.title_variants)) {
         const titleContainer = document.getElementById('titleVariants');
         const titleInputs = document.querySelectorAll('[name="title_variants[]"]');
-        const maxTitles = Math.min(content.title_variants.length, 20); // Ограничиваем до 20
+        const maxTitles = Math.min(content.title_variants.length, 5); // Ограничиваем до 5 для производительности
 
         // Добавляем недостающие поля (без показа сообщений)
         while (titleInputs.length < maxTitles) {
@@ -949,7 +958,7 @@ function fillFormWithSuggestion(data) {
     // Закрепленные комментарии - добавляем поля динамически если нужно (максимум 10)
     if (content.pinned_comments && Array.isArray(content.pinned_comments)) {
         const pinnedInputs = document.querySelectorAll('[name="pinned_comments[]"]');
-        const maxComments = Math.min(content.pinned_comments.length, 10); // Ограничиваем до 10
+        const maxComments = Math.min(content.pinned_comments.length, 3); // Ограничиваем до 3 для производительности
 
         // Добавляем недостающие поля
         while (pinnedInputs.length < maxComments) {
