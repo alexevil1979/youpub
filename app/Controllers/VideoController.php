@@ -48,6 +48,11 @@ class VideoController extends Controller
         }
         
         include __DIR__ . '/../../views/videos/index.php';
+        } catch (\Throwable $e) {
+            error_log("VideoController::index error: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+            http_response_code(500);
+            echo "Ошибка при загрузке страницы. Пожалуйста, попробуйте позже.";
+        }
     }
 
     /**
