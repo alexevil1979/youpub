@@ -935,13 +935,13 @@ function fillFormWithSuggestion(data) {
             }
         }
 
-        // Варианты названий (до 5)
+        // Варианты названий (до 25)
         if (content.title_variants && Array.isArray(content.title_variants)) {
             let titleInputs = document.querySelectorAll('[name="title_variants[]"]');
-            const maxTitles = Math.min(content.title_variants.length, 5);
+            const maxTitles = Math.min(content.title_variants.length, 25);
 
             let attempts = 0;
-            while (titleInputs.length < maxTitles && attempts < 10) {
+            while (titleInputs.length < maxTitles && attempts < 30) {
                 addVariant('titleVariants',
                     '<input type="text" name="title_variants[]" placeholder="Новый вариант названия" required>' +
                     '<button type="button" class="btn btn-sm btn-danger remove-variant" onclick="removeVariant(this)">❌</button>',
@@ -961,19 +961,19 @@ function fillFormWithSuggestion(data) {
             }
         }
 
-        // Варианты описаний (до 5)
+        // Варианты описаний (до 25)
         if (content.description_variants) {
             let totalVariants = 0;
             Object.entries(content.description_variants).forEach(([type, variants]) => {
                 if (Array.isArray(variants)) {
-                    totalVariants += Math.min(variants.length, 1);
+                    totalVariants += variants.length;
                 }
             });
-            totalVariants = Math.min(totalVariants, 5);
+            totalVariants = Math.min(totalVariants, 25);
 
             let descInputs = document.querySelectorAll('[name="description_texts[]"]');
             let descAttempts = 0;
-            while (descInputs.length < totalVariants && descAttempts < 10) {
+            while (descInputs.length < totalVariants && descAttempts < 30) {
                 addVariant('descriptionVariants',
                     '<select name="description_types[]" class="description-type" required>' +
                         '<option value="">Тип триггера</option>' +
@@ -997,9 +997,8 @@ function fillFormWithSuggestion(data) {
 
             Object.entries(content.description_variants).forEach(([type, variants]) => {
                 if (Array.isArray(variants)) {
-                    const limitedVariants = variants.slice(0, 1);
-                    limitedVariants.forEach(variant => {
-                        if (descIndex < updatedDescTypes.length && descIndex < updatedDescTexts.length) {
+                    variants.forEach(variant => {
+                        if (descIndex < totalVariants && descIndex < updatedDescTypes.length && descIndex < updatedDescTexts.length) {
                             if (updatedDescTypes[descIndex]) updatedDescTypes[descIndex].value = type;
                             if (updatedDescTexts[descIndex]) updatedDescTexts[descIndex].value = variant;
                             console.log(`✅ Заполнен вариант описания ${descIndex + 1} (${type}):`, variant);
@@ -1034,10 +1033,10 @@ function fillFormWithSuggestion(data) {
 
         if (content.pinned_comments && Array.isArray(content.pinned_comments)) {
             let pinnedInputs = document.querySelectorAll('[name="pinned_comments[]"]');
-            const maxComments = Math.min(content.pinned_comments.length, 3);
+            const maxComments = Math.min(content.pinned_comments.length, 25);
 
             let pinnedAttempts = 0;
-            while (pinnedInputs.length < maxComments && pinnedAttempts < 10) {
+            while (pinnedInputs.length < maxComments && pinnedAttempts < 30) {
                 addVariant('pinnedCommentVariants',
                     '<input type="text" name="pinned_comments[]" placeholder="Новый вариант закрепленного комментария" required>' +
                     '<button type="button" class="btn btn-sm btn-danger remove-variant" onclick="removeVariant(this)">❌</button>',
