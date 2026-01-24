@@ -675,9 +675,21 @@ function generateFromIdea() {
     .then(data => {
         console.log('Received data:', data);
         if (data.success) {
+            // Показываем результат в консоли
+            console.log('🎯 Сгенерированный контент:');
+            console.log('- Название:', data.content.title);
+            console.log('- Описание:', data.content.description);
+            console.log('- Теги:', data.content.tags_template);
+            console.log('- Emoji:', data.content.emoji_list);
+            console.log('- Тип контента:', data.intent.content_type);
+            console.log('- Настроение:', data.intent.mood);
+
             // Автозаполняем поля
             fillFormWithSuggestion(data);
-            alert('✅ Контент успешно сгенерирован и заполнен в форму!');
+
+            // Показываем уведомление с кратким результатом
+            const preview = `Название: "${data.content.title}"\nОписание: "${data.content.description}"\n\nПосмотрите в консоли (F12) для полного результата!`;
+            alert('✅ Контент успешно сгенерирован!\n\n' + preview);
         } else {
             console.error('Server returned error:', data.message);
             alert('❌ Ошибка: ' + (data.message || 'Не удалось сгенерировать контент'));
@@ -743,6 +755,8 @@ function suggestContent() {
 function fillFormWithSuggestion(data) {
     console.log('Filling form with suggestion:', data);
     const content = data.content;
+
+    console.log('📝 Начинаем заполнение формы...');
 
     // Заполняем основные поля с проверками
     const titleTemplateInput = document.querySelector('[name="title_template"]');
@@ -845,7 +859,8 @@ function fillFormWithSuggestion(data) {
         descriptionInput.value = `Автоматически сгенерированный шаблон для: ${data.idea}`;
     }
 
-    console.log('Form filling completed');
+    console.log('✅ Форма успешно заполнена сгенерированным контентом!');
+    console.log('🔍 Проверьте поля формы - они должны быть заполнены автоматически.');
 }
 
 // Автоматическая валидация при изменении полей
