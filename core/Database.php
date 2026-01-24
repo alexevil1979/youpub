@@ -56,9 +56,19 @@ class Database
                 
                 // Устанавливаем часовой пояс для MySQL
                 $timezone = self::$config['TIMEZONE'] ?? 'Europe/Moscow';
-                $offset = (new \DateTimeZone($timezone))->getOffset(new \DateTime()) / 3600;
-                $offsetStr = sprintf('%+03d:00', $offset);
-                self::$instance->exec("SET time_zone = '{$offsetStr}'");
+                try {
+                    $dt = new \DateTime('now', new \DateTimeZone($timezone));
+                    $offset = $dt->getOffset();
+                    $hours = floor(abs($offset) / 3600);
+                    $minutes = (abs($offset) % 3600) / 60;
+                    $sign = $offset >= 0 ? '+' : '-';
+                    $offsetStr = sprintf('%s%02d:%02d', $sign, $hours, $minutes);
+                    self::$instance->exec("SET time_zone = '{$offsetStr}'");
+                } catch (\Exception $e) {
+                    error_log("Failed to set MySQL timezone: " . $e->getMessage());
+                    // Используем UTC по умолчанию
+                    self::$instance->exec("SET time_zone = '+00:00'");
+                }
             } catch (PDOException $e) {
                 error_log('Database connection failed: ' . $e->getMessage());
                 throw new \RuntimeException('Database connection failed');
