@@ -56,7 +56,7 @@ return [
     'WORKER_LOG_DIR' => __DIR__ . '/../storage/logs/workers',
     
     // Часовой пояс
-    'TIMEZONE' => 'Europe/Moscow', // Часовой пояс для PHP и MySQL
+    'TIMEZONE' => 'Europe/Samara', // Часовой пояс для PHP и MySQL (UTC+4)
     
     // Лимиты
     'RATE_LIMIT_REQUESTS' => 100,

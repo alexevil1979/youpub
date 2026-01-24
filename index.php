@@ -40,7 +40,7 @@ ini_set('error_log', $errorLogFile);
 $config = require __DIR__ . '/config/env.php';
 
 // Установка часового пояса
-$timezone = $config['TIMEZONE'] ?? 'Europe/Moscow';
+$timezone = $config['TIMEZONE'] ?? 'Europe/Samara';
 date_default_timezone_set($timezone);
 
 // Тестовое логирование

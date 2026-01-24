@@ -55,7 +55,7 @@ class Database
                 );
                 
                 // Устанавливаем часовой пояс для MySQL
-                $timezone = self::$config['TIMEZONE'] ?? 'Europe/Moscow';
+                $timezone = self::$config['TIMEZONE'] ?? 'Europe/Samara';
                 try {
                     $dt = new \DateTime('now', new \DateTimeZone($timezone));
                     $offset = $dt->getOffset();
