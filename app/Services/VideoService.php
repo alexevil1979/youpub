@@ -51,46 +51,11 @@ class VideoService extends Service
             return ['success' => false, 'message' => 'Invalid file type'];
         }
 
-        // Создание директории для пользователя
-        $uploadDir = $this->config['UPLOAD_DIR'] . '/' . $userId;
-        
-        // Нормализация пути (убираем относительные пути)
-        $uploadDir = realpath(dirname($uploadDir)) . '/' . basename($uploadDir);
-        
-        // Логирование для отладки
-        error_log('Video Upload: Upload dir = ' . $uploadDir);
-        error_log('Video Upload: Upload dir exists = ' . (is_dir($uploadDir) ? 'yes' : 'no'));
-        error_log('Video Upload: Base dir = ' . dirname($uploadDir));
-        error_log('Video Upload: Base dir writable = ' . (is_writable(dirname($uploadDir)) ? 'yes' : 'no'));
-        
-        // Создаем базовую директорию, если не существует
-        $baseDir = dirname($uploadDir);
-        if (!is_dir($baseDir)) {
-            $created = @mkdir($baseDir, 0755, true);
-            if (!$created) {
-                error_log('Video Upload: Failed to create base directory: ' . $baseDir);
-                $error = error_get_last();
-                error_log('Video Upload: Error: ' . ($error['message'] ?? 'Unknown error'));
-                return ['success' => false, 'message' => 'Failed to create upload directory. Please contact administrator to create: ' . $baseDir];
-            }
+        $uploadDirResult = $this->prepareUploadDirectory($userId);
+        if (!$uploadDirResult['success']) {
+            return ['success' => false, 'message' => $uploadDirResult['message']];
         }
-        
-        // Создаем директорию пользователя
-        if (!is_dir($uploadDir)) {
-            $created = @mkdir($uploadDir, 0755, true);
-            if (!$created) {
-                error_log('Video Upload: Failed to create user directory: ' . $uploadDir);
-                $error = error_get_last();
-                error_log('Video Upload: Error: ' . ($error['message'] ?? 'Unknown error'));
-                return ['success' => false, 'message' => 'Failed to create user upload directory. Please contact administrator.'];
-            }
-        }
-
-        // Проверка прав на запись
-        if (!is_writable($uploadDir)) {
-            error_log('Video Upload: Directory not writable: ' . $uploadDir);
-            return ['success' => false, 'message' => 'Upload directory is not writable. Check permissions.'];
-        }
+        $uploadDir = $uploadDirResult['path'];
 
         // Генерация уникального имени файла
         $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
@@ -427,29 +392,11 @@ class VideoService extends Service
                 return ['success' => false, 'message' => "Лимит будет превышен. Можно загрузить только {$allowed} файлов."];
             }
         
-            // Подготовка директории
-            $uploadDir = $this->config['UPLOAD_DIR'] . '/' . $userId;
-            $uploadDir = realpath(dirname($uploadDir)) . '/' . basename($uploadDir);
-            
-            $baseDir = dirname($uploadDir);
-            if (!is_dir($baseDir)) {
-                if (!@mkdir($baseDir, 0755, true)) {
-                    error_log("Failed to create base directory: {$baseDir}");
-                    return ['success' => false, 'message' => 'Не удалось создать директорию для загрузки'];
-                }
+            $uploadDirResult = $this->prepareUploadDirectory($userId);
+            if (!$uploadDirResult['success']) {
+                return ['success' => false, 'message' => $uploadDirResult['message']];
             }
-            
-            if (!is_dir($uploadDir)) {
-                if (!@mkdir($uploadDir, 0755, true)) {
-                    error_log("Failed to create upload directory: {$uploadDir}");
-                    return ['success' => false, 'message' => 'Не удалось создать директорию для загрузки'];
-                }
-            }
-            
-            if (!is_writable($uploadDir)) {
-                error_log("Upload directory is not writable: {$uploadDir}");
-                return ['success' => false, 'message' => 'Директория для загрузки недоступна для записи'];
-            }
+            $uploadDir = $uploadDirResult['path'];
         
             // Обработка каждого файла
             foreach ($files as $index => $file) {
@@ -619,6 +566,60 @@ class VideoService extends Service
         ];
         
         return $messages[$errorCode] ?? 'Unknown upload error';
+    }
+
+    /**
+     * Подготовить директорию загрузки для пользователя
+     */
+    private function prepareUploadDirectory(int $userId): array
+    {
+        $baseDir = rtrim($this->config['UPLOAD_DIR'] ?? '', '/\\');
+        if ($baseDir === '') {
+            return [
+                'success' => false,
+                'message' => 'UPLOAD_DIR не настроен. Укажите директорию для загрузки.'
+            ];
+        }
+
+        $resolvedBase = is_dir($baseDir) ? (realpath($baseDir) ?: $baseDir) : $baseDir;
+        $uploadDir = $resolvedBase . '/' . $userId;
+
+        error_log('Video Upload: Upload dir = ' . $uploadDir);
+        error_log('Video Upload: Base dir = ' . $resolvedBase);
+
+        if (!is_dir($resolvedBase)) {
+            if (!@mkdir($resolvedBase, 0755, true)) {
+                $error = error_get_last();
+                error_log('Video Upload: Failed to create base directory: ' . $resolvedBase);
+                error_log('Video Upload: Error: ' . ($error['message'] ?? 'Unknown error'));
+                return [
+                    'success' => false,
+                    'message' => 'Не удалось создать директорию для загрузки: ' . $resolvedBase
+                ];
+            }
+        }
+
+        if (!is_dir($uploadDir)) {
+            if (!@mkdir($uploadDir, 0755, true)) {
+                $error = error_get_last();
+                error_log('Video Upload: Failed to create user directory: ' . $uploadDir);
+                error_log('Video Upload: Error: ' . ($error['message'] ?? 'Unknown error'));
+                return [
+                    'success' => false,
+                    'message' => 'Не удалось создать директорию пользователя для загрузки'
+                ];
+            }
+        }
+
+        if (!is_writable($uploadDir)) {
+            error_log('Video Upload: Directory not writable: ' . $uploadDir);
+            return [
+                'success' => false,
+                'message' => 'Директория для загрузки недоступна для записи: ' . $uploadDir
+            ];
+        }
+
+        return ['success' => true, 'path' => $uploadDir];
     }
 
     /**
