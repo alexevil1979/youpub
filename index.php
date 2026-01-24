@@ -36,46 +36,79 @@ if (posix_geteuid() === 0 && file_exists($errorLogFile)) {
 
 ini_set('error_log', $errorLogFile);
 
+// Функция для логирования с прямой записью в файл
+function writeLog($message) {
+    global $errorLogFile;
+    $timestamp = date('Y-m-d H:i:s');
+    $logMessage = "[{$timestamp}] {$message}\n";
+    @file_put_contents($errorLogFile, $logMessage, FILE_APPEND | LOCK_EX);
+    @error_log($message);
+}
+
+writeLog("=== Application starting ===");
+writeLog("Request URI: " . ($_SERVER['REQUEST_URI'] ?? 'unknown'));
+writeLog("Request Method: " . ($_SERVER['REQUEST_METHOD'] ?? 'unknown'));
+
 // Включить буферизацию вывода
 ob_start();
 
-require_once __DIR__ . '/vendor/autoload.php';
-
-use Core\Database;
-use Core\Router;
-use Core\Auth;
-
 try {
+    writeLog("Loading autoloader...");
+    require_once __DIR__ . '/vendor/autoload.php';
+    writeLog("Autoloader loaded");
+
+    use Core\Database;
+    use Core\Router;
+    use Core\Auth;
+
     // Загрузка конфигурации
+    writeLog("Loading config...");
     $config = require __DIR__ . '/config/env.php';
+    writeLog("Config loaded");
 
     // Установка часового пояса
     $timezone = $config['TIMEZONE'] ?? 'Europe/Samara';
+    writeLog("Setting timezone to: {$timezone}");
     date_default_timezone_set($timezone);
-
-    // Тестовое логирование
-    error_log("=== Application started at " . date('Y-m-d H:i:s') . " (timezone: {$timezone}) ===");
+    writeLog("Timezone set");
 
     // Инициализация БД
+    writeLog("Initializing database...");
     Database::init($config);
+    writeLog("Database initialized");
 
     // Инициализация сессий
+    writeLog("Creating Auth instance...");
     $auth = new Auth();
+    writeLog("Auth instance created");
+    
+    writeLog("Starting session...");
     $auth->startSession();
+    writeLog("Session started");
 
     // Создание роутера
+    writeLog("Creating router...");
     $router = new Router();
+    writeLog("Router created");
 
     // Загрузка маршрутов
+    writeLog("Loading routes...");
     require __DIR__ . '/routes/web.php';
+    writeLog("Web routes loaded");
+    
     require __DIR__ . '/routes/api.php';
+    writeLog("API routes loaded");
+    
     require __DIR__ . '/routes/admin.php';
+    writeLog("Admin routes loaded");
 
     // Обработка запроса
     $method = $_SERVER['REQUEST_METHOD'];
     $uri = $_SERVER['REQUEST_URI'];
-
+    writeLog("Dispatching request: {$method} {$uri}");
+    
     $router->dispatch($method, $uri);
+    writeLog("Request dispatched successfully");
     
 } catch (\Throwable $e) {
     // Очистить буфер при ошибке
@@ -83,16 +116,28 @@ try {
         ob_end_clean();
     }
     
-    // Логирование ошибки
-    error_log('Fatal error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
-    error_log('Stack trace: ' . $e->getTraceAsString());
+    // Логирование ошибки с прямой записью в файл
+    $errorMessage = 'Fatal error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine();
+    $stackTrace = 'Stack trace: ' . $e->getTraceAsString();
+    
+    writeLog($errorMessage);
+    writeLog($stackTrace);
+    
+    // Также логируем через error_log
+    error_log($errorMessage);
+    error_log($stackTrace);
     
     // Вывод ошибки (в production лучше показывать общее сообщение)
     http_response_code(500);
     $debug = false;
-    if (file_exists(__DIR__ . '/config/env.php')) {
-        $config = require __DIR__ . '/config/env.php';
-        $debug = $config['APP_DEBUG'] ?? false;
+    try {
+        if (file_exists(__DIR__ . '/config/env.php')) {
+            $config = require __DIR__ . '/config/env.php';
+            $debug = $config['APP_DEBUG'] ?? false;
+        }
+    } catch (\Throwable $configError) {
+        writeLog("Failed to load config for debug: " . $configError->getMessage());
+        $debug = false;
     }
     
     // Проверяем, это AJAX запрос или обычный?
