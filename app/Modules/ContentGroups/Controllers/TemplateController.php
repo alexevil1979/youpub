@@ -193,8 +193,23 @@ class TemplateController extends Controller
                 ];
                 $baseTags = $this->getParam('base_tags', '');
                 $tagVariants = $this->getParam('tag_variants', []);
-                $questions = array_filter(explode("\n", $this->getParam('questions', '')));
-                $pinnedComments = array_filter(explode("\n", $this->getParam('pinned_comments', '')));
+                $questionsRaw = $this->getParam('questions', []);
+                if (is_string($questionsRaw)) {
+                    $questions = array_filter(array_map('trim', explode("\n", $questionsRaw)));
+                } elseif (is_array($questionsRaw)) {
+                    $questions = array_filter(array_map('trim', $questionsRaw));
+                } else {
+                    $questions = [];
+                }
+
+                $pinnedRaw = $this->getParam('pinned_comments', []);
+                if (is_string($pinnedRaw)) {
+                    $pinnedComments = array_filter(array_map('trim', explode("\n", $pinnedRaw)));
+                } elseif (is_array($pinnedRaw)) {
+                    $pinnedComments = array_filter(array_map('trim', $pinnedRaw));
+                } else {
+                    $pinnedComments = [];
+                }
                 $focusPoints = $this->getParam('focus_points', []);
                 $hookType = $this->getParam('hook_type', 'emotional');
             }
@@ -239,8 +254,8 @@ class TemplateController extends Controller
                 'emoji_groups' => !empty($emojiGroups) ? $emojiGroups : null,
                 'base_tags' => $this->getParam('base_tags', ''),
                 'tag_variants' => $this->getParam('tag_variants', []),
-                'questions' => $this->getParam('questions', []),
-                'pinned_comments' => $this->getParam('pinned_comments', []),
+                'questions' => $questions,
+                'pinned_comments' => $pinnedComments,
                 'cta_types' => $this->getParam('cta_types', []),
                 'enable_ab_testing' => $this->getParam('enable_ab_testing', '1') === '1',
                 'is_active' => $this->getParam('is_active', '1') === '1',
@@ -373,6 +388,24 @@ class TemplateController extends Controller
                 $variants['description'][] = $this->getParam('variant_3');
             }
 
+            $questionsRaw = $this->getParam('questions', []);
+            if (is_string($questionsRaw)) {
+                $questions = array_filter(array_map('trim', explode("\n", $questionsRaw)));
+            } elseif (is_array($questionsRaw)) {
+                $questions = array_filter(array_map('trim', $questionsRaw));
+            } else {
+                $questions = [];
+            }
+
+            $pinnedRaw = $this->getParam('pinned_comments', []);
+            if (is_string($pinnedRaw)) {
+                $pinnedComments = array_filter(array_map('trim', explode("\n", $pinnedRaw)));
+            } elseif (is_array($pinnedRaw)) {
+                $pinnedComments = array_filter(array_map('trim', $pinnedRaw));
+            } else {
+                $pinnedComments = [];
+            }
+
             $data = [
                 'name' => $this->getParam('name', ''),
                 'description' => $this->getParam('description', ''),
@@ -390,8 +423,8 @@ class TemplateController extends Controller
                 'emoji_groups' => !empty($emojiGroups) ? $emojiGroups : null,
                 'base_tags' => $this->getParam('base_tags', ''),
                 'tag_variants' => $this->getParam('tag_variants', []),
-                'questions' => $this->getParam('questions', []),
-                'pinned_comments' => $this->getParam('pinned_comments', []),
+                'questions' => $questions,
+                'pinned_comments' => $pinnedComments,
                 'cta_types' => $this->getParam('cta_types', []),
                 'enable_ab_testing' => $this->getParam('enable_ab_testing', '1') === '1',
                 'is_active' => $this->getParam('is_active', '1') === '1',
