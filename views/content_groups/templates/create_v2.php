@@ -726,33 +726,72 @@ function suggestContent() {
     button.disabled = true;
 
     // Отправляем запрос
+    console.log('🚀 Начинаем отправку запроса...');
+    const csrfToken = document.querySelector('[name="csrf_token"]');
+    if (!csrfToken) {
+        alert('❌ Ошибка: CSRF токен не найден');
+        button.innerHTML = originalText;
+        button.disabled = false;
+        return;
+    }
+
+    // Создаем AbortController для возможности отмены запроса
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+        controller.abort();
+        console.warn('⏰ Запрос отменен по таймауту (30 сек)');
+    }, 30000);
+
     fetch('/content-groups/templates/suggest-content', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
             'X-Requested-With': 'XMLHttpRequest'
         },
-        body: 'idea=' + encodeURIComponent(idea.trim()) + '&csrf_token=' + document.querySelector('[name="csrf_token"]').value
+        body: 'idea=' + encodeURIComponent(idea.trim()) + '&csrf_token=' + csrfToken.value,
+        signal: controller.signal
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('📡 Получен ответ сервера:', response.status, response.statusText);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
     .then(data => {
+        console.log('📦 Разобран JSON ответ:', data);
         if (data.success) {
-            // Автозаполняем поля
-            fillFormWithSuggestion(data);
-            const variantsCount = data.content.generated_variants || data.variants_count || 1;
-            const titlesCount = data.content.title_variants ? data.content.title_variants.length : 0;
-            const descriptionsCount = data.content.unique_descriptions || 0;
-            const commentsCount = data.content.pinned_comments ? data.content.pinned_comments.length : 0;
-            alert(`✅ Контент успешно сгенерирован и заполнен в форму!\n🎯 Сгенерировано ${variantsCount} вариантов контента\n📝 Заголовков: ${titlesCount}, Описаний: ${descriptionsCount}, Комментариев: ${commentsCount}`);
+            console.log('🎯 Начинаем заполнение формы...');
+            try {
+                // Автозаполняем поля
+                fillFormWithSuggestion(data);
+                console.log('✅ Форма успешно заполнена');
+                const variantsCount = data.content.generated_variants || data.variants_count || 1;
+                const titlesCount = data.content.title_variants ? data.content.title_variants.length : 0;
+                const descriptionsCount = data.content.unique_descriptions || 0;
+                const commentsCount = data.content.pinned_comments ? data.content.pinned_comments.length : 0;
+                alert(`✅ Контент успешно сгенерирован и заполнен в форму!\n🎯 Сгенерировано ${variantsCount} вариантов контента\n📝 Заголовков: ${titlesCount}, Описаний: ${descriptionsCount}, Комментариев: ${commentsCount}`);
+            } catch (fillError) {
+                console.error('💥 Ошибка при заполнении формы:', fillError);
+                alert('❌ Контент сгенерирован, но произошла ошибка при заполнении формы: ' + fillError.message);
+            }
         } else {
+            console.error('❌ Сервер вернул ошибку:', data);
             alert('❌ Ошибка: ' + (data.message || 'Не удалось сгенерировать контент'));
         }
     })
     .catch(error => {
-        console.error('Error:', error);
-        alert('❌ Произошла ошибка при генерации контента');
+        clearTimeout(timeoutId);
+        console.error('💥 Ошибка в процессе генерации:', error);
+
+        if (error.name === 'AbortError') {
+            alert('⏰ Время ожидания истекло (30 сек). Попробуйте еще раз.');
+        } else {
+            alert('❌ Произошла ошибка при генерации контента: ' + error.message);
+        }
     })
     .finally(() => {
+        clearTimeout(timeoutId);
         // Восстанавливаем кнопку
         button.innerHTML = originalText;
         button.disabled = false;
@@ -761,8 +800,13 @@ function suggestContent() {
 
 // Функция для автозаполнения формы предложенными данными
 function fillFormWithSuggestion(data) {
-    console.log('Filling form with suggestion:', data);
+    console.log('🎬 fillFormWithSuggestion: Начинаем работу');
+    console.log('📦 Полученные данные:', data);
+
     const content = data.content;
+    if (!content) {
+        throw new Error('Данные content отсутствуют в ответе');
+    }
 
     console.log('📝 Начинаем заполнение формы...');
     console.log(`🎯 Всего сгенерировано вариантов: ${data.variants_count || content.generated_variants || 1}`);
@@ -770,7 +814,8 @@ function fillFormWithSuggestion(data) {
     console.log(`📝 Уникальных описаний: ${content.unique_descriptions || 1}`);
     console.log(`🏷️ Уникальных тегов: ${content.unique_tags || 1}`);
 
-    // Заполняем основные поля с проверками
+    try {
+        // Заполняем основные поля с проверками
     // Название шаблона (первое поле title_variants)
     const titleVariants = document.querySelectorAll('[name="title_variants[]"]');
     if (titleVariants.length > 0 && content.title_template) {
@@ -930,20 +975,28 @@ function fillFormWithSuggestion(data) {
         focusPointsInput.value = JSON.stringify(content.focus_points);
     }
 
-    // Обновляем название шаблона
-    const nameInput = document.querySelector('[name="name"]');
-    if (nameInput && data.idea) {
-        nameInput.value = `Auto: ${data.idea}`;
-    }
+        // Обновляем название шаблона
+        const nameInput = document.querySelector('[name="name"]');
+        if (nameInput && data.idea) {
+            nameInput.value = `Auto: ${data.idea}`;
+            console.log('✅ Обновлено название шаблона');
+        }
 
-    // Обновляем описание
-    const descriptionInput = document.querySelector('[name="description"]');
-    if (descriptionInput && data.idea) {
-        descriptionInput.value = `Автоматически сгенерированный шаблон для: ${data.idea}`;
-    }
+        // Обновляем описание
+        const descriptionInput = document.querySelector('[name="description"]');
+        if (descriptionInput && data.idea) {
+            descriptionInput.value = `Автоматически сгенерированный шаблон для: ${data.idea}`;
+            console.log('✅ Обновлено описание шаблона');
+        }
 
-    console.log('✅ Форма успешно заполнена сгенерированным контентом!');
-    console.log('🔍 Проверьте поля формы - они должны быть заполнены автоматически.');
+        console.log('✅ Форма успешно заполнена сгенерированным контентом!');
+        console.log('🔍 Проверьте поля формы - они должны быть заполнены автоматически.');
+
+    } catch (error) {
+        console.error('💥 Критическая ошибка в fillFormWithSuggestion:', error);
+        console.error('Stack trace:', error.stack);
+        throw error; // Передаем ошибку выше для обработки в suggestContent
+    }
 }
 
 // Автоматическая валидация при изменении полей
