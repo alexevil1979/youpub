@@ -141,7 +141,7 @@ class ScheduleService extends Service
             $scheduleId = $this->scheduleRepo->create([
                 'user_id' => $userId,
                 'video_id' => $data['video_id'],
-                'platform' => $data['platform'],
+                'platform' => strtolower($data['platform']),
                 'publish_at' => date('Y-m-d H:i:s', strtotime($data['publish_at'])),
                 'timezone' => $data['timezone'] ?? 'UTC',
                 'repeat_type' => $data['repeat_type'] ?? 'once',
@@ -230,7 +230,7 @@ class ScheduleService extends Service
         }
         
         if (isset($data['platform'])) {
-            $updateData['platform'] = $data['platform'];
+            $updateData['platform'] = strtolower($data['platform']);
         }
         
         if (isset($data['publish_at'])) {
@@ -406,6 +406,79 @@ class ScheduleService extends Service
             'message' => 'Schedule duplicated successfully',
             'data' => ['id' => $newScheduleId]
         ];
+    }
+
+    /**
+     * Опубликовать расписание сейчас (ручной запуск)
+     */
+    public function publishScheduleNow(int $id, int $userId): array
+    {
+        $schedule = $this->getSchedule($id, $userId);
+
+        if (!$schedule) {
+            return ['success' => false, 'message' => 'Schedule not found'];
+        }
+
+        if (!empty($schedule['content_group_id'])) {
+            return ['success' => false, 'message' => 'Group schedules must be published by smart worker'];
+        }
+
+        if (($schedule['status'] ?? '') === 'processing') {
+            return ['success' => false, 'message' => 'Schedule is already processing'];
+        }
+
+        $platform = strtolower($schedule['platform'] ?? '');
+        if ($platform === '') {
+            return ['success' => false, 'message' => 'Platform is not set'];
+        }
+
+        try {
+            switch ($platform) {
+                case 'youtube':
+                    $service = new \App\Services\YoutubeService();
+                    $result = $service->publishVideo($id);
+                    break;
+                case 'telegram':
+                    $service = new \App\Services\TelegramService();
+                    $result = $service->publishVideo($id);
+                    break;
+                case 'tiktok':
+                    $service = new \App\Services\TiktokService();
+                    $result = $service->publishVideo($id);
+                    break;
+                case 'instagram':
+                    $service = new \App\Services\InstagramService();
+                    $result = $service->publishReel($id);
+                    break;
+                case 'pinterest':
+                    $service = new \App\Services\PinterestService();
+                    $result = $service->publishPin($id);
+                    break;
+                case 'both':
+                    $youtubeService = new \App\Services\YoutubeService();
+                    $telegramService = new \App\Services\TelegramService();
+                    $youtubeResult = $youtubeService->publishVideo($id);
+                    $telegramResult = $telegramService->publishVideo($id);
+                    $result = [
+                        'success' => ($youtubeResult['success'] ?? false) && ($telegramResult['success'] ?? false),
+                        'message' => 'Published on both platforms',
+                        'data' => [
+                            'youtube' => $youtubeResult,
+                            'telegram' => $telegramResult
+                        ]
+                    ];
+                    if (!$result['success']) {
+                        $result['message'] = 'Failed to publish on one or more platforms';
+                    }
+                    break;
+                default:
+                    return ['success' => false, 'message' => 'Unsupported platform'];
+            }
+        } catch (\Exception $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+
+        return $result ?? ['success' => false, 'message' => 'Publish failed'];
     }
 
     /**

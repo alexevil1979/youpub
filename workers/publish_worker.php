@@ -57,19 +57,20 @@ try {
             logMessage("Processing schedule ID: {$schedule['id']}, Platform: {$schedule['platform']}", $logFile);
 
             $result = null;
+            $platform = strtolower(trim($schedule['platform'] ?? ''));
 
             // Публикация в зависимости от платформы
-            if ($schedule['platform'] === 'youtube') {
+            if ($platform === 'youtube') {
                 $result = $youtubeService->publishVideo($schedule['id']);
-            } elseif ($schedule['platform'] === 'telegram') {
+            } elseif ($platform === 'telegram') {
                 $result = $telegramService->publishVideo($schedule['id']);
-            } elseif ($schedule['platform'] === 'tiktok') {
+            } elseif ($platform === 'tiktok') {
                 $result = $tiktokService->publishVideo($schedule['id']);
-            } elseif ($schedule['platform'] === 'instagram') {
+            } elseif ($platform === 'instagram') {
                 $result = $instagramService->publishReel($schedule['id']);
-            } elseif ($schedule['platform'] === 'pinterest') {
+            } elseif ($platform === 'pinterest') {
                 $result = $pinterestService->publishPin($schedule['id']);
-            } elseif ($schedule['platform'] === 'both') {
+            } elseif ($platform === 'both') {
                 // Публикация на обе платформы (YouTube и Telegram)
                 $youtubeResult = $youtubeService->publishVideo($schedule['id']);
                 $telegramResult = $telegramService->publishVideo($schedule['id']);
@@ -78,6 +79,13 @@ try {
                     'success' => $youtubeResult['success'] && $telegramResult['success'],
                     'message' => 'Published on both platforms',
                 ];
+            } else {
+                $scheduleRepo->update($schedule['id'], [
+                    'status' => 'failed',
+                    'error_message' => 'Unsupported platform: ' . ($schedule['platform'] ?? 'empty')
+                ]);
+                logMessage("Schedule ID {$schedule['id']} failed: unsupported platform " . ($schedule['platform'] ?? 'empty'), $logFile);
+                continue;
             }
 
             if ($result && $result['success']) {
