@@ -436,12 +436,14 @@ document.getElementById('templateForm').addEventListener('submit', function(e) {
 });
 
 // Функции для динамического добавления вариантов
-function addVariant(containerId, template, minItems = 1) {
+function addVariant(containerId, template, minItems = 1, silent = false) {
     const container = document.getElementById(containerId);
     const items = container.querySelectorAll('.variant-item');
 
-    if (items.length >= 25) { // Максимум 25 вариантов для автогенерации
-        alert('Максимум 25 вариантов');
+    if (items.length >= 25) { // Максимум 25 вариантов
+        if (!silent) {
+            alert('Максимум 25 вариантов');
+        }
         return;
     }
 
@@ -807,13 +809,16 @@ function fillFormWithSuggestion(data) {
 
     // Варианты названий - добавляем поля динамически если нужно (максимум 20)
     if (content.title_variants && Array.isArray(content.title_variants)) {
-        const titleContainer = document.getElementById('titleVariantsContainer');
+        const titleContainer = document.getElementById('titleVariants');
         const titleInputs = document.querySelectorAll('[name="title_variants[]"]');
         const maxTitles = Math.min(content.title_variants.length, 20); // Ограничиваем до 20
 
-        // Добавляем недостающие поля
+        // Добавляем недостающие поля (без показа сообщений)
         while (titleInputs.length < maxTitles) {
-            document.getElementById('addTitleVariant').click();
+            addVariant('titleVariants',
+                '<input type="text" name="title_variants[]" placeholder="Новый вариант названия" required>' +
+                '<button type="button" class="btn btn-sm btn-danger remove-variant" onclick="removeVariant(this)">❌</button>',
+                1, true);
         }
 
         // Заполняем значения
@@ -840,7 +845,18 @@ function fillFormWithSuggestion(data) {
         // Добавляем недостающие поля описаний
         const descInputs = document.querySelectorAll('[name="description_texts[]"]');
         while (descInputs.length < totalVariants) {
-            document.getElementById('addDescriptionVariant').click();
+            addVariant('descriptionVariants',
+                '<select name="description_types[]" class="description-type" required>' +
+                    '<option value="">Тип триггера</option>' +
+                    '<option value="emotional">😱 Эмоция</option>' +
+                    '<option value="intrigue">🤔 Интрига</option>' +
+                    '<option value="atmosphere">🌙 Атмосфера</option>' +
+                    '<option value="question">❓ Вопрос</option>' +
+                    '<option value="cta">👇 CTA</option>' +
+                '</select>' +
+                '<textarea name="description_texts[]" rows="2" placeholder="Текст описания" required></textarea>' +
+                '<button type="button" class="btn btn-sm btn-danger remove-variant" onclick="removeVariant(this)">❌</button>',
+                1, true);
         }
 
         // Заполняем значения
@@ -892,7 +908,10 @@ function fillFormWithSuggestion(data) {
 
         // Добавляем недостающие поля
         while (pinnedInputs.length < maxComments) {
-            document.getElementById('addPinnedCommentVariant').click();
+            addVariant('pinnedCommentVariants',
+                '<input type="text" name="pinned_comments[]" placeholder="Новый вариант закрепленного комментария" required>' +
+                '<button type="button" class="btn btn-sm btn-danger remove-variant" onclick="removeVariant(this)">❌</button>',
+                1, true);
         }
 
         // Заполняем значения
