@@ -4,6 +4,7 @@ namespace App\Modules\ContentGroups\Controllers;
 
 use Core\Controller;
 use App\Modules\ContentGroups\Services\TemplateService;
+use App\Modules\ContentGroups\Services\AutoShortsGenerator;
 
 /**
  * Контроллер для управления шаблонами
@@ -11,11 +12,13 @@ use App\Modules\ContentGroups\Services\TemplateService;
 class TemplateController extends Controller
 {
     private TemplateService $templateService;
+    private AutoShortsGenerator $autoGenerator;
 
     public function __construct()
     {
         parent::__construct();
         $this->templateService = new TemplateService();
+        $this->autoGenerator = new AutoShortsGenerator();
     }
 
     /**
@@ -135,46 +138,88 @@ class TemplateController extends Controller
                 exit;
             }
 
-            // Обработка новых полей для Shorts
-            $titleVariants = $this->getParam('title_variants', []);
-            $descriptionTypes = $this->getParam('description_types', []);
-            $descriptionTexts = $this->getParam('description_texts', []);
+            // Проверяем, используется ли автогенерация
+            $useAutoGeneration = $this->getParam('use_auto_generation', false);
 
-            // Группируем описания по типам
-            $descriptionVariants = [];
-            if (!empty($descriptionTypes) && !empty($descriptionTexts)) {
-                foreach ($descriptionTypes as $index => $type) {
-                    if (!empty($descriptionTexts[$index])) {
-                        $descriptionVariants[$type][] = $descriptionTexts[$index];
+            if ($useAutoGeneration) {
+                // Используем автогенерацию
+                $videoIdea = trim($this->getParam('video_idea', ''));
+
+                if (empty($videoIdea)) {
+                    $_SESSION['error'] = 'Необходимо указать базовую идею видео для автогенерации';
+                    header('Location: /content-groups/templates/create');
+                    exit;
+                }
+
+                // Генерируем контент
+                $generatedResult = $this->autoGenerator->generateFromIdea($videoIdea);
+
+                // Заполняем поля на основе сгенерированного контента
+                $content = $generatedResult['content'];
+
+                $titleVariants = $content['title_variants'] ?? [$content['title']];
+                $descriptionVariants = $content['description_variants'] ?? [];
+                $emojiGroups = $content['emoji_groups'] ?? [];
+                $baseTags = $content['base_tags'] ?? '';
+                $tagVariants = $content['tag_variants'] ?? [];
+                $questions = $content['questions'] ?? [];
+                $pinnedComments = $content['pinned_comments'] ?? [];
+                $focusPoints = $content['focus_points'] ?? [];
+                $hookType = $content['hook_type'] ?? 'vocal';
+
+            } else {
+                // Обычная обработка полей
+                $titleVariants = $this->getParam('title_variants', []);
+                $descriptionTypes = $this->getParam('description_types', []);
+                $descriptionTexts = $this->getParam('description_texts', []);
+
+                // Группируем описания по типам
+                $descriptionVariants = [];
+                if (!empty($descriptionTypes) && !empty($descriptionTexts)) {
+                    foreach ($descriptionTypes as $index => $type) {
+                        if (!empty($descriptionTexts[$index])) {
+                            $descriptionVariants[$type][] = $descriptionTexts[$index];
+                        }
                     }
                 }
+
+                // Остальные поля для обычного режима
+                $emojiGroups = [
+                    'emotional' => $this->getParam('emoji_emotional', ''),
+                    'intrigue' => $this->getParam('emoji_intrigue', ''),
+                    'atmosphere' => $this->getParam('emoji_atmosphere', ''),
+                    'question' => $this->getParam('emoji_question', ''),
+                    'cta' => $this->getParam('emoji_cta', ''),
+                ];
+                $baseTags = $this->getParam('base_tags', '');
+                $tagVariants = $this->getParam('tag_variants', []);
+                $questions = array_filter(explode("\n", $this->getParam('questions', '')));
+                $pinnedComments = array_filter(explode("\n", $this->getParam('pinned_comments', '')));
+                $focusPoints = $this->getParam('focus_points', []);
+                $hookType = $this->getParam('hook_type', 'emotional');
             }
 
-            // Emoji группы
-            $emojiGroups = [
-                'emotional' => $this->getParam('emoji_emotional', ''),
-                'intrigue' => $this->getParam('emoji_intrigue', ''),
-                'atmosphere' => $this->getParam('emoji_atmosphere', ''),
-                'question' => $this->getParam('emoji_question', ''),
-                'cta' => $this->getParam('emoji_cta', ''),
-            ];
-
-            // Убираем пустые группы
+            // Очистка emoji групп от пустых значений
             $emojiGroups = array_filter($emojiGroups);
 
-            // Обратная совместимость: старые поля
-            $emojiList = $this->getParam('emoji_list', '');
-            $emojiArray = !empty($emojiList) ? array_filter(array_map('trim', explode(',', $emojiList))) : [];
-
+            // Обратная совместимость: старые поля (только для обычного режима)
+            $emojiList = '';
+            $emojiArray = [];
             $variants = [];
-            if ($this->getParam('variant_1')) {
-                $variants['description'][] = $this->getParam('variant_1');
-            }
-            if ($this->getParam('variant_2')) {
-                $variants['description'][] = $this->getParam('variant_2');
-            }
-            if ($this->getParam('variant_3')) {
-                $variants['description'][] = $this->getParam('variant_3');
+
+            if (!$useAutoGeneration) {
+                $emojiList = $this->getParam('emoji_list', '');
+                $emojiArray = !empty($emojiList) ? array_filter(array_map('trim', explode(',', $emojiList))) : [];
+
+                if ($this->getParam('variant_1')) {
+                    $variants['description'][] = $this->getParam('variant_1');
+                }
+                if ($this->getParam('variant_2')) {
+                    $variants['description'][] = $this->getParam('variant_2');
+                }
+                if ($this->getParam('variant_3')) {
+                    $variants['description'][] = $this->getParam('variant_3');
+                }
             }
 
             $data = [
@@ -362,6 +407,63 @@ class TemplateController extends Controller
             header('Location: /content-groups/templates/' . $id . '/edit');
         }
         exit;
+    }
+
+    /**
+     * Предложить контент для автозаполнения формы
+     */
+    public function suggestContent(): void
+    {
+        try {
+            $idea = trim($this->getParam('idea', ''));
+
+            if (empty($idea)) {
+                $this->jsonResponse(['success' => false, 'message' => 'Не указана идея для генерации']);
+                return;
+            }
+
+            if (strlen($idea) < 3) {
+                $this->jsonResponse(['success' => false, 'message' => 'Идея должна содержать минимум 3 символа']);
+                return;
+            }
+
+            // Генерируем контент
+            $result = $this->autoGenerator->generateFromIdea($idea);
+
+            // Форматируем для автозаполнения формы
+            $suggestion = [
+                'success' => true,
+                'idea' => $result['idea'],
+                'intent' => $result['intent'],
+                'content' => [
+                    'title_template' => $result['content']['title'],
+                    'description_template' => $result['content']['description'],
+                    'tags_template' => implode(', ', $result['content']['tags']),
+                    'emoji_list' => $result['content']['emoji'],
+
+                    // Новые поля для Shorts
+                    'hook_type' => $result['intent']['content_type'],
+                    'title_variants' => [$result['content']['title']],
+                    'description_variants' => [
+                        $result['intent']['mood'] => [$result['content']['description']]
+                    ],
+                    'emoji_groups' => [
+                        $result['intent']['mood'] => array_filter(explode(',', $result['content']['emoji']))
+                    ],
+                    'base_tags' => implode(', ', $result['content']['tags']),
+                    'tag_variants' => [$result['content']['tags']],
+                    'questions' => [$result['content']['pinned_comment']],
+                    'pinned_comments' => [$result['content']['pinned_comment']],
+                    'focus_points' => [$result['intent']['visual_focus']]
+                ]
+            ];
+
+            $this->jsonResponse($suggestion);
+
+        } catch (Exception $e) {
+            error_log('Template suggest content error: ' . $e->getMessage());
+            $this->jsonResponse(['success' => false, 'message' => 'Ошибка генерации контента: ' . $e->getMessage()]);
+        }
     }
 
     /**

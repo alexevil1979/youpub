@@ -36,7 +36,29 @@ ob_start();
             <label for="description">Описание шаблона</label>
             <textarea id="description" name="description" rows="2" placeholder="Для чего используется этот шаблон"></textarea>
         </div>
+
+        <!-- Переключатель автогенерации -->
+        <div class="form-group">
+            <label class="checkbox-label">
+                <input type="checkbox" id="use_auto_generation" name="use_auto_generation" onchange="toggleAutoGeneration()">
+                🚀 Использовать автогенерацию контента
+            </label>
+            <small>Автоматически сгенерировать контент из одной идеи вместо ручного заполнения</small>
+        </div>
+
+        <!-- Поле для идеи (скрыто по умолчанию) -->
+        <div class="form-group auto-gen-field" id="idea_field" style="display: none;">
+            <label for="video_idea">💡 Базовая идея видео *</label>
+            <input type="text" id="video_idea" name="video_idea" placeholder="Например: Девушка поёт под неоном" maxlength="100">
+            <small>Опишите суть видео в 3-7 словах</small>
+            <button type="button" class="btn btn-secondary" onclick="generateFromIdea()" style="margin-top: 0.5rem;">
+                🎯 Сгенерировать контент
+            </button>
+        </div>
     </div>
+
+    <!-- Ручные поля формы (скрываются при автогенерации) -->
+    <div id="manual_fields">
 
     <!-- ТИП КОНТЕНТА -->
     <div class="form-section">
@@ -273,8 +295,13 @@ ob_start();
         <button type="button" id="validateTemplate" class="btn btn-secondary">🔍 Проверить шаблон</button>
     </div>
 
+    </div> <!-- Закрываем manual_fields -->
+
     <div class="form-actions">
         <button type="submit" class="btn btn-primary">🎯 Создать шаблон</button>
+        <button type="button" class="btn btn-outline" onclick="suggestContent()">
+            🚀 Предложить контент
+        </button>
         <a href="/content-groups/templates" class="btn btn-secondary">Отмена</a>
     </div>
 </form>
@@ -371,6 +398,27 @@ ob_start();
     margin: 0.25rem 0;
     border-radius: 4px;
     border-left: 4px solid #ffc107;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: normal;
+    cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+    margin: 0;
+    width: auto;
+}
+
+.auto-gen-field {
+    background: #e8f5e8;
+    border: 2px solid #28a745;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
 }
 </style>
 
@@ -577,6 +625,205 @@ function validateTemplate() {
     }
 
     return errors.length === 0;
+}
+
+// Функция для переключения режима автогенерации
+function toggleAutoGeneration() {
+    const useAutoGen = document.getElementById('use_auto_generation').checked;
+    const manualFields = document.getElementById('manual_fields');
+    const ideaField = document.getElementById('idea_field');
+
+    if (useAutoGen) {
+        manualFields.style.display = 'none';
+        ideaField.style.display = 'block';
+    } else {
+        manualFields.style.display = 'block';
+        ideaField.style.display = 'none';
+    }
+}
+
+// Функция для генерации контента из идеи
+function generateFromIdea() {
+    const idea = document.getElementById('video_idea').value.trim();
+
+    if (!idea || idea.length < 3) {
+        alert('Пожалуйста, введите идею минимум 3 символа');
+        return;
+    }
+
+    // Показываем загрузку
+    const button = event.target;
+    const originalText = button.innerHTML;
+    button.innerHTML = '⏳ Генерирую...';
+    button.disabled = true;
+
+    // Отправляем запрос
+    fetch('/content-groups/templates/suggest-content', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: 'idea=' + encodeURIComponent(idea) + '&csrf_token=' + document.querySelector('[name="csrf_token"]').value
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Автозаполняем поля
+            fillFormWithSuggestion(data);
+            alert('✅ Контент успешно сгенерирован и заполнен в форму!');
+        } else {
+            alert('❌ Ошибка: ' + (data.message || 'Не удалось сгенерировать контент'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('❌ Произошла ошибка при генерации контента');
+    })
+    .finally(() => {
+        // Восстанавливаем кнопку
+        button.innerHTML = originalText;
+        button.disabled = false;
+    });
+}
+
+// Функция для предложения контента через автогенерацию
+function suggestContent() {
+    const idea = prompt('Введите базовую идею видео (3-7 слов):\n\nПримеры:\n• Девушка поёт под неоном\n• Атмосферный вокал ночью\n• Спокойный голос и неон');
+
+    if (!idea || idea.trim().length < 3) {
+        alert('Пожалуйста, введите идею минимум 3 символа');
+        return;
+    }
+
+    // Показываем загрузку
+    const button = event.target;
+    const originalText = button.innerHTML;
+    button.innerHTML = '⏳ Генерирую...';
+    button.disabled = true;
+
+    // Отправляем запрос
+    fetch('/content-groups/templates/suggest-content', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: 'idea=' + encodeURIComponent(idea.trim()) + '&csrf_token=' + document.querySelector('[name="csrf_token"]').value
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Автозаполняем поля
+            fillFormWithSuggestion(data);
+            alert('✅ Контент успешно сгенерирован и заполнен в форму!');
+        } else {
+            alert('❌ Ошибка: ' + (data.message || 'Не удалось сгенерировать контент'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('❌ Произошла ошибка при генерации контента');
+    })
+    .finally(() => {
+        // Восстанавливаем кнопку
+        button.innerHTML = originalText;
+        button.disabled = false;
+    });
+}
+
+// Функция для автозаполнения формы предложенными данными
+function fillFormWithSuggestion(data) {
+    const content = data.content;
+
+    // Заполняем основные поля
+    if (content.title_template) {
+        document.querySelector('[name="title_template"]').value = content.title_template;
+    }
+
+    if (content.description_template) {
+        document.querySelector('[name="description_template"]').value = content.description_template;
+    }
+
+    if (content.tags_template) {
+        document.querySelector('[name="tags_template"]').value = content.tags_template;
+    }
+
+    if (content.emoji_list) {
+        document.querySelector('[name="emoji_list"]').value = content.emoji_list;
+    }
+
+    // Заполняем новые поля Shorts
+    if (content.hook_type) {
+        const hookSelect = document.querySelector('[name="hook_type"]');
+        if (hookSelect) hookSelect.value = content.hook_type;
+    }
+
+    // Варианты названий
+    if (content.title_variants && Array.isArray(content.title_variants)) {
+        const titleInputs = document.querySelectorAll('[name="title_variants[]"]');
+        content.title_variants.forEach((variant, index) => {
+            if (titleInputs[index]) {
+                titleInputs[index].value = variant;
+            }
+        });
+    }
+
+    // Варианты описаний
+    if (content.description_variants) {
+        let descIndex = 0;
+        Object.entries(content.description_variants).forEach(([type, variants]) => {
+            if (Array.isArray(variants)) {
+                variants.forEach(variant => {
+                    const typeSelect = document.querySelectorAll('[name="description_types[]"]')[descIndex];
+                    const textInput = document.querySelectorAll('[name="description_texts[]"]')[descIndex];
+
+                    if (typeSelect) typeSelect.value = type;
+                    if (textInput) textInput.value = variant;
+
+                    descIndex++;
+                });
+            }
+        });
+    }
+
+    // Emoji группы
+    if (content.emoji_groups) {
+        Object.entries(content.emoji_groups).forEach(([type, emojis]) => {
+            const inputName = `emoji_${type}`;
+            const input = document.querySelector(`[name="${inputName}"]`);
+            if (input && Array.isArray(emojis)) {
+                input.value = emojis.join(', ');
+            }
+        });
+    }
+
+    // Остальные поля
+    if (content.base_tags) {
+        document.querySelector('[name="base_tags"]').value = content.base_tags;
+    }
+
+    if (content.questions && Array.isArray(content.questions)) {
+        document.querySelector('[name="questions"]').value = content.questions.join('\n');
+    }
+
+    if (content.pinned_comments && Array.isArray(content.pinned_comments)) {
+        document.querySelector('[name="pinned_comments"]').value = content.pinned_comments.join('\n');
+    }
+
+    if (content.focus_points && Array.isArray(content.focus_points)) {
+        document.querySelector('[name="focus_points"]').value = JSON.stringify(content.focus_points);
+    }
+
+    // Обновляем название шаблона
+    if (data.idea) {
+        document.querySelector('[name="name"]').value = `Auto: ${data.idea}`;
+    }
+
+    // Обновляем описание
+    if (data.idea) {
+        document.querySelector('[name="description"]').value = `Автоматически сгенерированный шаблон для: ${data.idea}`;
+    }
 }
 
 // Автоматическая валидация при изменении полей
