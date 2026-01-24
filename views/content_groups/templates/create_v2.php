@@ -40,7 +40,7 @@ ob_start();
         <!-- Переключатель автогенерации -->
         <div class="form-group">
             <label class="checkbox-label">
-                <input type="checkbox" id="use_auto_generation" name="use_auto_generation" onchange="toggleAutoGeneration()">
+                <input type="checkbox" id="use_auto_generation" name="use_auto_generation" onchange="if(typeof toggleAutoGeneration === 'function') { toggleAutoGeneration(); } else { console.error('toggleAutoGeneration function not found'); }">
                 🚀 Использовать автогенерацию контента
             </label>
             <small>Автоматически сгенерировать контент из одной идеи вместо ручного заполнения</small>
@@ -631,18 +631,54 @@ function validateTemplate() {
 
 // Функция для переключения режима автогенерации
 function toggleAutoGeneration() {
-    const useAutoGen = document.getElementById('use_auto_generation').checked;
-    const manualFields = document.getElementById('manual_fields');
-    const ideaField = document.getElementById('idea_field');
+    try {
+        console.log('🔄 toggleAutoGeneration called');
+        const useAutoGen = document.getElementById('use_auto_generation');
+        const manualFields = document.getElementById('manual_fields');
+        const ideaField = document.getElementById('idea_field');
 
-    if (useAutoGen) {
-        manualFields.style.display = 'none';
-        ideaField.style.display = 'block';
-    } else {
-        manualFields.style.display = 'block';
-        ideaField.style.display = 'none';
+        if (!useAutoGen) {
+            console.error('❌ Element use_auto_generation not found');
+            return;
+        }
+        if (!manualFields) {
+            console.error('❌ Element manual_fields not found');
+            return;
+        }
+        if (!ideaField) {
+            console.error('❌ Element idea_field not found');
+            return;
+        }
+
+        const checked = useAutoGen.checked;
+        console.log('📋 Auto generation:', checked);
+
+        if (checked) {
+            manualFields.style.display = 'none';
+            ideaField.style.display = 'block';
+            console.log('✅ Switched to auto-generation mode');
+        } else {
+            manualFields.style.display = 'block';
+            ideaField.style.display = 'none';
+            console.log('✅ Switched to manual mode');
+        }
+    } catch (error) {
+        console.error('💥 Error in toggleAutoGeneration:', error);
     }
 }
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Page loaded, initializing toggleAutoGeneration');
+    const checkbox = document.getElementById('use_auto_generation');
+    if (checkbox) {
+        // Вызываем функцию один раз при загрузке для корректного начального состояния
+        toggleAutoGeneration();
+        console.log('✅ toggleAutoGeneration initialized');
+    } else {
+        console.error('❌ use_auto_generation checkbox not found');
+    }
+});
 
 // Функция для генерации контента из идеи
 function generateFromIdea() {
