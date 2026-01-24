@@ -72,7 +72,13 @@ class SmartQueueService extends Service
             
             // Все видео опубликованы или нет доступных
             if ($skipPublished) {
-                return ['success' => false, 'message' => 'No unpublished videos in group'];
+                // Останавливаем расписание, чтобы не попадать в повторную обработку
+                $this->scheduleRepo->update($schedule['id'], [
+                    'status' => 'published',
+                    'publish_at' => null
+                ]);
+                error_log("SmartQueueService::processGroupSchedule: Group schedule {$schedule['id']} marked as published (no unpublished videos)");
+                return ['success' => true, 'message' => 'No unpublished videos in group'];
             }
             
             // Если не пропускаем, берем любое видео из группы
