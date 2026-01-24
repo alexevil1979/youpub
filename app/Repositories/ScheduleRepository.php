@@ -102,6 +102,7 @@ class ScheduleRepository extends Repository
 
     /**
      * Найти активные расписания с группами
+     * Включает расписания со статусом 'pending' и 'published' (если есть неопубликованные видео)
      */
     public function findActiveGroupSchedules(): array
     {
@@ -109,11 +110,23 @@ class ScheduleRepository extends Repository
             SELECT s.*, cg.name as group_name, cg.status as group_status
             FROM {$this->table} s
             JOIN content_groups cg ON cg.id = s.content_group_id
-            WHERE s.status = 'pending'
+            WHERE s.status IN ('pending', 'published')
             AND s.status != 'paused'
             AND cg.status = 'active'
             AND s.content_group_id IS NOT NULL
-            AND (s.publish_at <= NOW() OR s.publish_at IS NULL)
+            AND (
+                -- Для pending расписаний: время наступило или null
+                (s.status = 'pending' AND (s.publish_at <= NOW() OR s.publish_at IS NULL))
+                OR
+                -- Для published расписаний: проверяем наличие неопубликованных видео
+                (s.status = 'published' AND EXISTS (
+                    SELECT 1 FROM content_group_files cgf
+                    JOIN videos v ON v.id = cgf.video_id
+                    WHERE cgf.group_id = s.content_group_id
+                    AND cgf.status IN ('new', 'queued', 'paused')
+                    AND v.status IN ('uploaded', 'ready')
+                ))
+            )
             ORDER BY s.publish_at ASC
         ";
 
