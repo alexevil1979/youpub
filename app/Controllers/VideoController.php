@@ -71,6 +71,12 @@ class VideoController extends Controller
     {
         $userId = $_SESSION['user_id'];
 
+        // Если пришла множественная загрузка, перенаправляем в uploadMultiple
+        if (isset($_FILES['videos'])) {
+            $this->uploadMultiple();
+            return;
+        }
+
         if (!isset($_FILES['video']) || $_FILES['video']['error'] !== UPLOAD_ERR_OK) {
             $this->error('File upload failed');
             return;
