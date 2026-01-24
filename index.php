@@ -39,10 +39,19 @@ ini_set('error_log', $errorLogFile);
 // Функция для логирования с прямой записью в файл
 function writeLog($message) {
     global $errorLogFile;
-    $timestamp = date('Y-m-d H:i:s');
-    $logMessage = "[{$timestamp}] {$message}\n";
-    @file_put_contents($errorLogFile, $logMessage, FILE_APPEND | LOCK_EX);
-    @error_log($message);
+    try {
+        // Пытаемся получить время, если часовой пояс не установлен, используем UTC
+        try {
+            $timestamp = date('Y-m-d H:i:s');
+        } catch (\Throwable $e) {
+            $timestamp = gmdate('Y-m-d H:i:s') . ' UTC';
+        }
+        $logMessage = "[{$timestamp}] {$message}\n";
+        @file_put_contents($errorLogFile, $logMessage, FILE_APPEND | LOCK_EX);
+        @error_log($message);
+    } catch (\Throwable $e) {
+        // Игнорируем ошибки логирования, чтобы не ломать приложение
+    }
 }
 
 writeLog("=== Application starting ===");
