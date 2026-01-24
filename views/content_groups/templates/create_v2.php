@@ -961,6 +961,17 @@ function fillFormWithSuggestion(data) {
             }
         }
 
+        const normalizeTriggerType = (rawType) => {
+            if (!rawType) return '';
+            const type = String(rawType).toLowerCase();
+            if (type.includes('emotional') || type.includes('эмоци')) return 'emotional';
+            if (type.includes('intrigue') || type.includes('интриг')) return 'intrigue';
+            if (type.includes('atmosphere') || type.includes('атмосфер')) return 'atmosphere';
+            if (type.includes('question') || type.includes('вопрос')) return 'question';
+            if (type.includes('cta') || type.includes('призыв')) return 'cta';
+            return '';
+        };
+
         // Варианты описаний (до 25)
         if (content.description_variants) {
             let totalVariants = 0;
@@ -999,7 +1010,13 @@ function fillFormWithSuggestion(data) {
                 if (Array.isArray(variants)) {
                     variants.forEach(variant => {
                         if (descIndex < totalVariants && descIndex < updatedDescTypes.length && descIndex < updatedDescTexts.length) {
-                            if (updatedDescTypes[descIndex]) updatedDescTypes[descIndex].value = type;
+                            if (updatedDescTypes[descIndex]) {
+                                const mappedType = normalizeTriggerType(type);
+                                updatedDescTypes[descIndex].value = mappedType || '';
+                                if (!mappedType) {
+                                    console.warn('⚠️ Неизвестный тип триггера:', type);
+                                }
+                            }
                             if (updatedDescTexts[descIndex]) updatedDescTexts[descIndex].value = variant;
                             console.log(`✅ Заполнен вариант описания ${descIndex + 1} (${type}):`, variant);
                             descIndex++;
