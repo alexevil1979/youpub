@@ -204,6 +204,33 @@ class SmartQueueService extends Service
                 'status' => 'published',
                 'error_message' => null
             ]);
+
+            // Для групповых расписаний: проверяем, остались ли ещё видео для публикации
+            error_log("SmartQueueService::processGroupSchedule: Checking for remaining unpublished videos in group {$schedule['content_group_id']}");
+            $remainingFiles = $this->fileRepo->findNextUnpublished($schedule['content_group_id']);
+
+            if ($remainingFiles) {
+                // Есть ещё видео для публикации - обновляем время следующей публикации
+                error_log("SmartQueueService::processGroupSchedule: Found remaining videos. Updating publish_at for next video");
+                $nextPublishTime = $this->scheduleEngine->getNextPublishTime($schedule);
+                if ($nextPublishTime) {
+                    $this->scheduleRepo->update($schedule['id'], [
+                        'publish_at' => $nextPublishTime,
+                        'status' => 'pending' // Оставляем активным для следующих видео
+                    ]);
+                    error_log("SmartQueueService::processGroupSchedule: Updated schedule {$schedule['id']} publish_at to {$nextPublishTime}");
+                } else {
+                    error_log("SmartQueueService::processGroupSchedule: Could not calculate next publish time, keeping schedule active");
+                }
+            } else {
+                // Все видео опубликованы - завершаем групповое расписание
+                error_log("SmartQueueService::processGroupSchedule: No remaining videos found. Completing group schedule {$schedule['id']}");
+                $this->scheduleRepo->update($schedule['id'], [
+                    'status' => 'published',
+                    'publish_at' => null // Убираем время публикации
+                ]);
+                error_log("SmartQueueService::processGroupSchedule: Group schedule {$schedule['id']} marked as published");
+            }
         } else {
             $this->fileRepo->updateFileStatus($groupFile['id'], 'error');
             $this->fileRepo->update($groupFile['id'], ['error_message' => $result['message'] ?? 'Unknown error']);
