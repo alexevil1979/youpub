@@ -937,14 +937,18 @@ function fillFormWithSuggestion(data) {
 
         // Варианты названий (до 5)
         if (content.title_variants && Array.isArray(content.title_variants)) {
-            const titleInputs = document.querySelectorAll('[name="title_variants[]"]');
+            let titleInputs = document.querySelectorAll('[name="title_variants[]"]');
             const maxTitles = Math.min(content.title_variants.length, 5);
 
-            while (titleInputs.length < maxTitles) {
+            let attempts = 0;
+            while (titleInputs.length < maxTitles && attempts < 10) {
                 addVariant('titleVariants',
                     '<input type="text" name="title_variants[]" placeholder="Новый вариант названия" required>' +
                     '<button type="button" class="btn btn-sm btn-danger remove-variant" onclick="removeVariant(this)">❌</button>',
                     1, true);
+                titleInputs = document.querySelectorAll('[name="title_variants[]"]');
+                attempts++;
+                if (titleInputs.length >= maxTitles) break;
             }
 
             const updatedTitleInputs = document.querySelectorAll('[name="title_variants[]"]');
@@ -967,8 +971,9 @@ function fillFormWithSuggestion(data) {
             });
             totalVariants = Math.min(totalVariants, 5);
 
-            const descInputs = document.querySelectorAll('[name="description_texts[]"]');
-            while (descInputs.length < totalVariants) {
+            let descInputs = document.querySelectorAll('[name="description_texts[]"]');
+            let descAttempts = 0;
+            while (descInputs.length < totalVariants && descAttempts < 10) {
                 addVariant('descriptionVariants',
                     '<select name="description_types[]" class="description-type" required>' +
                         '<option value="">Тип триггера</option>' +
@@ -981,6 +986,9 @@ function fillFormWithSuggestion(data) {
                     '<textarea name="description_texts[]" rows="2" placeholder="Текст описания" required></textarea>' +
                     '<button type="button" class="btn btn-sm btn-danger remove-variant" onclick="removeVariant(this)">❌</button>',
                     1, true);
+                descInputs = document.querySelectorAll('[name="description_texts[]"]');
+                descAttempts++;
+                if (descInputs.length >= totalVariants) break;
             }
 
             let descIndex = 0;
@@ -1025,14 +1033,18 @@ function fillFormWithSuggestion(data) {
         }
 
         if (content.pinned_comments && Array.isArray(content.pinned_comments)) {
-            const pinnedInputs = document.querySelectorAll('[name="pinned_comments[]"]');
+            let pinnedInputs = document.querySelectorAll('[name="pinned_comments[]"]');
             const maxComments = Math.min(content.pinned_comments.length, 3);
 
-            while (pinnedInputs.length < maxComments) {
+            let pinnedAttempts = 0;
+            while (pinnedInputs.length < maxComments && pinnedAttempts < 10) {
                 addVariant('pinnedCommentVariants',
                     '<input type="text" name="pinned_comments[]" placeholder="Новый вариант закрепленного комментария" required>' +
                     '<button type="button" class="btn btn-sm btn-danger remove-variant" onclick="removeVariant(this)">❌</button>',
                     1, true);
+                pinnedInputs = document.querySelectorAll('[name="pinned_comments[]"]');
+                pinnedAttempts++;
+                if (pinnedInputs.length >= maxComments) break;
             }
 
             const updatedPinnedInputs = document.querySelectorAll('[name="pinned_comments[]"]');
