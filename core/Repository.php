@@ -96,6 +96,10 @@ abstract class Repository
      */
     public function update(int $id, array $data): bool
     {
+        if (array_key_exists('publish_at', $data) && $data['publish_at'] === null) {
+            $data['publish_at'] = date('Y-m-d H:i:s');
+        }
+
         $fields = [];
         $params = [];
         

@@ -72,10 +72,11 @@ class SmartQueueService extends Service
             
             // Все видео опубликованы или нет доступных
             if ($skipPublished) {
+                $publishedAt = $schedule['publish_at'] ?? date('Y-m-d H:i:s');
                 // Останавливаем расписание, чтобы не попадать в повторную обработку
                 $this->scheduleRepo->update($schedule['id'], [
                     'status' => 'published',
-                    'publish_at' => null
+                    'publish_at' => $publishedAt
                 ]);
                 error_log("SmartQueueService::processGroupSchedule: Group schedule {$schedule['id']} marked as published (no unpublished videos)");
                 return ['success' => true, 'message' => 'No unpublished videos in group'];
@@ -247,11 +248,12 @@ class SmartQueueService extends Service
             } else {
                 // Все видео опубликованы - завершаем групповое расписание
                 error_log("SmartQueueService::processGroupSchedule: No remaining videos found. Completing group schedule {$schedule['id']}");
+                $publishedAt = $schedule['publish_at'] ?? date('Y-m-d H:i:s');
                 $this->scheduleRepo->update($schedule['id'], [
                     'status' => 'published',
-                    'publish_at' => null // Убираем время публикации
+                    'publish_at' => $publishedAt
                 ]);
-                error_log("SmartQueueService::processGroupSchedule: Group schedule {$schedule['id']} marked as published and publish_at set to null");
+                error_log("SmartQueueService::processGroupSchedule: Group schedule {$schedule['id']} marked as published");
             }
         } else {
             $this->fileRepo->updateFileStatus($groupFile['id'], 'error');

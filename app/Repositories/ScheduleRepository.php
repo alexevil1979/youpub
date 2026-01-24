@@ -60,6 +60,22 @@ class ScheduleRepository extends Repository
     }
 
     /**
+     * Обновить расписание с защитой от NULL publish_at
+     */
+    public function update(int $id, array $data): bool
+    {
+        if (array_key_exists('publish_at', $data) && $data['publish_at'] === null) {
+            unset($data['publish_at']);
+        }
+
+        if (empty($data)) {
+            return false;
+        }
+
+        return parent::update($id, $data);
+    }
+
+    /**
      * Найти по пользователю и статусу
      */
     public function findByUserIdAndStatus(int $userId, string $status): array
