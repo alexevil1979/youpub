@@ -8,6 +8,7 @@ $filterPlatform = $_GET['platform'] ?? 'all';
 $filterDateFrom = $_GET['date_from'] ?? '';
 $filterDateTo = $_GET['date_to'] ?? '';
 $filterType = $_GET['type'] ?? 'all'; // all, single, group
+$sortBy = $_GET['sort'] ?? 'publish_at_desc';
 
 // Подсчет статистики
 $stats = [
@@ -60,6 +61,46 @@ if ($filterDateTo) {
         return strtotime($s['publish_at']) <= strtotime($filterDateTo . ' 23:59:59');
     });
 }
+
+// Сортировка
+$sortParts = explode('_', $sortBy);
+$sortField = $sortParts[0] ?? 'publish';
+$sortDir = strtolower($sortParts[2] ?? $sortParts[1] ?? 'desc');
+$sortDir = $sortDir === 'asc' ? 'asc' : 'desc';
+
+usort($filteredSchedules, function($a, $b) use ($sortField, $sortDir) {
+    $getTime = function($item, $key) {
+        if (!isset($item[$key]) || !$item[$key]) {
+            return 0;
+        }
+        return strtotime($item[$key]) ?: 0;
+    };
+
+    switch ($sortField) {
+        case 'created':
+            $aTime = $getTime($a, 'created_at');
+            $bTime = $getTime($b, 'created_at');
+            break;
+        case 'status':
+            $aTime = strcmp($a['status'] ?? '', $b['status'] ?? '');
+            $bTime = 0;
+            break;
+        case 'publish':
+        default:
+            $aTime = $getTime($a, 'publish_at');
+            $bTime = $getTime($b, 'publish_at');
+            break;
+    }
+
+    if ($sortField === 'status') {
+        return $sortDir === 'asc' ? $aTime : -$aTime;
+    }
+
+    if ($aTime === $bTime) return 0;
+    return ($sortDir === 'asc')
+        ? ($aTime < $bTime ? -1 : 1)
+        : ($aTime > $bTime ? -1 : 1);
+});
 
 $videoRepo = new \App\Repositories\VideoRepository();
 $groupRepo = new \App\Modules\ContentGroups\Repositories\ContentGroupRepository();
@@ -139,6 +180,18 @@ $groupRepo = new \App\Modules\ContentGroups\Repositories\ContentGroupRepository(
         <div class="filter-group">
             <label for="filter_date_to">По:</label>
             <input type="date" id="filter_date_to" name="date_to" value="<?= htmlspecialchars($filterDateTo) ?>" onchange="applyFilters()">
+        </div>
+
+        <div class="filter-group">
+            <label for="filter_sort">Сортировка:</label>
+            <select id="filter_sort" name="sort" onchange="applyFilters()">
+                <option value="publish_at_desc" <?= $sortBy === 'publish_at_desc' ? 'selected' : '' ?>>Сначала новые (публикация)</option>
+                <option value="publish_at_asc" <?= $sortBy === 'publish_at_asc' ? 'selected' : '' ?>>Сначала старые (публикация)</option>
+                <option value="created_at_desc" <?= $sortBy === 'created_at_desc' ? 'selected' : '' ?>>Сначала новые (создание)</option>
+                <option value="created_at_asc" <?= $sortBy === 'created_at_asc' ? 'selected' : '' ?>>Сначала старые (создание)</option>
+                <option value="status_asc" <?= $sortBy === 'status_asc' ? 'selected' : '' ?>>Статус (A→Z)</option>
+                <option value="status_desc" <?= $sortBy === 'status_desc' ? 'selected' : '' ?>>Статус (Z→A)</option>
+            </select>
         </div>
 
         <div class="filter-group">
