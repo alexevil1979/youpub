@@ -651,6 +651,8 @@ function generateFromIdea() {
         return;
     }
 
+    console.log('Generating content for idea:', idea);
+
     // Показываем загрузку
     const button = event.target;
     const originalText = button.innerHTML;
@@ -666,19 +668,24 @@ function generateFromIdea() {
         },
         body: 'idea=' + encodeURIComponent(idea) + '&csrf_token=' + document.querySelector('[name="csrf_token"]').value
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('Response status:', response.status);
+        return response.json();
+    })
     .then(data => {
+        console.log('Received data:', data);
         if (data.success) {
             // Автозаполняем поля
             fillFormWithSuggestion(data);
             alert('✅ Контент успешно сгенерирован и заполнен в форму!');
         } else {
+            console.error('Server returned error:', data.message);
             alert('❌ Ошибка: ' + (data.message || 'Не удалось сгенерировать контент'));
         }
     })
     .catch(error => {
-        console.error('Error:', error);
-        alert('❌ Произошла ошибка при генерации контента');
+        console.error('Fetch error:', error);
+        alert('❌ Произошла ошибка при генерации контента: ' + error.message);
     })
     .finally(() => {
         // Восстанавливаем кнопку
@@ -734,29 +741,36 @@ function suggestContent() {
 
 // Функция для автозаполнения формы предложенными данными
 function fillFormWithSuggestion(data) {
+    console.log('Filling form with suggestion:', data);
     const content = data.content;
 
-    // Заполняем основные поля
-    if (content.title_template) {
-        document.querySelector('[name="title_template"]').value = content.title_template;
+    // Заполняем основные поля с проверками
+    const titleTemplateInput = document.querySelector('[name="title_template"]');
+    if (titleTemplateInput && content.title_template) {
+        titleTemplateInput.value = content.title_template;
     }
 
-    if (content.description_template) {
-        document.querySelector('[name="description_template"]').value = content.description_template;
+    const descTemplateInput = document.querySelector('[name="description_template"]');
+    if (descTemplateInput && content.description_template) {
+        descTemplateInput.value = content.description_template;
     }
 
-    if (content.tags_template) {
-        document.querySelector('[name="tags_template"]').value = content.tags_template;
+    const tagsTemplateInput = document.querySelector('[name="tags_template"]');
+    if (tagsTemplateInput && content.tags_template) {
+        tagsTemplateInput.value = content.tags_template;
     }
 
-    if (content.emoji_list) {
-        document.querySelector('[name="emoji_list"]').value = content.emoji_list;
+    const emojiListInput = document.querySelector('[name="emoji_list"]');
+    if (emojiListInput && content.emoji_list) {
+        emojiListInput.value = content.emoji_list;
     }
 
-    // Заполняем новые поля Shorts
+    // Заполняем новые поля Shorts с проверками
     if (content.hook_type) {
         const hookSelect = document.querySelector('[name="hook_type"]');
-        if (hookSelect) hookSelect.value = content.hook_type;
+        if (hookSelect) {
+            hookSelect.value = content.hook_type;
+        }
     }
 
     // Варианты названий
@@ -798,32 +812,40 @@ function fillFormWithSuggestion(data) {
         });
     }
 
-    // Остальные поля
-    if (content.base_tags) {
-        document.querySelector('[name="base_tags"]').value = content.base_tags;
+    // Остальные поля с проверками
+    const baseTagsInput = document.querySelector('[name="base_tags"]');
+    if (baseTagsInput && content.base_tags) {
+        baseTagsInput.value = content.base_tags;
     }
 
-    if (content.questions && Array.isArray(content.questions)) {
-        document.querySelector('[name="questions"]').value = content.questions.join('\n');
+    const questionsInput = document.querySelector('[name="questions"]');
+    if (questionsInput && content.questions && Array.isArray(content.questions)) {
+        questionsInput.value = content.questions.join('\n');
     }
 
-    if (content.pinned_comments && Array.isArray(content.pinned_comments)) {
-        document.querySelector('[name="pinned_comments"]').value = content.pinned_comments.join('\n');
+    const pinnedCommentsInput = document.querySelector('[name="pinned_comments"]');
+    if (pinnedCommentsInput && content.pinned_comments && Array.isArray(content.pinned_comments)) {
+        pinnedCommentsInput.value = content.pinned_comments.join('\n');
     }
 
-    if (content.focus_points && Array.isArray(content.focus_points)) {
-        document.querySelector('[name="focus_points"]').value = JSON.stringify(content.focus_points);
+    const focusPointsInput = document.querySelector('[name="focus_points"]');
+    if (focusPointsInput && content.focus_points && Array.isArray(content.focus_points)) {
+        focusPointsInput.value = JSON.stringify(content.focus_points);
     }
 
     // Обновляем название шаблона
-    if (data.idea) {
-        document.querySelector('[name="name"]').value = `Auto: ${data.idea}`;
+    const nameInput = document.querySelector('[name="name"]');
+    if (nameInput && data.idea) {
+        nameInput.value = `Auto: ${data.idea}`;
     }
 
     // Обновляем описание
-    if (data.idea) {
-        document.querySelector('[name="description"]').value = `Автоматически сгенерированный шаблон для: ${data.idea}`;
+    const descriptionInput = document.querySelector('[name="description"]');
+    if (descriptionInput && data.idea) {
+        descriptionInput.value = `Автоматически сгенерированный шаблон для: ${data.idea}`;
     }
+
+    console.log('Form filling completed');
 }
 
 // Автоматическая валидация при изменении полей
