@@ -951,15 +951,22 @@ function fillFormStep1(data) {
     // Варианты названий - добавляем поля динамически если нужно (максимум 20)
     if (content.title_variants && Array.isArray(content.title_variants)) {
         const titleContainer = document.getElementById('titleVariants');
-        const titleInputs = document.querySelectorAll('[name="title_variants[]"]');
-        const maxTitles = Math.min(content.title_variants.length, 5); // Ограничиваем до 5 для производительности
+        let titleInputs = document.querySelectorAll('[name="title_variants[]"]');
+        const maxTitles = Math.min(content.title_variants.length, 20);
 
         // Добавляем недостающие поля (без показа сообщений)
-        while (titleInputs.length < maxTitles) {
+        let titleSafety = 0;
+        while (titleInputs.length < maxTitles && titleSafety < 50) {
             addVariant('titleVariants',
                 '<input type="text" name="title_variants[]" placeholder="Новый вариант названия" required>' +
                 '<button type="button" class="btn btn-sm btn-danger remove-variant" onclick="removeVariant(this)">❌</button>',
                 1, true);
+            // querySelectorAll возвращает статический список — перечитываем после добавления
+            titleInputs = document.querySelectorAll('[name="title_variants[]"]');
+            titleSafety++;
+        }
+        if (titleSafety >= 50) {
+            console.error('❌ Safety stop: possible infinite loop while adding title variants');
         }
 
         // Заполняем значения
@@ -978,14 +985,15 @@ function fillFormStep1(data) {
         let totalVariants = 0;
         Object.entries(content.description_variants).forEach(([type, variants]) => {
             if (Array.isArray(variants)) {
-                totalVariants += Math.min(variants.length, 5); // Максимум 5 на тип настроения
+                totalVariants += Math.min(variants.length, 4); // До 4 на тип (в сумме до 20)
             }
         });
-        totalVariants = Math.min(totalVariants, 15); // Общий максимум 15
+        totalVariants = Math.min(totalVariants, 20); // Общий максимум 20
 
         // Добавляем недостающие поля описаний
-        const descInputs = document.querySelectorAll('[name="description_texts[]"]');
-        while (descInputs.length < totalVariants) {
+        let descInputs = document.querySelectorAll('[name="description_texts[]"]');
+        let descSafety = 0;
+        while (descInputs.length < totalVariants && descSafety < 80) {
             addVariant('descriptionVariants',
                 '<select name="description_types[]" class="description-type" required>' +
                     '<option value="">Тип триггера</option>' +
@@ -998,6 +1006,11 @@ function fillFormStep1(data) {
                 '<textarea name="description_texts[]" rows="2" placeholder="Текст описания" required></textarea>' +
                 '<button type="button" class="btn btn-sm btn-danger remove-variant" onclick="removeVariant(this)">❌</button>',
                 1, true);
+            descInputs = document.querySelectorAll('[name="description_texts[]"]');
+            descSafety++;
+        }
+        if (descSafety >= 80) {
+            console.error('❌ Safety stop: possible infinite loop while adding description variants');
         }
 
         // Заполняем значения
@@ -1007,7 +1020,7 @@ function fillFormStep1(data) {
 
         Object.entries(content.description_variants).forEach(([type, variants]) => {
             if (Array.isArray(variants)) {
-                const limitedVariants = variants.slice(0, 5); // Максимум 5 на тип
+                const limitedVariants = variants.slice(0, 4); // До 4 на тип
                 limitedVariants.forEach(variant => {
                     if (descIndex < updatedDescTypes.length && descIndex < updatedDescTexts.length) {
                         if (updatedDescTypes[descIndex]) updatedDescTypes[descIndex].value = type;
@@ -1044,15 +1057,21 @@ function fillFormStep1(data) {
 
     // Закрепленные комментарии - добавляем поля динамически если нужно (максимум 10)
     if (content.pinned_comments && Array.isArray(content.pinned_comments)) {
-        const pinnedInputs = document.querySelectorAll('[name="pinned_comments[]"]');
-        const maxComments = Math.min(content.pinned_comments.length, 3); // Ограничиваем до 3 для производительности
+        let pinnedInputs = document.querySelectorAll('[name="pinned_comments[]"]');
+        const maxComments = Math.min(content.pinned_comments.length, 10);
 
         // Добавляем недостающие поля
-        while (pinnedInputs.length < maxComments) {
+        let pinnedSafety = 0;
+        while (pinnedInputs.length < maxComments && pinnedSafety < 50) {
             addVariant('pinnedCommentVariants',
                 '<input type="text" name="pinned_comments[]" placeholder="Новый вариант закрепленного комментария" required>' +
                 '<button type="button" class="btn btn-sm btn-danger remove-variant" onclick="removeVariant(this)">❌</button>',
                 1, true);
+            pinnedInputs = document.querySelectorAll('[name="pinned_comments[]"]');
+            pinnedSafety++;
+        }
+        if (pinnedSafety >= 50) {
+            console.error('❌ Safety stop: possible infinite loop while adding pinned comments');
         }
 
         // Заполняем значения
@@ -1087,8 +1106,6 @@ function fillFormStep1(data) {
 
         console.log('✅ Форма успешно заполнена сгенерированным контентом!');
         console.log('🔍 Проверьте поля формы - они должны быть заполнены автоматически.');
-
-        setTimeout(() => fillFormStep2(data), 50);
     } catch (error) {
         console.error('💥 Ошибка в шаге 1:', error);
         throw error;
