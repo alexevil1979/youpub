@@ -14,10 +14,10 @@ class AutoShortsGenerator
 {
     // Словари для анализа intent
     private const CONTENT_TYPES = [
-        'vocal' => ['голос', 'вокал', 'поёт', 'пение', 'певец', 'певица', 'голосом'],
-        'music' => ['музыка', 'мелодия', 'звук', 'аудио', 'трек', 'композиция', 'мелодия'],
-        'aesthetic' => ['неон', 'свет', 'красиво', 'эстетика', 'визуал', 'цвета', 'ярко'],
-        'ambience' => ['атмосфера', 'настроение', 'спокойно', 'тихо', 'ночь', 'вечер', 'погружение']
+        'vocal' => ['голос', 'вокал', 'поёт', 'пение', 'певец', 'певица', 'голосом', 'песня', 'пою'],
+        'music' => ['музыка', 'мелодия', 'звук', 'аудио', 'трек', 'композиция', 'мелодия', 'песня', 'мотив'],
+        'aesthetic' => ['неон', 'свет', 'красиво', 'эстетика', 'визуал', 'цвета', 'ярко', 'картинка'],
+        'ambience' => ['атмосфера', 'настроение', 'спокойно', 'тихо', 'ночь', 'вечер', 'погружение', 'релакс']
     ];
 
     private const MOODS = [
@@ -314,31 +314,52 @@ class AutoShortsGenerator
      */
     private function generateContent(array $intent, array $angles): array
     {
-        $angle = $angles[array_rand($angles)]; // Случайный угол
+        try {
+            $angle = $angles[array_rand($angles)]; // Случайный угол
+            error_log("AutoShortsGenerator::generateContent: Selected angle: {$angle}");
 
-        // Генерация названия
-        $title = $this->generateTitle($intent, $angle);
+            // Генерация названия
+            error_log("AutoShortsGenerator::generateContent: Generating title...");
+            $title = $this->generateTitle($intent, $angle);
+            error_log("AutoShortsGenerator::generateContent: Title generated: '{$title}'");
 
-        // Генерация описания
-        $description = $this->generateDescription($intent);
+            // Генерация описания
+            error_log("AutoShortsGenerator::generateContent: Generating description...");
+            $description = $this->generateDescription($intent);
+            error_log("AutoShortsGenerator::generateContent: Description generated: '{$description}'");
 
-        // Генерация emoji
-        $emoji = $this->generateEmoji($intent);
+            // Генерация emoji
+            error_log("AutoShortsGenerator::generateContent: Generating emoji...");
+            $emoji = $this->generateEmoji($intent);
+            error_log("AutoShortsGenerator::generateContent: Emoji generated: '{$emoji}'");
 
-        // Генерация тегов
-        $tags = $this->generateTags($intent);
+            // Генерация тегов
+            error_log("AutoShortsGenerator::generateContent: Generating tags...");
+            $tags = $this->generateTags($intent);
+            error_log("AutoShortsGenerator::generateContent: Tags generated: " . json_encode($tags));
 
-        // Генерация закрепленного комментария
-        $pinnedComment = $this->generatePinnedComment($intent);
+            // Генерация закрепленного комментария
+            error_log("AutoShortsGenerator::generateContent: Generating pinned comment...");
+            $pinnedComment = $this->generatePinnedComment($intent);
+            error_log("AutoShortsGenerator::generateContent: Pinned comment generated: '{$pinnedComment}'");
 
-        return [
-            'title' => $title,
-            'description' => $description,
-            'emoji' => $emoji,
-            'tags' => $tags,
-            'pinned_comment' => $pinnedComment,
-            'angle' => $angle
-        ];
+            $result = [
+                'title' => $title,
+                'description' => $description,
+                'emoji' => $emoji,
+                'tags' => $tags,
+                'pinned_comment' => $pinnedComment,
+                'angle' => $angle
+            ];
+
+            error_log("AutoShortsGenerator::generateContent: Content generation completed successfully");
+            return $result;
+
+        } catch (Exception $e) {
+            error_log("AutoShortsGenerator::generateContent: Exception: " . $e->getMessage());
+            error_log("AutoShortsGenerator::generateContent: Stack trace: " . $e->getTraceAsString());
+            throw $e;
+        }
     }
 
     /**
@@ -346,28 +367,42 @@ class AutoShortsGenerator
      */
     private function generateTitle(array $intent, string $angle): string
     {
-        $templates = self::TITLE_TEMPLATES[$intent['content_type']] ?? self::TITLE_TEMPLATES['vocal'];
+        try {
+            $contentType = $intent['content_type'] ?? 'vocal';
+            $templates = self::TITLE_TEMPLATES[$contentType] ?? self::TITLE_TEMPLATES['vocal'];
 
-        // Замены для шаблонов
-        $replacements = [
-            '{content}' => $this->getContentWord($intent['content_type']),
-            '{emotion}' => $this->getEmotionWord($intent['mood']),
-            '{visual}' => $this->getVisualWord($intent['visual_focus']),
-            '{angle}' => $angle
-        ];
+            error_log("AutoShortsGenerator::generateTitle: Content type: {$contentType}, available templates: " . count($templates));
 
-        // Выбираем случайный шаблон
-        $template = $templates[array_rand($templates)];
+            // Замены для шаблонов
+            $replacements = [
+                '{content}' => $this->getContentWord($contentType),
+                '{emotion}' => $this->getEmotionWord($intent['mood'] ?? 'calm'),
+                '{visual}' => $this->getVisualWord($intent['visual_focus'] ?? 'neon'),
+                '{angle}' => $angle
+            ];
 
-        // Применяем замены
-        $title = str_replace(array_keys($replacements), array_values($replacements), $template);
+            error_log("AutoShortsGenerator::generateTitle: Replacements: " . json_encode($replacements));
 
-        // Ограничиваем длину
-        if (mb_strlen($title) > 80) {
-            $title = mb_substr($title, 0, 77) . '...';
+            // Выбираем случайный шаблон
+            $template = $templates[array_rand($templates)];
+            error_log("AutoShortsGenerator::generateTitle: Selected template: '{$template}'");
+
+            // Применяем замены
+            $title = str_replace(array_keys($replacements), array_values($replacements), $template);
+            error_log("AutoShortsGenerator::generateTitle: After replacements: '{$title}'");
+
+            // Ограничиваем длину
+            if (mb_strlen($title) > 80) {
+                $title = mb_substr($title, 0, 77) . '...';
+            }
+
+            error_log("AutoShortsGenerator::generateTitle: Final title: '{$title}'");
+            return ucfirst($title);
+
+        } catch (Exception $e) {
+            error_log("AutoShortsGenerator::generateTitle: Exception: " . $e->getMessage());
+            return "Автоматически сгенерированное название"; // fallback
         }
-
-        return ucfirst($title);
     }
 
     /**
@@ -375,21 +410,35 @@ class AutoShortsGenerator
      */
     private function generateDescription(array $intent): string
     {
-        $descType = ['question', 'emotional', 'mysterious'][array_rand(['question', 'emotional', 'mysterious'])];
-        $templates = self::DESCRIPTION_TEMPLATES[$descType];
+        try {
+            $descType = ['question', 'emotional', 'mysterious'][array_rand(['question', 'emotional', 'mysterious'])];
+            $templates = self::DESCRIPTION_TEMPLATES[$descType];
 
-        $template = $templates[array_rand($templates)];
+            error_log("AutoShortsGenerator::generateDescription: Desc type: {$descType}, available templates: " . count($templates));
 
-        $replacements = [
-            '{emotion}' => $this->getEmotionWord($intent['mood']),
-            '{content}' => $this->getContentWord($intent['content_type']),
-            '{visual}' => $this->getVisualWord($intent['visual_focus']),
-            '{question}' => $this->getQuestionWord($intent['content_type']),
-            '{emotion_emoji}' => $this->getRandomEmoji($intent['mood'], 1),
-            '{cta_emoji}' => ['▶️', '👆', '💬', '❤️'][array_rand(['▶️', '👆', '💬', '❤️'])]
-        ];
+            $template = $templates[array_rand($templates)];
+            error_log("AutoShortsGenerator::generateDescription: Selected template: '{$template}'");
 
-        return str_replace(array_keys($replacements), array_values($replacements), $template);
+            $replacements = [
+                '{emotion}' => $this->getEmotionWord($intent['mood'] ?? 'calm'),
+                '{content}' => $this->getContentWord($intent['content_type'] ?? 'vocal'),
+                '{visual}' => $this->getVisualWord($intent['visual_focus'] ?? 'neon'),
+                '{question}' => $this->getQuestionWord($intent['content_type'] ?? 'vocal'),
+                '{emotion_emoji}' => $this->getRandomEmoji($intent['mood'] ?? 'calm', 1),
+                '{cta_emoji}' => ['▶️', '👆', '💬', '❤️'][array_rand(['▶️', '👆', '💬', '❤️'])]
+            ];
+
+            error_log("AutoShortsGenerator::generateDescription: Replacements: " . json_encode($replacements));
+
+            $result = str_replace(array_keys($replacements), array_values($replacements), $template);
+            error_log("AutoShortsGenerator::generateDescription: Final description: '{$result}'");
+
+            return $result;
+
+        } catch (Exception $e) {
+            error_log("AutoShortsGenerator::generateDescription: Exception: " . $e->getMessage());
+            return "Автоматически сгенерированное описание"; // fallback
+        }
     }
 
     /**
