@@ -911,7 +911,6 @@ function fillFormStep1(data) {
         console.log('🔄 Шаг 1: Заполняем основные поля');
         const content = data.content;
 
-    try {
         // Заполняем основные поля с проверками
     // Название шаблона (первое поле title_variants)
     const titleVariants = document.querySelectorAll('[name="title_variants[]"]');
@@ -1089,10 +1088,10 @@ function fillFormStep1(data) {
         console.log('✅ Форма успешно заполнена сгенерированным контентом!');
         console.log('🔍 Проверьте поля формы - они должны быть заполнены автоматически.');
 
+        setTimeout(() => fillFormStep2(data), 50);
     } catch (error) {
-        console.error('💥 Критическая ошибка в fillFormWithSuggestion:', error);
-        console.error('Stack trace:', error.stack);
-        throw error; // Передаем ошибку выше для обработки в suggestContent
+        console.error('💥 Ошибка в шаге 1:', error);
+        throw error;
     }
 }
 
