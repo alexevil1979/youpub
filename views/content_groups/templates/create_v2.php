@@ -858,10 +858,16 @@ function suggestContent() {
                 const titlesCount = data.content.title_variants ? data.content.title_variants.length : 0;
                 const descriptionsCount = data.content.unique_descriptions || 0;
                 const commentsCount = data.content.pinned_comments ? data.content.pinned_comments.length : 0;
-                alert(`✅ Контент успешно сгенерирован и заполнен в форму!\n🎯 Сгенерировано ${variantsCount} вариантов контента\n📝 Заголовков: ${titlesCount}, Описаний: ${descriptionsCount}, Комментариев: ${commentsCount}`);
+                
+                // Показываем alert асинхронно чтобы не блокировать выполнение
+                setTimeout(() => {
+                    alert(`✅ Контент успешно сгенерирован и заполнен в форму!\n🎯 Сгенерировано ${variantsCount} вариантов контента\n📝 Заголовков: ${titlesCount}, Описаний: ${descriptionsCount}, Комментариев: ${commentsCount}`);
+                }, 100);
             } catch (fillError) {
                 console.error('💥 Ошибка при заполнении формы:', fillError);
-                alert('❌ Контент сгенерирован, но произошла ошибка при заполнении формы: ' + fillError.message);
+                setTimeout(() => {
+                    alert('❌ Контент сгенерирован, но произошла ошибка при заполнении формы: ' + fillError.message);
+                }, 100);
             }
         } else {
             console.error('❌ Сервер вернул ошибку:', data);
@@ -955,12 +961,18 @@ function fillFormStep1(data) {
         const maxTitles = Math.min(content.title_variants.length, 5); // Ограничиваем до 5 для производительности
 
         // Добавляем недостающие поля (без показа сообщений)
-        while (titleInputs.length < maxTitles) {
+        let attempts = 0;
+        while (titleInputs.length < maxTitles && attempts < 10) {
             addVariant('titleVariants',
                 '<input type="text" name="title_variants[]" placeholder="Новый вариант названия" required>' +
                 '<button type="button" class="btn btn-sm btn-danger remove-variant" onclick="removeVariant(this)">❌</button>',
                 1, true);
+            // Обновляем список после добавления
+            titleInputs = document.querySelectorAll('[name="title_variants[]"]');
+            attempts++;
+            if (titleInputs.length >= maxTitles) break;
         }
+        console.log(`✅ Добавлено полей для названий: ${titleInputs.length} из ${maxTitles}`);
 
         // Заполняем значения
         const updatedTitleInputs = document.querySelectorAll('[name="title_variants[]"]');
@@ -984,8 +996,9 @@ function fillFormStep1(data) {
         totalVariants = Math.min(totalVariants, 15); // Общий максимум 15
 
         // Добавляем недостающие поля описаний
-        const descInputs = document.querySelectorAll('[name="description_texts[]"]');
-        while (descInputs.length < totalVariants) {
+        let descInputs = document.querySelectorAll('[name="description_texts[]"]');
+        let descAttempts = 0;
+        while (descInputs.length < totalVariants && descAttempts < 10) {
             addVariant('descriptionVariants',
                 '<select name="description_types[]" class="description-type" required>' +
                     '<option value="">Тип триггера</option>' +
@@ -998,7 +1011,12 @@ function fillFormStep1(data) {
                 '<textarea name="description_texts[]" rows="2" placeholder="Текст описания" required></textarea>' +
                 '<button type="button" class="btn btn-sm btn-danger remove-variant" onclick="removeVariant(this)">❌</button>',
                 1, true);
+            // Обновляем список после добавления
+            descInputs = document.querySelectorAll('[name="description_texts[]"]');
+            descAttempts++;
+            if (descInputs.length >= totalVariants) break;
         }
+        console.log(`✅ Добавлено полей для описаний: ${descInputs.length} из ${totalVariants}`);
 
         // Заполняем значения
         let descIndex = 0;
@@ -1048,16 +1066,23 @@ function fillFormStep1(data) {
         const maxComments = Math.min(content.pinned_comments.length, 3); // Ограничиваем до 3 для производительности
 
         // Добавляем недостающие поля
-        while (pinnedInputs.length < maxComments) {
+        let pinnedAttempts = 0;
+        let currentPinnedInputs = pinnedInputs;
+        while (currentPinnedInputs.length < maxComments && pinnedAttempts < 10) {
             addVariant('pinnedCommentVariants',
                 '<input type="text" name="pinned_comments[]" placeholder="Новый вариант закрепленного комментария" required>' +
                 '<button type="button" class="btn btn-sm btn-danger remove-variant" onclick="removeVariant(this)">❌</button>',
                 1, true);
+            // Обновляем список после добавления
+            currentPinnedInputs = document.querySelectorAll('[name="pinned_comments[]"]');
+            pinnedAttempts++;
+            if (currentPinnedInputs.length >= maxComments) break;
         }
+        console.log(`✅ Добавлено полей для комментариев: ${currentPinnedInputs.length} из ${maxComments}`);
 
         // Заполняем значения
         const updatedPinnedInputs = document.querySelectorAll('[name="pinned_comments[]"]');
-        for (let i = 0; i < maxComments; i++) {
+        for (let i = 0; i < maxComments && i < updatedPinnedInputs.length; i++) {
             const comment = content.pinned_comments[i];
             if (updatedPinnedInputs[i] && comment) {
                 updatedPinnedInputs[i].value = comment;
@@ -1087,10 +1112,11 @@ function fillFormStep1(data) {
 
         console.log('✅ Форма успешно заполнена сгенерированным контентом!');
         console.log('🔍 Проверьте поля формы - они должны быть заполнены автоматически.');
+        console.log('✅ fillFormStep1 завершен успешно');
 
-        setTimeout(() => fillFormStep2(data), 50);
     } catch (error) {
         console.error('💥 Ошибка в шаге 1:', error);
+        console.error('Stack trace:', error.stack);
         throw error;
     }
 }
