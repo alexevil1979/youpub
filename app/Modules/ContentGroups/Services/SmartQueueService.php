@@ -174,10 +174,13 @@ class SmartQueueService extends Service
         error_log("SmartQueueService::processGroupSchedule: Temporary schedule created. ID: {$tempScheduleId}");
 
         // Публикуем
+        error_log("SmartQueueService::processGroupSchedule: Calling publishVideo. Platform: {$schedule['platform']}, Temp schedule ID: {$tempScheduleId}");
         $result = $this->publishVideo($schedule['platform'], $tempScheduleId, $templated);
+        error_log("SmartQueueService::processGroupSchedule: publishVideo result. Success: " . ($result['success'] ? 'true' : 'false') . ", Message: " . ($result['message'] ?? 'no message'));
 
         // Обновляем статус временного расписания и файла в группе
         if ($result['success']) {
+            error_log("SmartQueueService::processGroupSchedule: Publication successful. Updating file status to 'published'");
             $publicationId = $result['data']['publication_id'] ?? null;
             $this->fileRepo->updateFileStatus($groupFile['id'], 'published', $publicationId);
             // Обновляем статус временного расписания на 'published'
@@ -228,6 +231,40 @@ class SmartQueueService extends Service
         }
     }
 
+
+    /**
+     * Обновить метаданные видео перед публикацией
+     */
+    private function updateVideoMetadata(int $scheduleId, array $templated): void
+    {
+        try {
+            $schedule = $this->scheduleRepo->findById($scheduleId);
+            if (!$schedule || empty($schedule['video_id'])) {
+                error_log("SmartQueueService::updateVideoMetadata: Schedule or video_id not found for schedule ID: {$scheduleId}");
+                return;
+            }
+
+            $videoRepo = new \App\Repositories\VideoRepository();
+            $updateData = [];
+
+            if (!empty($templated['title'])) {
+                $updateData['title'] = $templated['title'];
+            }
+            if (!empty($templated['description'])) {
+                $updateData['description'] = $templated['description'];
+            }
+            if (!empty($templated['tags'])) {
+                $updateData['tags'] = $templated['tags'];
+            }
+
+            if (!empty($updateData)) {
+                $videoRepo->update($schedule['video_id'], $updateData);
+                error_log("SmartQueueService::updateVideoMetadata: Updated video ID {$schedule['video_id']} with template data");
+            }
+        } catch (\Exception $e) {
+            error_log("SmartQueueService::updateVideoMetadata: Error - " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+        }
+    }
 
     /**
      * Автоматическое перемешивание видео в группе

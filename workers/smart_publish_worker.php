@@ -103,7 +103,14 @@ try {
             logMessage("Processing group schedule ID: {$schedule['id']}, Group: {$schedule['group_name']}, Platform: {$schedule['platform']}, Publish_at: " . ($schedule['publish_at'] ?? 'NULL') . $timeUntilPublish, $logFile);
 
             // Обрабатываем расписание с группой
-            $result = $smartQueue->processGroupSchedule($schedule);
+            try {
+                $result = $smartQueue->processGroupSchedule($schedule);
+                
+                logMessage("Schedule ID {$schedule['id']} processGroupSchedule result: success=" . ($result['success'] ? 'true' : 'false') . ", message=" . ($result['message'] ?? 'no message'), $logFile);
+            } catch (\Exception $e) {
+                logMessage("Schedule ID {$schedule['id']} processGroupSchedule exception: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine(), $logFile);
+                $result = ['success' => false, 'message' => $e->getMessage()];
+            }
 
             if ($result['success']) {
                 logMessage("Schedule ID {$schedule['id']} published successfully", $logFile);
