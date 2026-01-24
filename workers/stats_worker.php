@@ -14,6 +14,10 @@ use App\Repositories\StatisticsRepository;
 // Загрузка конфигурации
 $config = require __DIR__ . '/../config/env.php';
 
+// Установка часового пояса
+$timezone = $config['TIMEZONE'] ?? 'Europe/Moscow';
+date_default_timezone_set($timezone);
+
 // Инициализация БД
 Database::init($config);
 

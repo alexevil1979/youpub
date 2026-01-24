@@ -55,6 +55,9 @@ return [
     'WORKER_INTERVAL' => 60, // секунды
     'WORKER_LOG_DIR' => __DIR__ . '/../storage/logs/workers',
     
+    // Часовой пояс
+    'TIMEZONE' => 'Europe/Moscow', // Часовой пояс для PHP и MySQL
+    
     // Лимиты
     'RATE_LIMIT_REQUESTS' => 100,
     'RATE_LIMIT_WINDOW' => 3600, // 1 час

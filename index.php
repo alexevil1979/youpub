@@ -36,8 +36,15 @@ if (posix_geteuid() === 0 && file_exists($errorLogFile)) {
 
 ini_set('error_log', $errorLogFile);
 
+// Загрузка конфигурации для установки часового пояса
+$config = require __DIR__ . '/config/env.php';
+
+// Установка часового пояса
+$timezone = $config['TIMEZONE'] ?? 'Europe/Moscow';
+date_default_timezone_set($timezone);
+
 // Тестовое логирование
-error_log("=== Application started at " . date('Y-m-d H:i:s') . " ===");
+error_log("=== Application started at " . date('Y-m-d H:i:s') . " (timezone: {$timezone}) ===");
 
 // Включить буферизацию вывода
 ob_start();
@@ -49,9 +56,7 @@ use Core\Router;
 use Core\Auth;
 
 try {
-
-    // Загрузка конфигурации
-    $config = require __DIR__ . '/config/env.php';
+    // Конфигурация уже загружена выше для установки часового пояса
 
     // Инициализация БД
     Database::init($config);

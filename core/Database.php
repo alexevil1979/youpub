@@ -53,6 +53,12 @@ class Database
                     self::$config['DB_PASS'],
                     $options
                 );
+                
+                // Устанавливаем часовой пояс для MySQL
+                $timezone = self::$config['TIMEZONE'] ?? 'Europe/Moscow';
+                $offset = (new \DateTimeZone($timezone))->getOffset(new \DateTime()) / 3600;
+                $offsetStr = sprintf('%+03d:00', $offset);
+                self::$instance->exec("SET time_zone = '{$offsetStr}'");
             } catch (PDOException $e) {
                 error_log('Database connection failed: ' . $e->getMessage());
                 throw new \RuntimeException('Database connection failed');
