@@ -40,7 +40,7 @@ ob_start();
         <!-- Переключатель автогенерации -->
         <div class="form-group">
             <label class="checkbox-label">
-                <input type="checkbox" id="use_auto_generation" name="use_auto_generation" onchange="if(typeof toggleAutoGeneration === 'function') { toggleAutoGeneration(); } else { console.error('toggleAutoGeneration function not found'); }">
+                <input type="checkbox" id="use_auto_generation" name="use_auto_generation">
                 🚀 Использовать автогенерацию контента
             </label>
             <small>Автоматически сгенерировать контент из одной идеи вместо ручного заполнения</small>
@@ -672,6 +672,10 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Page loaded, initializing toggleAutoGeneration');
     const checkbox = document.getElementById('use_auto_generation');
     if (checkbox) {
+        // Добавляем обработчик события
+        checkbox.addEventListener('change', function() {
+            toggleAutoGeneration();
+        });
         // Вызываем функцию один раз при загрузке для корректного начального состояния
         toggleAutoGeneration();
         console.log('✅ toggleAutoGeneration initialized');
