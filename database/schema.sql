@@ -307,6 +307,20 @@ CREATE TABLE IF NOT EXISTS `publication_templates` (
   `tags_template` text COMMENT 'Шаблон тегов с переменными',
   `emoji_list` text COMMENT 'JSON: список emoji для рандомизации',
   `variants` text COMMENT 'JSON: варианты текста для рандомизации',
+
+  -- Новые поля для оптимизации YouTube Shorts
+  `hook_type` enum('emotional','intriguing','atmospheric','visual','educational') DEFAULT NULL COMMENT 'Тип контента (триггер)',
+  `focus_points` text COMMENT 'JSON: массив фокусов видео (голос, неон, атмосфера и т.д.)',
+  `title_variants` text COMMENT 'JSON: массив вариантов названий для A/B тестирования',
+  `description_variants` text COMMENT 'JSON: объект с вариантами описаний по типам триггеров',
+  `emoji_groups` text COMMENT 'JSON: объект с группами emoji по типам контента',
+  `base_tags` text COMMENT 'Основные теги (всегда присутствуют)',
+  `tag_variants` text COMMENT 'JSON: массив вариантов ротации тегов',
+  `questions` text COMMENT 'JSON: массив вопросов для вовлечённости',
+  `pinned_comments` text COMMENT 'JSON: массив вариантов закрепленных комментариев',
+  `cta_types` text COMMENT 'JSON: массив типов CTA (call to action)',
+  `enable_ab_testing` tinyint(1) DEFAULT 1 COMMENT 'Включить A/B тестирование названий',
+
   `is_active` tinyint(1) DEFAULT 1,
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

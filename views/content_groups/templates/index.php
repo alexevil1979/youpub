@@ -33,7 +33,8 @@ if (!isset($templates)) {
         <div class="empty-state-icon"><?= \App\Helpers\IconHelper::render('file', 64) ?></div>
         <h3>Нет созданных шаблонов</h3>
         <p>Создайте первый шаблон для автоматического оформления публикаций</p>
-        <a href="/content-groups/templates/create" class="btn btn-primary">Создать шаблон</a>
+        <a href="/content-groups/templates/create-shorts" class="btn btn-primary">🎯 Создать шаблон для Shorts</a>
+        <a href="/content-groups/templates/create" class="btn btn-secondary">📝 Простой шаблон</a>
     </div>
 <?php else: ?>
     <div style="margin-top: 2rem;">

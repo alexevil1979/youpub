@@ -113,19 +113,56 @@ class TemplateController extends Controller
     }
 
     /**
+     * Показать улучшенную форму создания шаблона для Shorts
+     */
+    public function showCreateShorts(): void
+    {
+        $csrfToken = (new \Core\Auth())->generateCsrfToken();
+        include __DIR__ . '/../../../../views/content_groups/templates/create_v2.php';
+    }
+
+    /**
      * Создать шаблон
      */
     public function create(): void
     {
         try {
             $userId = $_SESSION['user_id'] ?? null;
-            
+
             if (!$userId) {
                 $_SESSION['error'] = 'Необходима авторизация';
                 header('Location: /content-groups/templates/create');
                 exit;
             }
-            
+
+            // Обработка новых полей для Shorts
+            $titleVariants = $this->getParam('title_variants', []);
+            $descriptionTypes = $this->getParam('description_types', []);
+            $descriptionTexts = $this->getParam('description_texts', []);
+
+            // Группируем описания по типам
+            $descriptionVariants = [];
+            if (!empty($descriptionTypes) && !empty($descriptionTexts)) {
+                foreach ($descriptionTypes as $index => $type) {
+                    if (!empty($descriptionTexts[$index])) {
+                        $descriptionVariants[$type][] = $descriptionTexts[$index];
+                    }
+                }
+            }
+
+            // Emoji группы
+            $emojiGroups = [
+                'emotional' => $this->getParam('emoji_emotional', ''),
+                'intrigue' => $this->getParam('emoji_intrigue', ''),
+                'atmosphere' => $this->getParam('emoji_atmosphere', ''),
+                'question' => $this->getParam('emoji_question', ''),
+                'cta' => $this->getParam('emoji_cta', ''),
+            ];
+
+            // Убираем пустые группы
+            $emojiGroups = array_filter($emojiGroups);
+
+            // Обратная совместимость: старые поля
             $emojiList = $this->getParam('emoji_list', '');
             $emojiArray = !empty($emojiList) ? array_filter(array_map('trim', explode(',', $emojiList))) : [];
 
@@ -143,11 +180,24 @@ class TemplateController extends Controller
             $data = [
                 'name' => $this->getParam('name', ''),
                 'description' => $this->getParam('description', ''),
+                // Старые поля для обратной совместимости
                 'title_template' => $this->getParam('title_template', ''),
                 'description_template' => $this->getParam('description_template', ''),
                 'tags_template' => $this->getParam('tags_template', ''),
                 'emoji_list' => $emojiArray,
                 'variants' => !empty($variants) ? $variants : null,
+                // Новые поля для Shorts
+                'hook_type' => $this->getParam('hook_type', 'emotional'),
+                'focus_points' => $this->getParam('focus_points', []),
+                'title_variants' => !empty($titleVariants) ? array_filter($titleVariants) : null,
+                'description_variants' => !empty($descriptionVariants) ? $descriptionVariants : null,
+                'emoji_groups' => !empty($emojiGroups) ? $emojiGroups : null,
+                'base_tags' => $this->getParam('base_tags', ''),
+                'tag_variants' => $this->getParam('tag_variants', []),
+                'questions' => $this->getParam('questions', []),
+                'pinned_comments' => $this->getParam('pinned_comments', []),
+                'cta_types' => $this->getParam('cta_types', []),
+                'enable_ab_testing' => $this->getParam('enable_ab_testing', '1') === '1',
                 'is_active' => $this->getParam('is_active', '1') === '1',
             ];
 
@@ -236,6 +286,34 @@ class TemplateController extends Controller
                 exit;
             }
             
+            // Обработка новых полей для Shorts (аналогично create)
+            $titleVariants = $this->getParam('title_variants', []);
+            $descriptionTypes = $this->getParam('description_types', []);
+            $descriptionTexts = $this->getParam('description_texts', []);
+
+            // Группируем описания по типам
+            $descriptionVariants = [];
+            if (!empty($descriptionTypes) && !empty($descriptionTexts)) {
+                foreach ($descriptionTypes as $index => $type) {
+                    if (!empty($descriptionTexts[$index])) {
+                        $descriptionVariants[$type][] = $descriptionTexts[$index];
+                    }
+                }
+            }
+
+            // Emoji группы
+            $emojiGroups = [
+                'emotional' => $this->getParam('emoji_emotional', ''),
+                'intrigue' => $this->getParam('emoji_intrigue', ''),
+                'atmosphere' => $this->getParam('emoji_atmosphere', ''),
+                'question' => $this->getParam('emoji_question', ''),
+                'cta' => $this->getParam('emoji_cta', ''),
+            ];
+
+            // Убираем пустые группы
+            $emojiGroups = array_filter($emojiGroups);
+
+            // Обратная совместимость: старые поля
             $emojiList = $this->getParam('emoji_list', '');
             $emojiArray = !empty($emojiList) ? array_filter(array_map('trim', explode(',', $emojiList))) : [];
 
@@ -253,11 +331,24 @@ class TemplateController extends Controller
             $data = [
                 'name' => $this->getParam('name', ''),
                 'description' => $this->getParam('description', ''),
+                // Старые поля для обратной совместимости
                 'title_template' => $this->getParam('title_template', ''),
                 'description_template' => $this->getParam('description_template', ''),
                 'tags_template' => $this->getParam('tags_template', ''),
                 'emoji_list' => $emojiArray,
                 'variants' => !empty($variants) ? $variants : null,
+                // Новые поля для Shorts
+                'hook_type' => $this->getParam('hook_type', 'emotional'),
+                'focus_points' => $this->getParam('focus_points', []),
+                'title_variants' => !empty($titleVariants) ? array_filter($titleVariants) : null,
+                'description_variants' => !empty($descriptionVariants) ? $descriptionVariants : null,
+                'emoji_groups' => !empty($emojiGroups) ? $emojiGroups : null,
+                'base_tags' => $this->getParam('base_tags', ''),
+                'tag_variants' => $this->getParam('tag_variants', []),
+                'questions' => $this->getParam('questions', []),
+                'pinned_comments' => $this->getParam('pinned_comments', []),
+                'cta_types' => $this->getParam('cta_types', []),
+                'enable_ab_testing' => $this->getParam('enable_ab_testing', '1') === '1',
                 'is_active' => $this->getParam('is_active', '1') === '1',
             ];
 
