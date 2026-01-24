@@ -151,48 +151,79 @@ class AutoShortsGenerator
     /**
      * Генерировать полный Shorts контент из одной идеи
      */
+    /**
+     * Генерация одного варианта контента (legacy method)
+     */
     public function generateFromIdea(string $idea): array
     {
+        $variants = $this->generateMultipleVariants($idea, 1);
+        return $variants[0] ?? [];
+    }
+
+    /**
+     * Генерация 20 различных вариантов оформления видео
+     */
+    public function generateMultipleVariants(string $idea, int $count = 20): array
+    {
         try {
-            error_log('AutoShortsGenerator::generateFromIdea: Starting generation for idea: "' . $idea . '"');
+            error_log('AutoShortsGenerator::generateMultipleVariants: Starting generation for idea: "' . $idea . '" with ' . $count . ' variants');
 
             // 1. Анализ intent
-            error_log('AutoShortsGenerator::generateFromIdea: Analyzing intent');
+            error_log('AutoShortsGenerator::generateMultipleVariants: Analyzing intent');
             $intent = $this->analyzeIntent($idea);
-            error_log('AutoShortsGenerator::generateFromIdea: Intent analyzed - ' . json_encode($intent));
+            error_log('AutoShortsGenerator::generateMultipleVariants: Intent analyzed - ' . json_encode($intent));
 
             // 2. Генерация смысловых углов
-            error_log('AutoShortsGenerator::generateFromIdea: Generating content angles');
+            error_log('AutoShortsGenerator::generateMultipleVariants: Generating content angles');
             $angles = $this->generateContentAngles($intent, $idea);
-            error_log('AutoShortsGenerator::generateFromIdea: Angles generated - ' . count($angles) . ' angles');
+            error_log('AutoShortsGenerator::generateMultipleVariants: Angles generated - ' . count($angles) . ' angles');
 
-            // 3. Генерация контента
-            error_log('AutoShortsGenerator::generateFromIdea: Generating content');
-            $content = $this->generateContent($intent, $angles);
-            error_log('AutoShortsGenerator::generateFromIdea: Content generated successfully');
+            $variants = [];
+            $usedTitles = [];
+            $usedDescriptions = [];
 
-            // 4. Проверка на дубликаты
-            error_log('AutoShortsGenerator::generateFromIdea: Ensuring uniqueness');
-            $content = $this->ensureUniqueness($content);
-            error_log('AutoShortsGenerator::generateFromIdea: Uniqueness ensured');
+            // 3. Генерация множества вариантов
+            for ($i = 0; $i < $count; $i++) {
+                error_log('AutoShortsGenerator::generateMultipleVariants: Generating variant ' . ($i + 1));
 
-            // 5. Сохранение в истории
-            error_log('AutoShortsGenerator::generateFromIdea: Adding to history');
-            $this->addToHistory($content);
+                // Создаем уникальный вариант с разными параметрами
+                $variantIntent = $this->modifyIntentForVariant($intent, $i);
+                $variantAngles = $this->selectAnglesForVariant($angles, $i);
 
-            $result = [
-                'idea' => $idea,
-                'intent' => $intent,
-                'content' => $content,
-                'generated_at' => date('Y-m-d H:i:s')
-            ];
+                // Генерируем контент для этого варианта
+                $content = $this->generateContent($variantIntent, $variantAngles);
 
-            error_log('AutoShortsGenerator::generateFromIdea: Generation completed successfully');
-            return $result;
+                // Убеждаемся в уникальности
+                $content = $this->ensureVariantUniqueness($content, $usedTitles, $usedDescriptions);
+
+                // Добавляем в историю для защиты от глобальных дубликатов
+                $this->addToHistory($content);
+
+                $variant = [
+                    'idea' => $idea,
+                    'intent' => $variantIntent,
+                    'content' => $content,
+                    'variant_number' => $i + 1,
+                    'generated_at' => date('Y-m-d H:i:s')
+                ];
+
+                $variants[] = $variant;
+
+                // Сохраняем использованные заголовки и описания для уникальности
+                if (isset($content['title'])) {
+                    $usedTitles[] = $content['title'];
+                }
+                if (isset($content['description'])) {
+                    $usedDescriptions[] = $content['description'];
+                }
+            }
+
+            error_log('AutoShortsGenerator::generateMultipleVariants: Generated ' . count($variants) . ' variants successfully');
+            return $variants;
 
         } catch (Exception $e) {
-            error_log('AutoShortsGenerator::generateFromIdea: Exception: ' . $e->getMessage());
-            error_log('AutoShortsGenerator::generateFromIdea: Stack trace: ' . $e->getTraceAsString());
+            error_log('AutoShortsGenerator::generateMultipleVariants: Exception: ' . $e->getMessage());
+            error_log('AutoShortsGenerator::generateMultipleVariants: Stack trace: ' . $e->getTraceAsString());
             throw $e;
         }
     }

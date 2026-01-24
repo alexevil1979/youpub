@@ -688,7 +688,8 @@ function generateFromIdea() {
             fillFormWithSuggestion(data);
 
             // Показываем уведомление с кратким результатом
-            const preview = `Название: "${data.content.title_template}"\nОписание: "${data.content.description_template}"\n\nПосмотрите в консоли (F12) для полного результата!`;
+            const variantsCount = data.content.generated_variants || data.variants_count || 1;
+            const preview = `🎯 Сгенерировано ${variantsCount} уникальных вариантов!\n\nНазвание: "${data.content.title_template}"\nОписание: "${data.content.description_template}"\n\nПосмотрите в консоли (F12) для полного результата!`;
             alert('✅ Контент успешно сгенерирован!\n\n' + preview);
         } else {
             console.error('Server returned error:', data.message);
@@ -735,7 +736,8 @@ function suggestContent() {
         if (data.success) {
             // Автозаполняем поля
             fillFormWithSuggestion(data);
-            alert('✅ Контент успешно сгенерирован и заполнен в форму!');
+            const variantsCount = data.content.generated_variants || data.variants_count || 1;
+            alert(`✅ Контент успешно сгенерирован и заполнен в форму!\n🎯 Создано ${variantsCount} уникальных вариантов для шаблона.`);
         } else {
             alert('❌ Ошибка: ' + (data.message || 'Не удалось сгенерировать контент'));
         }
@@ -757,6 +759,10 @@ function fillFormWithSuggestion(data) {
     const content = data.content;
 
     console.log('📝 Начинаем заполнение формы...');
+    console.log(`🎯 Всего сгенерировано вариантов: ${data.variants_count || content.generated_variants || 1}`);
+    console.log(`📊 Уникальных названий: ${content.unique_titles || 1}`);
+    console.log(`📝 Уникальных описаний: ${content.unique_descriptions || 1}`);
+    console.log(`🏷️ Уникальных тегов: ${content.unique_tags || 1}`);
 
     // Заполняем основные поля с проверками
     // Название шаблона (первое поле title_variants)
@@ -795,18 +801,42 @@ function fillFormWithSuggestion(data) {
         }
     }
 
-    // Варианты названий
+    // Варианты названий - добавляем поля динамически если нужно
     if (content.title_variants && Array.isArray(content.title_variants)) {
+        const titleContainer = document.getElementById('titleVariantsContainer');
         const titleInputs = document.querySelectorAll('[name="title_variants[]"]');
+
+        // Добавляем недостающие поля
+        while (titleInputs.length < content.title_variants.length) {
+            document.getElementById('addTitleVariant').click();
+        }
+
+        // Заполняем значения
+        const updatedTitleInputs = document.querySelectorAll('[name="title_variants[]"]');
         content.title_variants.forEach((variant, index) => {
-            if (titleInputs[index]) {
-                titleInputs[index].value = variant;
+            if (updatedTitleInputs[index] && variant) {
+                updatedTitleInputs[index].value = variant;
+                console.log(`✅ Заполнен вариант названия ${index + 1}:`, variant);
             }
         });
     }
 
-    // Варианты описаний
+    // Варианты описаний - добавляем поля динамически если нужно
     if (content.description_variants) {
+        let totalVariants = 0;
+        Object.entries(content.description_variants).forEach(([type, variants]) => {
+            if (Array.isArray(variants)) {
+                totalVariants += variants.length;
+            }
+        });
+
+        // Добавляем недостающие поля описаний
+        const descInputs = document.querySelectorAll('[name="description_texts[]"]');
+        while (descInputs.length < totalVariants) {
+            document.getElementById('addDescriptionVariant').click();
+        }
+
+        // Заполняем значения
         let descIndex = 0;
         Object.entries(content.description_variants).forEach(([type, variants]) => {
             if (Array.isArray(variants)) {
@@ -816,6 +846,7 @@ function fillFormWithSuggestion(data) {
 
                     if (typeSelect) typeSelect.value = type;
                     if (textInput) textInput.value = variant;
+                    console.log(`✅ Заполнен вариант описания ${descIndex + 1} (${type}):`, variant);
 
                     descIndex++;
                 });
@@ -845,9 +876,23 @@ function fillFormWithSuggestion(data) {
         questionsInput.value = content.questions.join('\n');
     }
 
-    const pinnedCommentsInput = document.querySelector('[name="pinned_comments"]');
-    if (pinnedCommentsInput && content.pinned_comments && Array.isArray(content.pinned_comments)) {
-        pinnedCommentsInput.value = content.pinned_comments.join('\n');
+    // Закрепленные комментарии - добавляем поля динамически если нужно
+    if (content.pinned_comments && Array.isArray(content.pinned_comments)) {
+        const pinnedInputs = document.querySelectorAll('[name="pinned_comments[]"]');
+
+        // Добавляем недостающие поля
+        while (pinnedInputs.length < content.pinned_comments.length) {
+            document.getElementById('addPinnedCommentVariant').click();
+        }
+
+        // Заполняем значения
+        const updatedPinnedInputs = document.querySelectorAll('[name="pinned_comments[]"]');
+        content.pinned_comments.forEach((comment, index) => {
+            if (updatedPinnedInputs[index] && comment) {
+                updatedPinnedInputs[index].value = comment;
+                console.log(`✅ Заполнен закрепленный комментарий ${index + 1}:`, comment);
+            }
+        });
     }
 
     const focusPointsInput = document.querySelector('[name="focus_points"]');
