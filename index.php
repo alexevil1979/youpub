@@ -69,8 +69,19 @@ try {
     // Установка часового пояса
     $timezone = $config['TIMEZONE'] ?? 'Europe/Samara';
     writeLog("Setting timezone to: {$timezone}");
-    date_default_timezone_set($timezone);
-    writeLog("Timezone set");
+    try {
+        date_default_timezone_set($timezone);
+        writeLog("Timezone set successfully");
+    } catch (\Throwable $tzError) {
+        writeLog("Failed to set timezone {$timezone}: " . $tzError->getMessage());
+        // Пробуем альтернативный часовой пояс
+        try {
+            date_default_timezone_set('UTC');
+            writeLog("Fallback to UTC timezone");
+        } catch (\Throwable $utcError) {
+            writeLog("Failed to set UTC timezone: " . $utcError->getMessage());
+        }
+    }
 
     // Инициализация БД
     writeLog("Initializing database...");
