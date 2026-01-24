@@ -417,19 +417,34 @@ class TemplateController extends Controller
         try {
             error_log('TemplateController::suggestContent: Starting content suggestion');
 
+            // Инициализируем сессию, если не инициализирована
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+
             $idea = trim($this->getParam('idea', ''));
             error_log('TemplateController::suggestContent: Idea received: "' . $idea . '"');
 
             if (empty($idea)) {
                 error_log('TemplateController::suggestContent: Empty idea');
-                $this->jsonResponse(['success' => false, 'message' => 'Не указана идея для генерации']);
-                return;
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Не указана идея для генерации']);
+                exit;
             }
 
             if (strlen($idea) < 3) {
                 error_log('TemplateController::suggestContent: Idea too short');
-                $this->jsonResponse(['success' => false, 'message' => 'Идея должна содержать минимум 3 символа']);
-                return;
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Идея должна содержать минимум 3 символа']);
+                exit;
+            }
+
+            // Проверяем, что autoGenerator инициализирован
+            if (!$this->autoGenerator) {
+                error_log('TemplateController::suggestContent: AutoGenerator not initialized');
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Система генерации не инициализирована']);
+                exit;
             }
 
             // Генерируем контент
@@ -443,35 +458,39 @@ class TemplateController extends Controller
                 'idea' => $result['idea'],
                 'intent' => $result['intent'],
                 'content' => [
-                    'title_template' => $result['content']['title'],
-                    'description_template' => $result['content']['description'],
-                    'tags_template' => implode(', ', $result['content']['tags']),
-                    'emoji_list' => $result['content']['emoji'],
+                    'title_template' => $result['content']['title'] ?? '',
+                    'description_template' => $result['content']['description'] ?? '',
+                    'tags_template' => implode(', ', $result['content']['tags'] ?? []),
+                    'emoji_list' => $result['content']['emoji'] ?? '',
 
                     // Новые поля для Shorts
-                    'hook_type' => $result['intent']['content_type'],
-                    'title_variants' => [$result['content']['title']],
+                    'hook_type' => $result['intent']['content_type'] ?? 'vocal',
+                    'title_variants' => [$result['content']['title'] ?? ''],
                     'description_variants' => [
-                        $result['intent']['mood'] => [$result['content']['description']]
+                        ($result['intent']['mood'] ?? 'calm') => [$result['content']['description'] ?? '']
                     ],
                     'emoji_groups' => [
-                        $result['intent']['mood'] => array_filter(explode(',', $result['content']['emoji']))
+                        ($result['intent']['mood'] ?? 'calm') => array_filter(explode(',', $result['content']['emoji'] ?? ''))
                     ],
-                    'base_tags' => implode(', ', $result['content']['tags']),
-                    'tag_variants' => [$result['content']['tags']],
-                    'questions' => [$result['content']['pinned_comment']],
-                    'pinned_comments' => [$result['content']['pinned_comment']],
-                    'focus_points' => [$result['intent']['visual_focus']]
+                    'base_tags' => implode(', ', $result['content']['tags'] ?? []),
+                    'tag_variants' => [$result['content']['tags'] ?? []],
+                    'questions' => [$result['content']['pinned_comment'] ?? ''],
+                    'pinned_comments' => [$result['content']['pinned_comment'] ?? ''],
+                    'focus_points' => [$result['intent']['visual_focus'] ?? 'neon']
                 ]
             ];
 
             error_log('TemplateController::suggestContent: Returning successful response');
-            $this->jsonResponse($suggestion);
+            header('Content-Type: application/json');
+            echo json_encode($suggestion);
+            exit;
 
         } catch (Exception $e) {
             error_log('TemplateController::suggestContent: Exception caught: ' . $e->getMessage());
             error_log('TemplateController::suggestContent: Stack trace: ' . $e->getTraceAsString());
-            $this->jsonResponse(['success' => false, 'message' => 'Ошибка генерации контента: ' . $e->getMessage()]);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Ошибка генерации контента: ' . $e->getMessage()]);
+            exit;
         }
     }
 
