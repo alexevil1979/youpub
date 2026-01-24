@@ -23,7 +23,12 @@ class TemplateController extends Controller
      */
     public function index(): void
     {
-        error_log("TemplateController::index: START - " . date('Y-m-d H:i:s'));
+        try {
+            $timestamp = @date('Y-m-d H:i:s') ?: gmdate('Y-m-d H:i:s') . ' UTC';
+        } catch (\Throwable $e) {
+            $timestamp = gmdate('Y-m-d H:i:s') . ' UTC';
+        }
+        error_log("TemplateController::index: START - " . $timestamp);
         
         try {
             // Проверяем сессию

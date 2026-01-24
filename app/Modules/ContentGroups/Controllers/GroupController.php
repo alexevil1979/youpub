@@ -26,10 +26,21 @@ class GroupController extends Controller
      */
     public function index(): void
     {
-        $userId = $_SESSION['user_id'];
-        $groups = $this->groupService->getUserGroups($userId, true);
-        
-        include __DIR__ . '/../../../../views/content_groups/index.php';
+        try {
+            if (!isset($_SESSION['user_id'])) {
+                header('Location: /login');
+                exit;
+            }
+            
+            $userId = $_SESSION['user_id'];
+            $groups = $this->groupService->getUserGroups($userId, true);
+            
+            include __DIR__ . '/../../../../views/content_groups/index.php';
+        } catch (\Throwable $e) {
+            error_log("GroupController::index error: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+            http_response_code(500);
+            echo "Ошибка при загрузке страницы. Пожалуйста, попробуйте позже.";
+        }
     }
 
     /**

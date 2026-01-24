@@ -23,8 +23,14 @@ class VideoController extends Controller
      */
     public function index(): void
     {
-        $userId = $_SESSION['user_id'];
-        $videos = $this->videoService->getUserVideos($userId);
+        try {
+            if (!isset($_SESSION['user_id'])) {
+                header('Location: /login');
+                exit;
+            }
+            
+            $userId = $_SESSION['user_id'];
+            $videos = $this->videoService->getUserVideos($userId);
         
         // Получаем группы для отображения в модальном окне
         $groupService = new \App\Modules\ContentGroups\Services\GroupService();

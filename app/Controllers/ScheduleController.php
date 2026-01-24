@@ -23,14 +23,25 @@ class ScheduleController extends Controller
      */
     public function index(): void
     {
-        $userId = $_SESSION['user_id'];
-        $schedules = $this->scheduleService->getUserSchedules($userId);
-        
-        // Получаем группы для отображения в модальном окне (если нужно)
-        $groupService = new \App\Modules\ContentGroups\Services\GroupService();
-        $groups = $groupService->getUserGroups($userId);
-        
-        include __DIR__ . '/../../views/schedules/index.php';
+        try {
+            if (!isset($_SESSION['user_id'])) {
+                header('Location: /login');
+                exit;
+            }
+            
+            $userId = $_SESSION['user_id'];
+            $schedules = $this->scheduleService->getUserSchedules($userId);
+            
+            // Получаем группы для отображения в модальном окне (если нужно)
+            $groupService = new \App\Modules\ContentGroups\Services\GroupService();
+            $groups = $groupService->getUserGroups($userId);
+            
+            include __DIR__ . '/../../views/schedules/index.php';
+        } catch (\Throwable $e) {
+            error_log("ScheduleController::index error: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+            http_response_code(500);
+            echo "Ошибка при загрузке страницы. Пожалуйста, попробуйте позже.";
+        }
     }
 
     /**
