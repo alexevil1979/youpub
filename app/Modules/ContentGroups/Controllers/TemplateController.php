@@ -320,7 +320,16 @@ class TemplateController extends Controller
         }
 
         $csrfToken = (new \Core\Auth())->generateCsrfToken();
-        include __DIR__ . '/../../../../views/content_groups/templates/edit.php';
+        $isShortsTemplate = !empty($template['hook_type'])
+            || !empty($template['title_variants'])
+            || !empty($template['description_variants'])
+            || !empty($template['emoji_groups']);
+
+        if ($isShortsTemplate) {
+            include __DIR__ . '/../../../../views/content_groups/templates/create_v2.php';
+        } else {
+            include __DIR__ . '/../../../../views/content_groups/templates/edit.php';
+        }
     }
 
     /**

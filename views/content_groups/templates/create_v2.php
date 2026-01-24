@@ -1,9 +1,90 @@
 <?php
-$title = 'Создать шаблон Shorts (улучшенный)';
+$isEdit = isset($template) && is_array($template);
+$pageTitle = $isEdit ? 'Редактировать шаблон Shorts' : 'Создать шаблон Shorts (улучшенный)';
+$title = $pageTitle;
+$formAction = $isEdit ? '/content-groups/templates/' . ($template['id'] ?? '') . '/update' : '/content-groups/templates/create-shorts';
+
+$decodeJson = static function ($value): array {
+    if (!is_string($value) || $value === '') {
+        return [];
+    }
+    $decoded = json_decode($value, true);
+    return is_array($decoded) ? $decoded : [];
+};
+
+$nameValue = $isEdit ? ($template['name'] ?? '') : '';
+$descriptionValue = $isEdit ? ($template['description'] ?? '') : '';
+$hookTypeValue = $isEdit ? ($template['hook_type'] ?? '') : '';
+$focusPoints = $isEdit ? $decodeJson($template['focus_points'] ?? '') : [];
+$titleVariants = $isEdit ? $decodeJson($template['title_variants'] ?? '') : [];
+$descriptionVariants = $isEdit ? $decodeJson($template['description_variants'] ?? '') : [];
+$emojiGroups = $isEdit ? $decodeJson($template['emoji_groups'] ?? '') : [];
+$baseTagsValue = $isEdit ? ($template['base_tags'] ?? '') : 'неон, голос, вокал, атмосфера, музыка';
+$tagVariants = $isEdit ? $decodeJson($template['tag_variants'] ?? '') : [];
+$questions = $isEdit ? $decodeJson($template['questions'] ?? '') : [];
+$pinnedComments = $isEdit ? $decodeJson($template['pinned_comments'] ?? '') : [];
+$ctaTypes = $isEdit ? $decodeJson($template['cta_types'] ?? '') : [];
+$enableAbTesting = $isEdit ? !empty($template['enable_ab_testing']) : true;
+$isActive = $isEdit ? !empty($template['is_active']) : true;
+
+$descriptionItems = [];
+foreach ($descriptionVariants as $type => $variants) {
+    if (is_array($variants)) {
+        foreach ($variants as $variant) {
+            $descriptionItems[] = ['type' => $type, 'text' => $variant];
+        }
+    }
+}
+if (empty($descriptionItems)) {
+    $descriptionItems[] = ['type' => '', 'text' => ''];
+}
+
+if (empty($titleVariants)) {
+    $titleVariants = ['', '', ''];
+}
+if (empty($tagVariants)) {
+    $tagVariants = [
+        'неоновые огни, женский вокал, эмоции',
+        'красный неон, спокойная музыка, чувства',
+        'синий неон, уникальный голос, настроение',
+    ];
+}
+if (empty($questions)) {
+    $questions = [
+        'Какое сочетание цветов тебе больше всего понравилось?',
+        'Чувствовал ли ты мурашки от голоса?',
+        'Какая часть видео тебя зацепила больше всего?',
+    ];
+}
+if (empty($pinnedComments)) {
+    $pinnedComments = [
+        '🎵 Слушай плейлист в моём профиле',
+        '🔥 Все видео этой серии здесь 👇',
+    ];
+}
+
+$emojiDefaults = [
+    'emotional' => '😱,😲,❤️,💙,💜,🔥,✨,🌟',
+    'intrigue' => '🤔,❓,🔍,🎭,🎪,🎨,🌈,⭐',
+    'atmosphere' => '🌙,🌃,🌌,💫,🌠,🎵,🎶,🎼',
+    'question' => '❓,🤔,💭,💡,🔮,🎯,🎪,🎨',
+    'cta' => '👇,💬,📝,✍️,💭,🔥,👍,❤️',
+];
+
+$formatEmojiGroup = static function ($value, string $fallback): string {
+    if (is_array($value)) {
+        return implode(',', $value);
+    }
+    if (is_string($value) && $value !== '') {
+        return $value;
+    }
+    return $fallback;
+};
+
 ob_start();
 ?>
 
-<h1>🎯 Создать шаблон для YouTube Shorts</h1>
+<h1><?= $isEdit ? '✏️ Редактировать шаблон для YouTube Shorts' : '🎯 Создать шаблон для YouTube Shorts' ?></h1>
 
 <?php if (isset($_SESSION['error'])): ?>
     <div class="alert alert-error" style="margin-bottom: 1rem;">
@@ -19,7 +100,7 @@ ob_start();
     <?php unset($_SESSION['success']); ?>
 <?php endif; ?>
 
-<form method="POST" action="/content-groups/templates/create-shorts" class="template-form-shorts" id="templateForm">
+<form method="POST" action="<?= htmlspecialchars($formAction) ?>" class="template-form-shorts" id="templateForm">
     <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">
 
     <!-- ОСНОВНАЯ ИНФОРМАЦИЯ -->
@@ -28,13 +109,13 @@ ob_start();
 
         <div class="form-group">
             <label for="name">Название шаблона *</label>
-            <input type="text" id="name" name="name" required placeholder="Например: Неон + Голос (Эмоциональный)">
+            <input type="text" id="name" name="name" required placeholder="Например: Неон + Голос (Эмоциональный)" value="<?= htmlspecialchars($nameValue) ?>">
             <small>Уникальное название для идентификации шаблона</small>
         </div>
 
         <div class="form-group">
             <label for="description">Описание шаблона</label>
-            <textarea id="description" name="description" rows="2" placeholder="Для чего используется этот шаблон"></textarea>
+            <textarea id="description" name="description" rows="2" placeholder="Для чего используется этот шаблон"><?= htmlspecialchars($descriptionValue) ?></textarea>
         </div>
 
         <!-- Переключатель автогенерации -->
@@ -68,11 +149,11 @@ ob_start();
             <label for="hook_type">Основной тип контента *</label>
             <select id="hook_type" name="hook_type" required>
                 <option value="">Выберите тип</option>
-                <option value="emotional">😱 Эмоциональный (мурашки, слезы, восторг)</option>
-                <option value="intriguing">🤔 Интригующий (секрет, загадка, интрига)</option>
-                <option value="atmospheric">🌙 Атмосферный (настроение, атмосфера, чувство)</option>
-                <option value="visual">🎨 Визуальный (красиво, эстетика, цвета)</option>
-                <option value="educational">📚 Образовательный (узнаешь, откроешь, поймешь)</option>
+                <option value="emotional" <?= $hookTypeValue === 'emotional' ? 'selected' : '' ?>>😱 Эмоциональный (мурашки, слезы, восторг)</option>
+                <option value="intriguing" <?= $hookTypeValue === 'intriguing' ? 'selected' : '' ?>>🤔 Интригующий (секрет, загадка, интрига)</option>
+                <option value="atmospheric" <?= $hookTypeValue === 'atmospheric' ? 'selected' : '' ?>>🌙 Атмосферный (настроение, атмосфера, чувство)</option>
+                <option value="visual" <?= $hookTypeValue === 'visual' ? 'selected' : '' ?>>🎨 Визуальный (красиво, эстетика, цвета)</option>
+                <option value="educational" <?= $hookTypeValue === 'educational' ? 'selected' : '' ?>>📚 Образовательный (узнаешь, откроешь, поймешь)</option>
             </select>
             <small>Определяет стиль подачи контента</small>
         </div>
@@ -80,11 +161,11 @@ ob_start();
         <div class="form-group">
             <label>Фокус видео (можно выбрать несколько)</label>
             <div class="checkbox-grid">
-                <label><input type="checkbox" name="focus_points[]" value="voice"> 🎤 Голос/вокал</label>
-                <label><input type="checkbox" name="focus_points[]" value="neon"> 💡 Неоновые огни/цвета</label>
-                <label><input type="checkbox" name="focus_points[]" value="atmosphere"> 🌫️ Атмосфера/настроение</label>
-                <label><input type="checkbox" name="focus_points[]" value="effects"> ✨ Визуальные эффекты</label>
-                <label><input type="checkbox" name="focus_points[]" value="combination"> 🔄 Комбинация всего</label>
+                <label><input type="checkbox" name="focus_points[]" value="voice" <?= in_array('voice', $focusPoints, true) ? 'checked' : '' ?>> 🎤 Голос/вокал</label>
+                <label><input type="checkbox" name="focus_points[]" value="neon" <?= in_array('neon', $focusPoints, true) ? 'checked' : '' ?>> 💡 Неоновые огни/цвета</label>
+                <label><input type="checkbox" name="focus_points[]" value="atmosphere" <?= in_array('atmosphere', $focusPoints, true) ? 'checked' : '' ?>> 🌫️ Атмосфера/настроение</label>
+                <label><input type="checkbox" name="focus_points[]" value="effects" <?= in_array('effects', $focusPoints, true) ? 'checked' : '' ?>> ✨ Визуальные эффекты</label>
+                <label><input type="checkbox" name="focus_points[]" value="combination" <?= in_array('combination', $focusPoints, true) ? 'checked' : '' ?>> 🔄 Комбинация всего</label>
             </div>
         </div>
     </div>
@@ -95,18 +176,20 @@ ob_start();
 
         <div class="form-group">
             <div id="titleVariants">
+                <?php
+                $titlePlaceholders = [
+                    'Вариант 1: Неон + голос = мурашки по коже',
+                    'Вариант 2: Этот вокал заставляет светиться ярче',
+                    'Вариант 3: Когда голос встречает неоновый свет',
+                ];
+                foreach ($titleVariants as $index => $value):
+                    $placeholder = $titlePlaceholders[$index] ?? ('Вариант ' . ($index + 1));
+                ?>
                 <div class="variant-item">
-                    <input type="text" name="title_variants[]" placeholder="Вариант 1: Неон + голос = мурашки по коже" required>
+                    <input type="text" name="title_variants[]" placeholder="<?= htmlspecialchars($placeholder) ?>" value="<?= htmlspecialchars($value) ?>" required>
                     <button type="button" class="btn btn-sm btn-danger remove-variant" style="display: none;">❌</button>
                 </div>
-                <div class="variant-item">
-                    <input type="text" name="title_variants[]" placeholder="Вариант 2: Этот вокал заставляет светиться ярче" required>
-                    <button type="button" class="btn btn-sm btn-danger remove-variant" style="display: none;">❌</button>
-                </div>
-                <div class="variant-item">
-                    <input type="text" name="title_variants[]" placeholder="Вариант 3: Когда голос встречает неоновый свет" required>
-                    <button type="button" class="btn btn-sm btn-danger remove-variant" style="display: none;">❌</button>
-                </div>
+                <?php endforeach; ?>
             </div>
             <button type="button" id="addTitleVariant" class="btn btn-sm btn-secondary">➕ Добавить вариант</button>
         </div>
@@ -127,18 +210,20 @@ ob_start();
 
         <div class="form-group">
             <div id="descriptionVariants">
+                <?php foreach ($descriptionItems as $item): ?>
                 <div class="variant-item description-variant">
                     <select name="description_types[]" class="description-type" required>
                         <option value="">Тип триггера</option>
-                        <option value="emotional">😱 Эмоция</option>
-                        <option value="intrigue">🤔 Интрига</option>
-                        <option value="atmosphere">🌙 Атмосфера</option>
-                        <option value="question">❓ Вопрос</option>
-                        <option value="cta">👇 CTA</option>
+                        <option value="emotional" <?= $item['type'] === 'emotional' ? 'selected' : '' ?>>😱 Эмоция</option>
+                        <option value="intrigue" <?= $item['type'] === 'intrigue' ? 'selected' : '' ?>>🤔 Интрига</option>
+                        <option value="atmosphere" <?= $item['type'] === 'atmosphere' ? 'selected' : '' ?>>🌙 Атмосфера</option>
+                        <option value="question" <?= $item['type'] === 'question' ? 'selected' : '' ?>>❓ Вопрос</option>
+                        <option value="cta" <?= $item['type'] === 'cta' ? 'selected' : '' ?>>👇 CTA</option>
                     </select>
-                    <textarea name="description_texts[]" rows="2" placeholder="Текст описания (1-2 строки)" required></textarea>
+                    <textarea name="description_texts[]" rows="2" placeholder="Текст описания (1-2 строки)" required><?= htmlspecialchars($item['text']) ?></textarea>
                     <button type="button" class="btn btn-sm btn-danger remove-variant">❌</button>
                 </div>
+                <?php endforeach; ?>
             </div>
             <button type="button" id="addDescriptionVariant" class="btn btn-sm btn-secondary">➕ Добавить вариант описания</button>
         </div>
@@ -162,23 +247,23 @@ ob_start();
         <div class="emoji-groups">
             <div class="emoji-group">
                 <label>Эмоциональные (😱❤️🔥)</label>
-                <input type="text" name="emoji_emotional" value="😱,😲,❤️,💙,💜,🔥,✨,🌟" placeholder="😱,😲,❤️,💙,💜,🔥,✨,🌟">
+                <input type="text" name="emoji_emotional" value="<?= htmlspecialchars($formatEmojiGroup($emojiGroups['emotional'] ?? null, $emojiDefaults['emotional'])) ?>" placeholder="😱,😲,❤️,💙,💜,🔥,✨,🌟">
             </div>
             <div class="emoji-group">
                 <label>Интригующие (🤔❓🎭)</label>
-                <input type="text" name="emoji_intrigue" value="🤔,❓,🔍,🎭,🎪,🎨,🌈,⭐" placeholder="🤔,❓,🔍,🎭,🎪,🎨,🌈,⭐">
+                <input type="text" name="emoji_intrigue" value="<?= htmlspecialchars($formatEmojiGroup($emojiGroups['intrigue'] ?? null, $emojiDefaults['intrigue'])) ?>" placeholder="🤔,❓,🔍,🎭,🎪,🎨,🌈,⭐">
             </div>
             <div class="emoji-group">
                 <label>Атмосферные (🌙🌃💫)</label>
-                <input type="text" name="emoji_atmosphere" value="🌙,🌃,🌌,💫,🌠,🎵,🎶,🎼" placeholder="🌙,🌃,🌌,💫,🌠,🎵,🎶,🎼">
+                <input type="text" name="emoji_atmosphere" value="<?= htmlspecialchars($formatEmojiGroup($emojiGroups['atmosphere'] ?? null, $emojiDefaults['atmosphere'])) ?>" placeholder="🌙,🌃,🌌,💫,🌠,🎵,🎶,🎼">
             </div>
             <div class="emoji-group">
                 <label>Вопросительные (❓💭💡)</label>
-                <input type="text" name="emoji_question" value="❓,🤔,💭,💡,🔮,🎯,🎪,🎨" placeholder="❓,🤔,💭,💡,🔮,🎯,🎪,🎨">
+                <input type="text" name="emoji_question" value="<?= htmlspecialchars($formatEmojiGroup($emojiGroups['question'] ?? null, $emojiDefaults['question'])) ?>" placeholder="❓,🤔,💭,💡,🔮,🎯,🎪,🎨">
             </div>
             <div class="emoji-group">
                 <label>CTA (👇💬📝)</label>
-                <input type="text" name="emoji_cta" value="👇,💬,📝,✍️,💭,🔥,👍,❤️" placeholder="👇,💬,📝,✍️,💭,🔥,👍,❤️">
+                <input type="text" name="emoji_cta" value="<?= htmlspecialchars($formatEmojiGroup($emojiGroups['cta'] ?? null, $emojiDefaults['cta'])) ?>" placeholder="👇,💬,📝,✍️,💭,🔥,👍,❤️">
             </div>
         </div>
 
@@ -193,25 +278,19 @@ ob_start();
 
         <div class="form-group">
             <label>Основные теги (всегда присутствуют)</label>
-            <input type="text" name="base_tags" value="неон, голос, вокал, атмосфера, музыка" placeholder="неон, голос, вокал, атмосфера, музыка" required>
+            <input type="text" name="base_tags" value="<?= htmlspecialchars($baseTagsValue) ?>" placeholder="неон, голос, вокал, атмосфера, музыка" required>
             <small>Эти теги будут в каждом видео</small>
         </div>
 
         <div class="form-group">
             <label>Вариативные теги (ротация)</label>
             <div id="tagVariants">
+                <?php foreach ($tagVariants as $value): ?>
                 <div class="variant-item">
-                    <input type="text" name="tag_variants[]" value="неоновые огни, женский вокал, эмоции" required>
+                    <input type="text" name="tag_variants[]" value="<?= htmlspecialchars($value) ?>" required>
                     <button type="button" class="btn btn-sm btn-danger remove-variant" style="display: none;">❌</button>
                 </div>
-                <div class="variant-item">
-                    <input type="text" name="tag_variants[]" value="красный неон, спокойная музыка, чувства" required>
-                    <button type="button" class="btn btn-sm btn-danger remove-variant" style="display: none;">❌</button>
-                </div>
-                <div class="variant-item">
-                    <input type="text" name="tag_variants[]" value="синий неон, уникальный голос, настроение" required>
-                    <button type="button" class="btn btn-sm btn-danger remove-variant" style="display: none;">❌</button>
-                </div>
+                <?php endforeach; ?>
             </div>
             <button type="button" id="addTagVariant" class="btn btn-sm btn-secondary">➕ Добавить вариант тегов</button>
             <small>Из этих наборов выбирается 3-5 тегов для каждого видео</small>
@@ -225,18 +304,12 @@ ob_start();
         <div class="form-group">
             <label>Вопросы для комментариев (рандомизация)</label>
             <div id="questionVariants">
+                <?php foreach ($questions as $value): ?>
                 <div class="variant-item">
-                    <input type="text" name="questions[]" value="Какое сочетание цветов тебе больше всего понравилось?" required>
+                    <input type="text" name="questions[]" value="<?= htmlspecialchars($value) ?>" required>
                     <button type="button" class="btn btn-sm btn-danger remove-variant" style="display: none;">❌</button>
                 </div>
-                <div class="variant-item">
-                    <input type="text" name="questions[]" value="Чувствовал ли ты мурашки от голоса?" required>
-                    <button type="button" class="btn btn-sm btn-danger remove-variant" style="display: none;">❌</button>
-                </div>
-                <div class="variant-item">
-                    <input type="text" name="questions[]" value="Какая часть видео тебя зацепила больше всего?" required>
-                    <button type="button" class="btn btn-sm btn-danger remove-variant" style="display: none;">❌</button>
-                </div>
+                <?php endforeach; ?>
             </div>
             <button type="button" id="addQuestionVariant" class="btn btn-sm btn-secondary">➕ Добавить вопрос</button>
         </div>
@@ -244,14 +317,12 @@ ob_start();
         <div class="form-group">
             <label>Закреплённый комментарий (варианты)</label>
             <div id="pinnedCommentVariants">
+                <?php foreach ($pinnedComments as $value): ?>
                 <div class="variant-item">
-                    <input type="text" name="pinned_comments[]" value="🎵 Слушай плейлист в моём профиле" required>
+                    <input type="text" name="pinned_comments[]" value="<?= htmlspecialchars($value) ?>" required>
                     <button type="button" class="btn btn-sm btn-danger remove-variant" style="display: none;">❌</button>
                 </div>
-                <div class="variant-item">
-                    <input type="text" name="pinned_comments[]" value="🔥 Все видео этой серии здесь 👇" required>
-                    <button type="button" class="btn btn-sm btn-danger remove-variant" style="display: none;">❌</button>
-                </div>
+                <?php endforeach; ?>
             </div>
             <button type="button" id="addPinnedCommentVariant" class="btn btn-sm btn-secondary">➕ Добавить вариант</button>
         </div>
@@ -259,11 +330,11 @@ ob_start();
         <div class="form-group">
             <label>Типы CTA (Call to Action)</label>
             <div class="checkbox-grid">
-                <label><input type="checkbox" name="cta_types[]" value="subscribe" checked> 📺 Подписка на канал</label>
-                <label><input type="checkbox" name="cta_types[]" value="playlist"> 🎵 Просмотр плейлиста</label>
-                <label><input type="checkbox" name="cta_types[]" value="like_comment"> 👍 Лайк и комментарий</label>
-                <label><input type="checkbox" name="cta_types[]" value="link_bio"> 🔗 Ссылка в описании</label>
-                <label><input type="checkbox" name="cta_types[]" value="next_video"> ⏭️ Следующее видео</label>
+                <label><input type="checkbox" name="cta_types[]" value="subscribe" <?= empty($ctaTypes) || in_array('subscribe', $ctaTypes, true) ? 'checked' : '' ?>> 📺 Подписка на канал</label>
+                <label><input type="checkbox" name="cta_types[]" value="playlist" <?= in_array('playlist', $ctaTypes, true) ? 'checked' : '' ?>> 🎵 Просмотр плейлиста</label>
+                <label><input type="checkbox" name="cta_types[]" value="like_comment" <?= in_array('like_comment', $ctaTypes, true) ? 'checked' : '' ?>> 👍 Лайк и комментарий</label>
+                <label><input type="checkbox" name="cta_types[]" value="link_bio" <?= in_array('link_bio', $ctaTypes, true) ? 'checked' : '' ?>> 🔗 Ссылка в описании</label>
+                <label><input type="checkbox" name="cta_types[]" value="next_video" <?= in_array('next_video', $ctaTypes, true) ? 'checked' : '' ?>> ⏭️ Следующее видео</label>
             </div>
         </div>
     </div>
@@ -274,13 +345,13 @@ ob_start();
 
         <div class="form-group">
             <label>
-                <input type="checkbox" name="is_active" value="1" checked> Активен
+                <input type="checkbox" name="is_active" value="1" <?= $isActive ? 'checked' : '' ?>> Активен
             </label>
         </div>
 
         <div class="form-group">
             <label>
-                <input type="checkbox" name="enable_ab_testing" value="1" checked> Включить A/B тестирование названий
+                <input type="checkbox" name="enable_ab_testing" value="1" <?= $enableAbTesting ? 'checked' : '' ?>> Включить A/B тестирование названий
             </label>
             <small>Разные видео получат разные варианты названий для сравнения CTR</small>
         </div>
@@ -298,7 +369,7 @@ ob_start();
     </div> <!-- Закрываем manual_fields -->
 
     <div class="form-actions">
-        <button type="submit" class="btn btn-primary">🎯 Создать шаблон</button>
+        <button type="submit" class="btn btn-primary"><?= $isEdit ? '💾 Сохранить изменения' : '🎯 Создать шаблон' ?></button>
         <button type="button" class="btn btn-outline" onclick="suggestContent()">
             🚀 Предложить контент
         </button>
