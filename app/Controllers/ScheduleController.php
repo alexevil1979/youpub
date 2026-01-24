@@ -255,6 +255,26 @@ class ScheduleController extends Controller
     }
 
     /**
+     * Опубликовать расписание сейчас
+     */
+    public function publishNow(int $id): void
+    {
+        $userId = $_SESSION['user_id'] ?? null;
+        if (!$userId) {
+            $this->error('Unauthorized', 401);
+            return;
+        }
+
+        $result = $this->scheduleService->publishScheduleNow($id, $userId);
+
+        if ($result['success']) {
+            $this->success($result['data'] ?? [], $result['message'] ?? 'Schedule published');
+        } else {
+            $this->error($result['message'] ?? 'Publish failed', 400);
+        }
+    }
+
+    /**
      * Копировать расписание
      */
     public function duplicate(int $id): void

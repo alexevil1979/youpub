@@ -381,6 +381,14 @@ $groupRepo = new \App\Modules\ContentGroups\Repositories\ContentGroupRepository(
                             <?php if ($schedule['status'] === 'pending' || $schedule['status'] === 'paused'): ?>
                                 <button type="button" class="btn-action btn-copy" onclick="duplicateSchedule(<?= $schedule['id'] ?>)" title="Копировать"><?= \App\Helpers\IconHelper::render('copy', 20) ?></button>
                             <?php endif; ?>
+
+                            <?php
+                            $isOverdue = ($schedule['status'] === 'pending' && !empty($schedule['publish_at']) && strtotime($schedule['publish_at']) <= time());
+                            $isGroupSchedule = !empty($schedule['content_group_id']);
+                            if ($isOverdue && !$isGroupSchedule):
+                            ?>
+                                <button type="button" class="btn-action btn-play" onclick="publishScheduleNow(<?= $schedule['id'] ?>)" title="Опубликовать сейчас"><?= \App\Helpers\IconHelper::render('play', 20) ?></button>
+                            <?php endif; ?>
                             
                             <button type="button" class="btn-action btn-delete" onclick="deleteSchedule(<?= $schedule['id'] ?>)" title="Удалить"><?= \App\Helpers\IconHelper::render('delete', 20) ?></button>
                         </div>
@@ -472,6 +480,28 @@ function resumeSchedule(id) {
             setTimeout(() => window.location.reload(), 1000);
         } else {
             showToast('Ошибка: ' + (data.message || 'Не удалось возобновить'), 'error');
+        }
+    })
+    .catch(e => {
+        console.error('Error:', e);
+        showToast('Произошла ошибка', 'error');
+    });
+}
+
+function publishScheduleNow(id) {
+    if (!confirm('Опубликовать это расписание прямо сейчас?')) return;
+    
+    fetch('/schedules/' + id + '/publish-now', {
+        method: 'POST',
+        headers: {'X-Requested-With': 'XMLHttpRequest'}
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Публикация запущена', 'success');
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showToast('Ошибка: ' + (data.message || 'Не удалось опубликовать'), 'error');
         }
     })
     .catch(e => {

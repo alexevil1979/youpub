@@ -57,6 +57,7 @@ $router->post('/schedules/{id}/update', [ScheduleController::class, 'update'], [
 $router->delete('/schedules/{id}', [ScheduleController::class, 'delete'], [AuthMiddleware::class]);
 $router->post('/schedules/{id}/pause', [ScheduleController::class, 'pause'], [AuthMiddleware::class]);
 $router->post('/schedules/{id}/resume', [ScheduleController::class, 'resume'], [AuthMiddleware::class]);
+$router->post('/schedules/{id}/publish-now', [ScheduleController::class, 'publishNow'], [AuthMiddleware::class]);
 $router->post('/schedules/{id}/duplicate', [ScheduleController::class, 'duplicate'], [AuthMiddleware::class]);
 $router->post('/schedules/bulk-pause', [ScheduleController::class, 'bulkPause'], [AuthMiddleware::class]);
 $router->post('/schedules/bulk-resume', [ScheduleController::class, 'bulkResume'], [AuthMiddleware::class]);

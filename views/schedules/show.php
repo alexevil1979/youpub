@@ -111,6 +111,13 @@ if (!empty($schedule['content_group_id'])) {
     if ($canEdit): ?>
         <a href="/schedules/<?= $schedule['id'] ?>/edit" class="btn btn-primary"><?= \App\Helpers\IconHelper::render('edit', 16, 'icon-inline') ?> Редактировать</a>
     <?php endif; ?>
+    <?php
+    $isOverdue = (($schedule['status'] ?? '') === 'pending' && !empty($schedule['publish_at']) && strtotime($schedule['publish_at']) <= time());
+    $isGroupSchedule = !empty($schedule['content_group_id']);
+    if ($isOverdue && !$isGroupSchedule):
+    ?>
+        <button type="button" class="btn btn-success" onclick="publishScheduleNow(<?= $schedule['id'] ?>)"><?= \App\Helpers\IconHelper::render('play', 16, 'icon-inline') ?> Опубликовать сейчас</button>
+    <?php endif; ?>
     <?php if (($schedule['status'] ?? '') === 'pending' || ($schedule['status'] ?? '') === 'paused'): ?>
         <button type="button" class="btn btn-danger" onclick="deleteSchedule(<?= $schedule['id'] ?>)"><?= \App\Helpers\IconHelper::render('delete', 16, 'icon-inline') ?> Удалить расписание</button>
     <?php endif; ?>
@@ -135,6 +142,32 @@ function deleteSchedule(id) {
             window.location.href = '/schedules';
         } else {
             alert('Ошибка: ' + (data.message || 'Не удалось удалить расписание'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Произошла ошибка');
+    });
+}
+
+function publishScheduleNow(id) {
+    if (!confirm('Опубликовать это расписание прямо сейчас?')) {
+        return;
+    }
+
+    fetch('/schedules/' + id + '/publish-now', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Публикация запущена');
+            window.location.reload();
+        } else {
+            alert('Ошибка: ' + (data.message || 'Не удалось опубликовать'));
         }
     })
     .catch(error => {
