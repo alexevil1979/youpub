@@ -106,39 +106,41 @@ class SmartQueueService extends Service
         $templated = $this->templateService->applyTemplate($templateId, $video, $context);
         error_log("SmartQueueService::processGroupSchedule: Template applied. Template ID: " . ($templateId ?? 'null'));
 
-        // Очищаем старые зависшие расписания 'processing' (старше 10 минут) ДО проверки активных
-        error_log("SmartQueueService::processGroupSchedule: Checking for old stuck processing schedules for video {$groupFile['video_id']}");
+        // Очищаем ВСЕ зависшие расписания 'processing' для этого видео (старше 2 минут)
+        // 2 минуты достаточно для публикации, если дольше - значит зависло
+        error_log("SmartQueueService::processGroupSchedule: Checking for stuck processing schedules for video {$groupFile['video_id']}");
         $stmt = $this->db->prepare("
-            SELECT id, created_at FROM schedules 
+            SELECT id, created_at, TIMESTAMPDIFF(SECOND, created_at, NOW()) as age_seconds
+            FROM schedules 
             WHERE video_id = ? 
             AND status = 'processing' 
             AND content_group_id IS NOT NULL
-            AND created_at < DATE_SUB(NOW(), INTERVAL 10 MINUTE)
+            AND created_at < DATE_SUB(NOW(), INTERVAL 2 MINUTE)
         ");
         $stmt->execute([$groupFile['video_id']]);
-        $oldProcessing = $stmt->fetchAll();
+        $stuckProcessing = $stmt->fetchAll();
         
-        if (!empty($oldProcessing)) {
-            error_log("SmartQueueService::processGroupSchedule: Found " . count($oldProcessing) . " old stuck processing schedules, cleaning up");
+        if (!empty($stuckProcessing)) {
+            error_log("SmartQueueService::processGroupSchedule: Found " . count($stuckProcessing) . " stuck processing schedules (older than 2 minutes), cleaning up");
+            foreach ($stuckProcessing as $stuck) {
+                $ageSeconds = $stuck['age_seconds'] ?? 0;
+                error_log("SmartQueueService::processGroupSchedule: Cleaning up stuck schedule ID: {$stuck['id']}, Created at: {$stuck['created_at']}, Age: {$ageSeconds} seconds");
+                $this->scheduleRepo->update($stuck['id'], [
+                    'status' => 'failed',
+                    'error_message' => 'Processing timeout (2 minutes)'
+                ]);
+            }
         }
         
-        // Очищаем старые зависшие расписания
-        foreach ($oldProcessing as $old) {
-            error_log("SmartQueueService::processGroupSchedule: Cleaning up stuck schedule ID: {$old['id']}, Created at: {$old['created_at']}");
-            $this->scheduleRepo->update($old['id'], [
-                'status' => 'failed',
-                'error_message' => 'Processing timeout (10 minutes)'
-            ]);
-        }
-        
-        // Проверяем активные расписания 'processing' для этого видео (младше 10 минут, но старше 5 секунд)
-        // Исключаем очень свежие расписания (младше 5 секунд), чтобы не блокировать текущую попытку
+        // Проверяем активные расписания 'processing' для этого видео (младше 2 минут)
+        // Если есть активное расписание, которое действительно обрабатывается (старше 5 секунд), пропускаем
         $stmt = $this->db->prepare("
-            SELECT id, created_at FROM schedules 
+            SELECT id, created_at, TIMESTAMPDIFF(SECOND, created_at, NOW()) as age_seconds
+            FROM schedules 
             WHERE video_id = ? 
             AND status = 'processing' 
             AND content_group_id IS NOT NULL
-            AND created_at >= DATE_SUB(NOW(), INTERVAL 10 MINUTE)
+            AND created_at >= DATE_SUB(NOW(), INTERVAL 2 MINUTE)
             AND created_at < DATE_SUB(NOW(), INTERVAL 5 SECOND)
         ");
         $stmt->execute([$groupFile['video_id']]);
@@ -148,7 +150,8 @@ class SmartQueueService extends Service
             // Уже есть активное расписание в обработке для этого видео, пропускаем
             error_log("SmartQueueService::processGroupSchedule: Video {$groupFile['video_id']} already being processed. Active processing schedules: " . count($activeProcessing));
             foreach ($activeProcessing as $proc) {
-                error_log("SmartQueueService::processGroupSchedule: Processing schedule ID: {$proc['id']}, Created at: " . ($proc['created_at'] ?? 'unknown'));
+                $ageSeconds = $proc['age_seconds'] ?? 0;
+                error_log("SmartQueueService::processGroupSchedule: Active processing schedule ID: {$proc['id']}, Created at: " . ($proc['created_at'] ?? 'unknown') . ", Age: {$ageSeconds} seconds");
             }
             return ['success' => false, 'message' => 'Video already being processed'];
         }
