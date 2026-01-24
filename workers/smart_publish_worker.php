@@ -124,8 +124,33 @@ try {
                         logMessage("Schedule ID {$schedule['id']} next publish time updated to {$nextTime}", $logFile);
                     }
                 } else {
-                    // Для фиксированных расписаний меняем статус на 'published'
-                    $scheduleRepo->update($schedule['id'], ['status' => 'published']);
+                    // Для фиксированных расписаний проверяем, есть ли еще неопубликованные видео
+                    if (!empty($schedule['content_group_id'])) {
+                        $fileRepo = new \App\Modules\ContentGroups\Repositories\ContentGroupFileRepository();
+                        $nextFile = $fileRepo->findNextUnpublished($schedule['content_group_id']);
+                        
+                        if ($nextFile) {
+                            // Есть еще неопубликованные видео - обновляем publish_at на следующее время
+                            // Вычисляем следующее время публикации на основе delay_between_posts
+                            $delayMinutes = $schedule['delay_between_posts'] ?? 30;
+                            $currentPublishAt = strtotime($schedule['publish_at']);
+                            $nextPublishAt = date('Y-m-d H:i:s', $currentPublishAt + ($delayMinutes * 60));
+                            
+                            $scheduleRepo->update($schedule['id'], [
+                                'publish_at' => $nextPublishAt,
+                                'status' => 'pending' // Оставляем pending для продолжения публикации
+                            ]);
+                            logMessage("Schedule ID {$schedule['id']} has more videos, next publish time updated to {$nextPublishAt}", $logFile);
+                        } else {
+                            // Все видео опубликованы - меняем статус на 'published'
+                            $scheduleRepo->update($schedule['id'], ['status' => 'published']);
+                            logMessage("Schedule ID {$schedule['id']} all videos published, marking as 'published'", $logFile);
+                        }
+                    } else {
+                        // Нет группы - обычное фиксированное расписание, помечаем как 'published'
+                        $scheduleRepo->update($schedule['id'], ['status' => 'published']);
+                        logMessage("Schedule ID {$schedule['id']} (no group) marked as 'published'", $logFile);
+                    }
                 }
             } else {
                 logMessage("Schedule ID {$schedule['id']} failed: " . ($result['message'] ?? 'Unknown error'), $logFile);
