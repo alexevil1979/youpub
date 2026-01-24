@@ -52,9 +52,23 @@ try {
 
     logMessage('Found ' . count($schedules) . ' schedules to process', $logFile);
 
-    foreach ($schedules as $schedule) {
-        try {
-            logMessage("Processing schedule ID: {$schedule['id']}, Platform: {$schedule['platform']}", $logFile);
+        foreach ($schedules as $schedule) {
+            try {
+                if (!empty($schedule['content_group_id'])) {
+                    logMessage("Skipping group schedule ID {$schedule['id']} in publish_worker", $logFile);
+                    continue;
+                }
+
+                if (empty($schedule['video_id'])) {
+                    $scheduleRepo->update($schedule['id'], [
+                        'status' => 'failed',
+                        'error_message' => 'Missing video_id for schedule'
+                    ]);
+                    logMessage("Schedule ID {$schedule['id']} failed: missing video_id", $logFile);
+                    continue;
+                }
+
+                logMessage("Processing schedule ID: {$schedule['id']}, Platform: {$schedule['platform']}", $logFile);
 
             $result = null;
             $platform = strtolower(trim($schedule['platform'] ?? ''));
@@ -94,7 +108,7 @@ try {
                 logMessage("Schedule ID {$schedule['id']} failed: " . ($result['message'] ?? 'Unknown error'), $logFile);
             }
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             logMessage("Error processing schedule ID {$schedule['id']}: " . $e->getMessage(), $logFile);
         }
     }
