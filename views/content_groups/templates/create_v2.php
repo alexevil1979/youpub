@@ -995,6 +995,27 @@ function fillFormWithSuggestion(data) {
             return '';
         };
 
+        const detectTriggerTypeFromText = (text) => {
+            if (!text) return '';
+            const value = String(text).toLowerCase();
+            if (value.includes('?') || value.includes('как ') || value.includes('почему') || value.includes('что если')) {
+                return 'question';
+            }
+            if (value.includes('коммент') || value.includes('лайк') || value.includes('подпиш') || value.includes('расскажи') || value.includes('пиши')) {
+                return 'cta';
+            }
+            if (value.includes('секрет') || value.includes('угада') || value.includes('интриг') || value.includes('знаешь')) {
+                return 'intrigue';
+            }
+            if (value.includes('атмосфер') || value.includes('спокой') || value.includes('ноч') || value.includes('неон') || value.includes('настро')) {
+                return 'atmosphere';
+            }
+            if (value.includes('мураш') || value.includes('слез') || value.includes('восторг') || value.includes('эмоци')) {
+                return 'emotional';
+            }
+            return '';
+        };
+
         // Варианты описаний (до 25)
         if (content.description_variants) {
             let totalVariants = 0;
@@ -1035,9 +1056,11 @@ function fillFormWithSuggestion(data) {
                         if (descIndex < totalVariants && descIndex < updatedDescTypes.length && descIndex < updatedDescTexts.length) {
                             if (updatedDescTypes[descIndex]) {
                                 const mappedType = normalizeTriggerType(type);
-                                updatedDescTypes[descIndex].value = mappedType || '';
-                                if (!mappedType) {
-                                    console.warn('⚠️ Неизвестный тип триггера:', type);
+                                const inferredType = detectTriggerTypeFromText(variant);
+                                const finalType = mappedType || inferredType || 'atmosphere';
+                                updatedDescTypes[descIndex].value = finalType;
+                                if (!mappedType && !inferredType) {
+                                    console.warn('⚠️ Не удалось определить тип триггера, использован atmosphere');
                                 }
                             }
                             if (updatedDescTexts[descIndex]) updatedDescTexts[descIndex].value = variant;
