@@ -129,6 +129,7 @@ ob_start();
 <div class="form-actions group-actions">
     <a href="/content-groups" class="btn btn-secondary">Назад к списку</a>
     <a href="/content-groups/<?= $group['id'] ?>/edit" class="btn btn-primary">Редактировать группу</a>
+    <a href="/videos/upload?group_id=<?= $group['id'] ?>" class="btn btn-primary">Загрузить видео в группу</a>
     <button type="button" class="btn btn-info" onclick="shuffleGroup(<?= $group['id'] ?>)">Перемешать видео</button>
     <a href="/content-groups/schedules/create?group_id=<?= $group['id'] ?>" class="btn btn-success">Создать расписание</a>
 </div>

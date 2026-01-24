@@ -5,9 +5,13 @@ ob_start();
 // Получаем группы пользователя для выбора
 $userId = $_SESSION['user_id'] ?? null;
 $groups = [];
+$preselectedGroupId = null;
 if ($userId) {
     $groupService = new \App\Modules\ContentGroups\Services\GroupService();
     $groups = $groupService->getUserGroups($userId);
+    if (isset($_GET['group_id']) && is_numeric($_GET['group_id'])) {
+        $preselectedGroupId = (int)$_GET['group_id'];
+    }
 }
 ?>
 
@@ -37,7 +41,9 @@ if ($userId) {
             <select id="group_id" name="group_id">
                 <option value="">Не добавлять в группу</option>
                 <?php foreach ($groups as $group): ?>
-                    <option value="<?= $group['id'] ?>"><?= htmlspecialchars($group['name']) ?></option>
+                    <option value="<?= $group['id'] ?>" <?= $preselectedGroupId === (int)$group['id'] ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($group['name']) ?>
+                    </option>
                 <?php endforeach; ?>
             </select>
             <small>Выберите группу, в которую будут добавлены все загруженные видео</small>
