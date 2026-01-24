@@ -153,27 +153,48 @@ class AutoShortsGenerator
      */
     public function generateFromIdea(string $idea): array
     {
-        // 1. Анализ intent
-        $intent = $this->analyzeIntent($idea);
+        try {
+            error_log('AutoShortsGenerator::generateFromIdea: Starting generation for idea: "' . $idea . '"');
 
-        // 2. Генерация смысловых углов
-        $angles = $this->generateContentAngles($intent, $idea);
+            // 1. Анализ intent
+            error_log('AutoShortsGenerator::generateFromIdea: Analyzing intent');
+            $intent = $this->analyzeIntent($idea);
+            error_log('AutoShortsGenerator::generateFromIdea: Intent analyzed - ' . json_encode($intent));
 
-        // 3. Генерация контента
-        $content = $this->generateContent($intent, $angles);
+            // 2. Генерация смысловых углов
+            error_log('AutoShortsGenerator::generateFromIdea: Generating content angles');
+            $angles = $this->generateContentAngles($intent, $idea);
+            error_log('AutoShortsGenerator::generateFromIdea: Angles generated - ' . count($angles) . ' angles');
 
-        // 4. Проверка на дубликаты
-        $content = $this->ensureUniqueness($content);
+            // 3. Генерация контента
+            error_log('AutoShortsGenerator::generateFromIdea: Generating content');
+            $content = $this->generateContent($intent, $angles);
+            error_log('AutoShortsGenerator::generateFromIdea: Content generated successfully');
 
-        // 5. Сохранение в истории
-        $this->addToHistory($content);
+            // 4. Проверка на дубликаты
+            error_log('AutoShortsGenerator::generateFromIdea: Ensuring uniqueness');
+            $content = $this->ensureUniqueness($content);
+            error_log('AutoShortsGenerator::generateFromIdea: Uniqueness ensured');
 
-        return [
-            'idea' => $idea,
-            'intent' => $intent,
-            'content' => $content,
-            'generated_at' => date('Y-m-d H:i:s')
-        ];
+            // 5. Сохранение в истории
+            error_log('AutoShortsGenerator::generateFromIdea: Adding to history');
+            $this->addToHistory($content);
+
+            $result = [
+                'idea' => $idea,
+                'intent' => $intent,
+                'content' => $content,
+                'generated_at' => date('Y-m-d H:i:s')
+            ];
+
+            error_log('AutoShortsGenerator::generateFromIdea: Generation completed successfully');
+            return $result;
+
+        } catch (Exception $e) {
+            error_log('AutoShortsGenerator::generateFromIdea: Exception: ' . $e->getMessage());
+            error_log('AutoShortsGenerator::generateFromIdea: Stack trace: ' . $e->getTraceAsString());
+            throw $e;
+        }
     }
 
     /**

@@ -415,20 +415,27 @@ class TemplateController extends Controller
     public function suggestContent(): void
     {
         try {
+            error_log('TemplateController::suggestContent: Starting content suggestion');
+
             $idea = trim($this->getParam('idea', ''));
+            error_log('TemplateController::suggestContent: Idea received: "' . $idea . '"');
 
             if (empty($idea)) {
+                error_log('TemplateController::suggestContent: Empty idea');
                 $this->jsonResponse(['success' => false, 'message' => 'Не указана идея для генерации']);
                 return;
             }
 
             if (strlen($idea) < 3) {
+                error_log('TemplateController::suggestContent: Idea too short');
                 $this->jsonResponse(['success' => false, 'message' => 'Идея должна содержать минимум 3 символа']);
                 return;
             }
 
             // Генерируем контент
+            error_log('TemplateController::suggestContent: Calling autoGenerator->generateFromIdea');
             $result = $this->autoGenerator->generateFromIdea($idea);
+            error_log('TemplateController::suggestContent: Generation completed successfully');
 
             // Форматируем для автозаполнения формы
             $suggestion = [
@@ -458,10 +465,12 @@ class TemplateController extends Controller
                 ]
             ];
 
+            error_log('TemplateController::suggestContent: Returning successful response');
             $this->jsonResponse($suggestion);
 
         } catch (Exception $e) {
-            error_log('Template suggest content error: ' . $e->getMessage());
+            error_log('TemplateController::suggestContent: Exception caught: ' . $e->getMessage());
+            error_log('TemplateController::suggestContent: Stack trace: ' . $e->getTraceAsString());
             $this->jsonResponse(['success' => false, 'message' => 'Ошибка генерации контента: ' . $e->getMessage()]);
         }
     }
