@@ -146,6 +146,12 @@ class TemplateService extends Service
         } else {
             // Обратная совместимость: старый подход
             $emojiList = !empty($template['emoji_list']) ? json_decode($template['emoji_list'], true) : ['🎬'];
+
+            // Гарантируем, что emojiList является массивом
+            if (!is_array($emojiList) || empty($emojiList)) {
+                $emojiList = ['🎬'];
+            }
+
             $vars['random_emoji'] = $emojiList[array_rand($emojiList)];
             $result['title'] = $this->processTemplate($template['title_template'] ?? '', $vars, $video['title'] ?? '');
         }
