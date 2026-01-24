@@ -218,7 +218,7 @@ class SmartQueueService extends Service
                         'publish_at' => $nextPublishTime,
                         'status' => 'pending' // Оставляем активным для следующих видео
                     ]);
-                    error_log("SmartQueueService::processGroupSchedule: Updated schedule {$schedule['id']} publish_at to {$nextPublishTime}");
+                    error_log("SmartQueueService::processGroupSchedule: Updated schedule {$schedule['id']} publish_at to {$nextPublishTime}, status to 'pending'");
                 } else {
                     error_log("SmartQueueService::processGroupSchedule: Could not calculate next publish time, keeping schedule active");
                 }
@@ -229,7 +229,7 @@ class SmartQueueService extends Service
                     'status' => 'published',
                     'publish_at' => null // Убираем время публикации
                 ]);
-                error_log("SmartQueueService::processGroupSchedule: Group schedule {$schedule['id']} marked as published");
+                error_log("SmartQueueService::processGroupSchedule: Group schedule {$schedule['id']} marked as published and publish_at set to null");
             }
         } else {
             $this->fileRepo->updateFileStatus($groupFile['id'], 'error');
