@@ -106,8 +106,13 @@ if (!empty($schedule['content_group_id'])) {
 
 <div class="form-actions schedule-actions">
     <a href="/schedules" class="btn btn-secondary">Назад к списку</a>
-    <?php if (($schedule['status'] ?? '') === 'pending'): ?>
-        <button type="button" class="btn btn-danger" onclick="deleteSchedule(<?= $schedule['id'] ?>)">Удалить расписание</button>
+    <?php 
+    $canEdit = !in_array($schedule['status'] ?? '', ['published', 'processing']);
+    if ($canEdit): ?>
+        <a href="/schedules/<?= $schedule['id'] ?>/edit" class="btn btn-primary"><?= \App\Helpers\IconHelper::render('edit', 16, 'icon-inline') ?> Редактировать</a>
+    <?php endif; ?>
+    <?php if (($schedule['status'] ?? '') === 'pending' || ($schedule['status'] ?? '') === 'paused'): ?>
+        <button type="button" class="btn btn-danger" onclick="deleteSchedule(<?= $schedule['id'] ?>)"><?= \App\Helpers\IconHelper::render('delete', 16, 'icon-inline') ?> Удалить расписание</button>
     <?php endif; ?>
 </div>
 

@@ -318,12 +318,18 @@ $groupRepo = new \App\Modules\ContentGroups\Repositories\ContentGroupRepository(
                                 <?php endif; 
                             endif; ?>
                             
-                            <?php if ($schedule['status'] === 'pending' || $schedule['status'] === 'paused'): ?>
-                                <button type="button" class="btn-action btn-copy" onclick="duplicateSchedule(<?= $schedule['id'] ?>)" title="Копировать"><?= \App\Helpers\IconHelper::render('copy', 20) ?></button>
+                            <?php 
+                            // Кнопка редактирования - показываем только для расписаний, которые можно редактировать
+                            $canEdit = !in_array($schedule['status'], ['published', 'processing']);
+                            if ($canEdit): ?>
                                 <button type="button" class="btn-action btn-edit" onclick="editSchedule(<?= $schedule['id'] ?>)" title="Редактировать"><?= \App\Helpers\IconHelper::render('edit', 20) ?></button>
                             <?php endif; ?>
                             
-                            <button type="button" class="btn-action btn-delete" onclick="deleteSchedule(<?= $schedule['id'] ?>)" title="Удалить">🗑</button>
+                            <?php if ($schedule['status'] === 'pending' || $schedule['status'] === 'paused'): ?>
+                                <button type="button" class="btn-action btn-copy" onclick="duplicateSchedule(<?= $schedule['id'] ?>)" title="Копировать"><?= \App\Helpers\IconHelper::render('copy', 20) ?></button>
+                            <?php endif; ?>
+                            
+                            <button type="button" class="btn-action btn-delete" onclick="deleteSchedule(<?= $schedule['id'] ?>)" title="Удалить"><?= \App\Helpers\IconHelper::render('delete', 20) ?></button>
                         </div>
                     </td>
                 </tr>
