@@ -20,6 +20,13 @@ class AutoShortsGenerator
         'ambience' => ['атмосфера', 'настроение', 'спокойно', 'тихо', 'ночь', 'вечер', 'погружение', 'релакс']
     ];
 
+    private const CONTENT_TYPES_EN = [
+        'vocal' => ['voice', 'vocal', 'vocals', 'sing', 'singing', 'singer', 'song'],
+        'music' => ['music', 'melody', 'track', 'beat', 'audio', 'sound'],
+        'aesthetic' => ['neon', 'aesthetic', 'visual', 'colors', 'beautiful', 'pretty'],
+        'ambience' => ['ambience', 'atmosphere', 'mood', 'vibe', 'calm', 'night', 'relax']
+    ];
+
     private const MOODS = [
         'calm' => ['спокойно', 'тихо', 'плавно', 'мягко', 'нежно', 'умиротворение'],
         'emotional' => ['эмоционально', 'чувства', 'душа', 'сердце', 'глубоко', 'трогательно'],
@@ -27,11 +34,25 @@ class AutoShortsGenerator
         'mysterious' => ['загадочно', 'тайна', 'мистика', 'непонятно', 'интрига', 'секрет']
     ];
 
+    private const MOODS_EN = [
+        'calm' => ['calm', 'soft', 'gentle', 'smooth', 'chill'],
+        'emotional' => ['emotional', 'touching', 'deep', 'heartfelt'],
+        'romantic' => ['romantic', 'love', 'tender', 'sweet'],
+        'mysterious' => ['mysterious', 'secret', 'enigmatic', 'intriguing']
+    ];
+
     private const VISUAL_FOCUS = [
         'neon' => ['неон', 'свет', 'ярко', 'цвета', 'разноцветный', 'переливы'],
         'night' => ['ночь', 'темно', 'тень', 'луна', 'звёзды', 'тёмный'],
         'closeup' => ['близко', 'крупно', 'лицо', 'глаза', 'взгляд', 'детали'],
         'atmosphere' => ['атмосфера', 'окружение', 'пространство', 'воздух', 'погружение']
+    ];
+
+    private const VISUAL_FOCUS_EN = [
+        'neon' => ['neon', 'glow', 'bright', 'colors', 'lights'],
+        'night' => ['night', 'dark', 'moon', 'stars', 'shadow'],
+        'closeup' => ['closeup', 'close', 'face', 'eyes', 'details'],
+        'atmosphere' => ['atmosphere', 'space', 'ambient', 'surroundings']
     ];
 
     // Шаблоны генерации
@@ -72,6 +93,34 @@ class AutoShortsGenerator
         ]
     ];
 
+    private const TITLE_TEMPLATES_EN = [
+        'vocal' => [
+            '{visual} {content} feels {emotion}',
+            '{emotion} {content} in {visual}',
+            'This {content} is so {emotion}',
+            'Can’t stop listening to this {content}',
+            'She’s SO FLEXIBLE!',
+            'Who did it BEST?'
+        ],
+        'music' => [
+            '{emotion} {content} with {visual}',
+            'This {content} hits different',
+            '{visual} {content} vibes',
+            'Who did it BEST?'
+        ],
+        'aesthetic' => [
+            '{visual} {content} moment',
+            'So {emotion} in this {visual} scene',
+            'Who did it BEST?',
+            'She’s SO FLEXIBLE!'
+        ],
+        'ambience' => [
+            '{emotion} {visual} atmosphere',
+            'Lost in the {visual} {content}',
+            'Who did it BEST?'
+        ]
+    ];
+
     private const DESCRIPTION_TEMPLATES = [
         'question' => [
             '{emotion_emoji} {question} {cta_emoji}',
@@ -97,6 +146,25 @@ class AutoShortsGenerator
         ]
     ];
 
+    private const DESCRIPTION_TEMPLATES_EN = [
+        'question' => [
+            '{emotion_emoji} {question} {cta_emoji}',
+            'Did you feel that? {emotion_emoji}',
+            'Who did it BEST? {cta_emoji}',
+            'Would you watch again? {emotion_emoji}'
+        ],
+        'emotional' => [
+            'Nothing extra. Just {emotion} vibes {emotion_emoji}',
+            'This {content} feels {emotion} {emotion_emoji}',
+            'So {emotion}. Just watch {emotion_emoji}'
+        ],
+        'mysterious' => [
+            'Something special here {emotion_emoji}',
+            'Can’t explain it {emotion_emoji}',
+            'Just watch {cta_emoji}'
+        ]
+    ];
+
     // Emoji по настроениям
     private const EMOJI_SETS = [
         'calm' => ['✨', '🌙', '💫', '🌌', '🌠', '🌸'],
@@ -111,6 +179,13 @@ class AutoShortsGenerator
         'music' => ['#Shorts', '#Музыка', '#Мелодия', '#Звук', '#Аудио'],
         'aesthetic' => ['#Shorts', '#Красиво', '#Эстетика', '#Визуал', '#Арт'],
         'ambience' => ['#Shorts', '#Атмосфера', '#Настроение', '#Спокойно', '#Релакс']
+    ];
+
+    private const TAG_SETS_EN = [
+        'vocal' => ['#Shorts', '#Singing', '#Vocal', '#Voice', '#Music'],
+        'music' => ['#Shorts', '#Music', '#Melody', '#Sound', '#Audio'],
+        'aesthetic' => ['#Shorts', '#Aesthetic', '#Visual', '#Beautiful', '#Art'],
+        'ambience' => ['#Shorts', '#Atmosphere', '#Mood', '#Calm', '#Relax']
     ];
 
     // Вопросы для вовлечённости
@@ -142,6 +217,31 @@ class AutoShortsGenerator
             'Как тебе погружение?',
             'Хочешь ещё такой атмосферы?',
             'Стоит продолжать?'
+        ]
+    ];
+
+    private const ENGAGEMENT_QUESTIONS_EN = [
+        'vocal' => [
+            'How is the voice?',
+            'Did the vocals hook you?',
+            'Want more like this?',
+            'Who did it BEST?'
+        ],
+        'music' => [
+            'How is the melody?',
+            'This track hits?',
+            'Want more like this?',
+            'Who did it BEST?'
+        ],
+        'aesthetic' => [
+            'How’s the visual?',
+            'Does this look amazing?',
+            'Want more like this?'
+        ],
+        'ambience' => [
+            'Feel the atmosphere?',
+            'Do you like the vibe?',
+            'Want more like this?'
         ]
     ];
 
@@ -233,13 +333,15 @@ class AutoShortsGenerator
      */
     private function analyzeIntent(string $idea): array
     {
+        $language = $this->detectLanguage($idea);
         $idea = mb_strtolower($idea);
 
         // Определение типа контента
         $contentType = 'vocal'; // дефолт
         $maxWeight = 0;
 
-        foreach (self::CONTENT_TYPES as $type => $keywords) {
+        $contentTypes = $language === 'en' ? self::CONTENT_TYPES_EN : self::CONTENT_TYPES;
+        foreach ($contentTypes as $type => $keywords) {
             $weight = 0;
             foreach ($keywords as $keyword) {
                 if (strpos($idea, $keyword) !== false) {
@@ -256,7 +358,8 @@ class AutoShortsGenerator
         $mood = 'calm'; // дефолт
         $maxWeight = 0;
 
-        foreach (self::MOODS as $moodType => $keywords) {
+        $moods = $language === 'en' ? self::MOODS_EN : self::MOODS;
+        foreach ($moods as $moodType => $keywords) {
             $weight = 0;
             foreach ($keywords as $keyword) {
                 if (strpos($idea, $keyword) !== false) {
@@ -273,7 +376,8 @@ class AutoShortsGenerator
         $visualFocus = 'neon'; // дефолт
         $maxWeight = 0;
 
-        foreach (self::VISUAL_FOCUS as $focus => $keywords) {
+        $visuals = $language === 'en' ? self::VISUAL_FOCUS_EN : self::VISUAL_FOCUS;
+        foreach ($visuals as $focus => $keywords) {
             $weight = 0;
             foreach ($keywords as $keyword) {
                 if (strpos($idea, $keyword) !== false) {
@@ -290,9 +394,19 @@ class AutoShortsGenerator
             'content_type' => $contentType,
             'mood' => $mood,
             'visual_focus' => $visualFocus,
-            'language' => 'ru',
+            'language' => $language,
             'platform' => 'shorts'
         ];
+    }
+
+    private function detectLanguage(string $idea): string
+    {
+        $hasLatin = (bool)preg_match('/[a-z]/i', $idea);
+        $hasCyrillic = (bool)preg_match('/[а-яё]/iu', $idea);
+        if ($hasLatin && !$hasCyrillic) {
+            return 'en';
+        }
+        return 'ru';
     }
 
     /**
@@ -452,7 +566,8 @@ class AutoShortsGenerator
                 'emoji' => $emoji,
                 'tags' => $tags,
                 'pinned_comment' => $pinnedComment,
-                'angle' => $angle
+                'angle' => $angle,
+                'language' => $intent['language'] ?? 'ru'
             ];
 
             error_log("AutoShortsGenerator::generateContent: Content generation completed successfully");
@@ -472,15 +587,18 @@ class AutoShortsGenerator
     {
         try {
             $contentType = $intent['content_type'] ?? 'vocal';
-            $templates = self::TITLE_TEMPLATES[$contentType] ?? self::TITLE_TEMPLATES['vocal'];
+            $language = $intent['language'] ?? 'ru';
+            $templates = $language === 'en'
+                ? (self::TITLE_TEMPLATES_EN[$contentType] ?? self::TITLE_TEMPLATES_EN['vocal'])
+                : (self::TITLE_TEMPLATES[$contentType] ?? self::TITLE_TEMPLATES['vocal']);
 
             error_log("AutoShortsGenerator::generateTitle: Content type: {$contentType}, available templates: " . count($templates));
 
             // Замены для шаблонов
             $replacements = [
-                '{content}' => $this->getContentWord($contentType),
-                '{emotion}' => $this->getEmotionWord($intent['mood'] ?? 'calm'),
-                '{visual}' => $this->getVisualWord($intent['visual_focus'] ?? 'neon'),
+                '{content}' => $this->getContentWord($contentType, $language),
+                '{emotion}' => $this->getEmotionWord($intent['mood'] ?? 'calm', $language),
+                '{visual}' => $this->getVisualWord($intent['visual_focus'] ?? 'neon', $language),
                 '{angle}' => $angle
             ];
 
@@ -500,7 +618,7 @@ class AutoShortsGenerator
             }
 
             error_log("AutoShortsGenerator::generateTitle: Final title: '{$title}'");
-            return ucfirst($title);
+            return $language === 'en' ? ucfirst($title) : ucfirst($title);
 
         } catch (Exception $e) {
             error_log("AutoShortsGenerator::generateTitle: Exception: " . $e->getMessage());
@@ -514,8 +632,11 @@ class AutoShortsGenerator
     private function generateDescription(array $intent): string
     {
         try {
+            $language = $intent['language'] ?? 'ru';
             $descType = ['question', 'emotional', 'mysterious'][array_rand(['question', 'emotional', 'mysterious'])];
-            $templates = self::DESCRIPTION_TEMPLATES[$descType];
+            $templates = $language === 'en'
+                ? (self::DESCRIPTION_TEMPLATES_EN[$descType] ?? self::DESCRIPTION_TEMPLATES_EN['question'])
+                : self::DESCRIPTION_TEMPLATES[$descType];
 
             error_log("AutoShortsGenerator::generateDescription: Desc type: {$descType}, available templates: " . count($templates));
 
@@ -523,10 +644,10 @@ class AutoShortsGenerator
             error_log("AutoShortsGenerator::generateDescription: Selected template: '{$template}'");
 
             $replacements = [
-                '{emotion}' => $this->getEmotionWord($intent['mood'] ?? 'calm'),
-                '{content}' => $this->getContentWord($intent['content_type'] ?? 'vocal'),
-                '{visual}' => $this->getVisualWord($intent['visual_focus'] ?? 'neon'),
-                '{question}' => $this->getQuestionWord($intent['content_type'] ?? 'vocal'),
+                '{emotion}' => $this->getEmotionWord($intent['mood'] ?? 'calm', $language),
+                '{content}' => $this->getContentWord($intent['content_type'] ?? 'vocal', $language),
+                '{visual}' => $this->getVisualWord($intent['visual_focus'] ?? 'neon', $language),
+                '{question}' => $this->getQuestionWord($intent['content_type'] ?? 'vocal', $language),
                 '{emotion_emoji}' => $this->getRandomEmoji($intent['mood'] ?? 'calm', 1),
                 '{cta_emoji}' => ['▶️', '👆', '💬', '❤️'][array_rand(['▶️', '👆', '💬', '❤️'])]
             ];
@@ -561,10 +682,20 @@ class AutoShortsGenerator
      */
     private function generateTags(array $intent): array
     {
-        $baseTags = self::TAG_SETS[$intent['content_type']] ?? self::TAG_SETS['vocal'];
+        $language = $intent['language'] ?? 'ru';
+        $baseTags = $language === 'en'
+            ? (self::TAG_SETS_EN[$intent['content_type']] ?? self::TAG_SETS_EN['vocal'])
+            : (self::TAG_SETS[$intent['content_type']] ?? self::TAG_SETS['vocal']);
 
         // Добавляем mood-специфичные теги
-        $moodTags = [
+        $moodTags = $language === 'en'
+            ? [
+                'calm' => ['#Calm', '#Relax'],
+                'emotional' => ['#Emotions', '#Feelings'],
+                'romantic' => ['#Romance', '#Love'],
+                'mysterious' => ['#Mystery', '#Vibes']
+            ]
+            : [
             'calm' => ['#Спокойно', '#Релакс'],
             'emotional' => ['#Эмоции', '#Чувства'],
             'romantic' => ['#Романтика', '#Любовь'],
@@ -583,7 +714,10 @@ class AutoShortsGenerator
      */
     private function generatePinnedComment(array $intent): string
     {
-        $questions = self::ENGAGEMENT_QUESTIONS[$intent['content_type']] ?? self::ENGAGEMENT_QUESTIONS['vocal'];
+        $language = $intent['language'] ?? 'ru';
+        $questions = $language === 'en'
+            ? (self::ENGAGEMENT_QUESTIONS_EN[$intent['content_type']] ?? self::ENGAGEMENT_QUESTIONS_EN['vocal'])
+            : (self::ENGAGEMENT_QUESTIONS[$intent['content_type']] ?? self::ENGAGEMENT_QUESTIONS['vocal']);
         return $questions[array_rand($questions)];
     }
 
@@ -638,50 +772,78 @@ class AutoShortsGenerator
 
     // Вспомогательные методы
 
-    private function getContentWord(string $contentType): string
+    private function getContentWord(string $contentType, string $language = 'ru'): string
     {
-        $words = [
-            'vocal' => ['голос', 'вокал', 'пение', 'звук'],
-            'music' => ['мелодия', 'музыка', 'композиция', 'звук'],
-            'aesthetic' => ['визуал', 'красота', 'эстетика', 'свет'],
-            'ambience' => ['атмосфера', 'настроение', 'погружение', 'ощущение']
-        ];
+        $words = $language === 'en'
+            ? [
+                'vocal' => ['voice', 'vocals', 'singing', 'song'],
+                'music' => ['melody', 'music', 'track', 'sound'],
+                'aesthetic' => ['visual', 'beauty', 'aesthetic', 'light'],
+                'ambience' => ['atmosphere', 'mood', 'vibe', 'ambience']
+            ]
+            : [
+                'vocal' => ['голос', 'вокал', 'пение', 'звук'],
+                'music' => ['мелодия', 'музыка', 'композиция', 'звук'],
+                'aesthetic' => ['визуал', 'красота', 'эстетика', 'свет'],
+                'ambience' => ['атмосфера', 'настроение', 'погружение', 'ощущение']
+            ];
         $list = $words[$contentType] ?? $words['vocal'];
         return $list[array_rand($list)];
     }
 
-    private function getEmotionWord(string $mood): string
+    private function getEmotionWord(string $mood, string $language = 'ru'): string
     {
-        $words = [
-            'calm' => ['спокойный', 'мягкий', 'нежный', 'умиротворяющий'],
-            'emotional' => ['эмоциональный', 'трогательный', 'глубокий', 'душевный'],
-            'romantic' => ['романтический', 'нежный', 'чувственный', 'лирический'],
-            'mysterious' => ['загадочный', 'мистический', 'таинственный', 'непонятный']
-        ];
+        $words = $language === 'en'
+            ? [
+                'calm' => ['calm', 'soft', 'gentle', 'peaceful'],
+                'emotional' => ['emotional', 'touching', 'deep', 'heartfelt'],
+                'romantic' => ['romantic', 'tender', 'sweet', 'dreamy'],
+                'mysterious' => ['mysterious', 'enigmatic', 'secret', 'haunting']
+            ]
+            : [
+                'calm' => ['спокойный', 'мягкий', 'нежный', 'умиротворяющий'],
+                'emotional' => ['эмоциональный', 'трогательный', 'глубокий', 'душевный'],
+                'romantic' => ['романтический', 'нежный', 'чувственный', 'лирический'],
+                'mysterious' => ['загадочный', 'мистический', 'таинственный', 'непонятный']
+            ];
         $list = $words[$mood] ?? $words['calm'];
         return $list[array_rand($list)];
     }
 
-    private function getVisualWord(string $visualFocus): string
+    private function getVisualWord(string $visualFocus, string $language = 'ru'): string
     {
-        $words = [
-            'neon' => ['неоновый', 'яркий', 'цветной', 'светящийся'],
-            'night' => ['ночной', 'тёмный', 'лунный', 'звёздный'],
-            'closeup' => ['крупный', 'близкий', 'детальный', 'интимный'],
-            'atmosphere' => ['атмосферный', 'пространственный', 'объёмный', 'погружающий']
-        ];
+        $words = $language === 'en'
+            ? [
+                'neon' => ['neon', 'bright', 'colorful', 'glowing'],
+                'night' => ['night', 'dark', 'moonlit', 'starry'],
+                'closeup' => ['close', 'intimate', 'detailed', 'tight'],
+                'atmosphere' => ['atmospheric', 'spacious', 'immersive', 'ambient']
+            ]
+            : [
+                'neon' => ['неоновый', 'яркий', 'цветной', 'светящийся'],
+                'night' => ['ночной', 'тёмный', 'лунный', 'звёздный'],
+                'closeup' => ['крупный', 'близкий', 'детальный', 'интимный'],
+                'atmosphere' => ['атмосферный', 'пространственный', 'объёмный', 'погружающий']
+            ];
         $list = $words[$visualFocus] ?? $words['neon'];
         return $list[array_rand($list)];
     }
 
-    private function getQuestionWord(string $contentType): string
+    private function getQuestionWord(string $contentType, string $language = 'ru'): string
     {
-        $questions = [
-            'vocal' => ['Как голос?', 'Залип на пение?', 'Вокал зацепил?'],
-            'music' => ['Мелодия хороша?', 'Музыка цепляет?', 'Звук нравится?'],
-            'aesthetic' => ['Визуал красивый?', 'Картинка зацепила?', 'Эстетика понравилась?'],
-            'ambience' => ['Атмосфера чувствуется?', 'Настроение передалось?', 'Погружение удалось?']
-        ];
+        $questions = $language === 'en'
+            ? [
+                'vocal' => ['How is the voice?', 'Did the vocals hook you?', 'Loved the singing?'],
+                'music' => ['How is the melody?', 'Does the music hit?', 'Sound good?'],
+                'aesthetic' => ['Love the visuals?', 'Looks amazing?', 'Aesthetic on point?'],
+                'ambience' => ['Feel the atmosphere?', 'Did the vibe land?', 'Immersive enough?']
+            ]
+            : [
+                'vocal' => ['Как голос?', 'Залип на пение?', 'Вокал зацепил?'],
+                'music' => ['Мелодия хороша?', 'Музыка цепляет?', 'Звук нравится?'],
+                'aesthetic' => ['Визуал красивый?', 'Картинка зацепила?', 'Эстетика понравилась?'],
+                'ambience' => ['Атмосфера чувствуется?', 'Настроение передалось?', 'Погружение удалось?']
+            ];
         $list = $questions[$contentType] ?? $questions['vocal'];
         return $list[array_rand($list)];
     }
@@ -708,7 +870,11 @@ class AutoShortsGenerator
         $types = ['question', 'emotional', 'mysterious'];
         $newType = $types[array_rand($types)];
 
-        return self::DESCRIPTION_TEMPLATES[$newType][array_rand(self::DESCRIPTION_TEMPLATES[$newType])];
+        $language = $content['language'] ?? 'ru';
+        $templates = $language === 'en'
+            ? (self::DESCRIPTION_TEMPLATES_EN[$newType] ?? self::DESCRIPTION_TEMPLATES_EN['question'])
+            : self::DESCRIPTION_TEMPLATES[$newType];
+        return $templates[array_rand($templates)];
     }
 
     private function regenerateEmoji(array $content): string
