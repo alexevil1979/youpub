@@ -63,7 +63,8 @@ class ContentGroupFileRepository extends Repository
         $result = $stmt->fetch() ?: null;
         
         if ($result) {
-            error_log("ContentGroupFileRepository::findNextUnpublished: Found file. Group ID: {$groupId}, File ID: {$result['id']}, Video ID: {$result['video_id']}, File status: {$result['status']}, Video status: {$result['video_status'] ?? 'unknown'}");
+            $videoStatus = isset($result['video_status']) ? $result['video_status'] : 'unknown';
+            error_log("ContentGroupFileRepository::findNextUnpublished: Found file. Group ID: {$groupId}, File ID: {$result['id']}, Video ID: {$result['video_id']}, File status: {$result['status']}, Video status: {$videoStatus}");
         } else {
             error_log("ContentGroupFileRepository::findNextUnpublished: No unpublished file found. Group ID: {$groupId}");
             
@@ -71,7 +72,8 @@ class ContentGroupFileRepository extends Repository
             $allFiles = $this->findByGroupId($groupId);
             error_log("ContentGroupFileRepository::findNextUnpublished: Total files in group: " . count($allFiles));
             foreach ($allFiles as $file) {
-                error_log("ContentGroupFileRepository::findNextUnpublished: File ID: {$file['id']}, Video ID: {$file['video_id']}, File status: {$file['status']}, Video status: {$file['video_status'] ?? 'unknown'}");
+                $fileVideoStatus = isset($file['video_status']) ? $file['video_status'] : 'unknown';
+                error_log("ContentGroupFileRepository::findNextUnpublished: File ID: {$file['id']}, Video ID: {$file['video_id']}, File status: {$file['status']}, Video status: {$fileVideoStatus}");
             }
         }
         
@@ -109,7 +111,8 @@ class ContentGroupFileRepository extends Repository
         // Получаем максимальный order_index
         $maxOrder = $this->db->prepare("SELECT MAX(order_index) as max_order FROM {$this->table} WHERE group_id = ?");
         $maxOrder->execute([$groupId]);
-        $max = $maxOrder->fetch()['max_order'] ?? 0;
+        $maxRow = $maxOrder->fetch();
+        $max = isset($maxRow['max_order']) ? (int)$maxRow['max_order'] : 0;
 
         return $this->create([
             'group_id' => $groupId,
@@ -139,7 +142,8 @@ class ContentGroupFileRepository extends Repository
     public function updateFileStatus(int $id, string $status, ?int $publicationId = null): bool
     {
         try {
-            error_log("ContentGroupFileRepository::updateFileStatus: id={$id}, status={$status}, publicationId=" . ($publicationId ?? 'null'));
+            $publicationIdStr = $publicationId !== null ? (string)$publicationId : 'null';
+            error_log("ContentGroupFileRepository::updateFileStatus: id={$id}, status={$status}, publicationId=" . $publicationIdStr);
             
             $data = ['status' => $status];
             if ($status === 'published') {
