@@ -341,6 +341,78 @@ class AutoShortsGenerator
     }
 
     /**
+     * Модификация интента для варианта (для разнообразия)
+     */
+    private function modifyIntentForVariant(array $baseIntent, int $variantIndex): array
+    {
+        $intent = $baseIntent;
+
+        // Циклически меняем настроение для разнообразия
+        $moods = ['calm', 'emotional', 'atmospheric', 'intense', 'dreamy'];
+        $intent['mood'] = $moods[$variantIndex % count($moods)];
+
+        // Циклически меняем визуальный фокус
+        $visualFocuses = ['neon', 'lights', 'shadows', 'colors', 'silhouette'];
+        $intent['visual_focus'] = $visualFocuses[$variantIndex % count($visualFocuses)];
+
+        return $intent;
+    }
+
+    /**
+     * Выбор углов для варианта
+     */
+    private function selectAnglesForVariant(array $allAngles, int $variantIndex): array
+    {
+        // Для каждого варианта выбираем разные комбинации углов
+        $angleCount = count($allAngles);
+        $startIndex = $variantIndex * 3 % $angleCount; // Сдвиг на 3 угла для каждого варианта
+        $selectedCount = rand(4, 6); // 4-6 углов на вариант
+
+        $selectedAngles = [];
+        for ($i = 0; $i < $selectedCount; $i++) {
+            $index = ($startIndex + $i) % $angleCount;
+            $selectedAngles[] = $allAngles[$index];
+        }
+
+        return $selectedAngles;
+    }
+
+    /**
+     * Обеспечение уникальности варианта внутри батча
+     */
+    private function ensureVariantUniqueness(array $content, array &$usedTitles, array &$usedDescriptions): array
+    {
+        $maxAttempts = 5;
+        $attempt = 0;
+
+        while ($attempt < $maxAttempts) {
+            $isUnique = true;
+
+            // Проверяем уникальность заголовка
+            if (isset($content['title']) && in_array($content['title'], $usedTitles)) {
+                // Регенерируем заголовок
+                $content['title'] = $this->generateTitle(['content_type' => 'vocal', 'mood' => 'calm'], 'альтернативный_угол');
+                $isUnique = false;
+            }
+
+            // Проверяем уникальность описания
+            if (isset($content['description']) && in_array($content['description'], $usedDescriptions)) {
+                // Регенерируем описание
+                $content['description'] = $this->generateDescription(['content_type' => 'vocal', 'mood' => 'calm']);
+                $isUnique = false;
+            }
+
+            if ($isUnique) {
+                break;
+            }
+
+            $attempt++;
+        }
+
+        return $content;
+    }
+
+    /**
      * Генерация полного контента
      */
     private function generateContent(array $intent, array $angles): array
