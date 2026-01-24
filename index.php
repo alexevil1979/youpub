@@ -52,14 +52,15 @@ writeLog("Request Method: " . ($_SERVER['REQUEST_METHOD'] ?? 'unknown'));
 // Включить буферизацию вывода
 ob_start();
 
-try {
-    writeLog("Loading autoloader...");
-    require_once __DIR__ . '/vendor/autoload.php';
-    writeLog("Autoloader loaded");
+writeLog("Loading autoloader...");
+require_once __DIR__ . '/vendor/autoload.php';
+writeLog("Autoloader loaded");
 
-    use Core\Database;
-    use Core\Router;
-    use Core\Auth;
+use Core\Database;
+use Core\Router;
+use Core\Auth;
+
+try {
 
     // Загрузка конфигурации
     writeLog("Loading config...");
