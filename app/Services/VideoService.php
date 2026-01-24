@@ -5,6 +5,7 @@ namespace App\Services;
 use Core\Service;
 use App\Repositories\VideoRepository;
 use App\Repositories\UserRepository;
+use App\Services\ThumbnailService;
 
 /**
  * Сервис для работы с видео
@@ -13,12 +14,14 @@ class VideoService extends Service
 {
     private VideoRepository $videoRepo;
     private UserRepository $userRepo;
+    private ThumbnailService $thumbnailService;
 
     public function __construct()
     {
         parent::__construct();
         $this->videoRepo = new VideoRepository();
         $this->userRepo = new UserRepository();
+        $this->thumbnailService = new ThumbnailService();
     }
 
     /**
@@ -124,6 +127,9 @@ class VideoService extends Service
             'tags' => $tags,
             'status' => 'uploaded',
         ]);
+
+        // Генерация превью в фоне (асинхронно)
+        $this->generateThumbnailAsync($videoId, $filePath);
 
         return [
             'success' => true,
@@ -351,6 +357,35 @@ class VideoService extends Service
         $this->videoRepo->delete($id);
 
         return ['success' => true, 'message' => 'Video deleted successfully'];
+    }
+
+    /**
+     * Асинхронная генерация превью для видео
+     */
+    private function generateThumbnailAsync(int $videoId, string $videoPath): void
+    {
+        // Запускаем генерацию превью в фоне
+        $cmd = "php -r \"require_once __DIR__ . '/../../vendor/autoload.php'; " .
+               "use App\Services\ThumbnailService; " .
+               "\$service = new ThumbnailService(); " .
+               "\$thumbnail = \$service->generateThumbnail('$videoPath', '$videoId'); " .
+               "if (\$thumbnail) { " .
+               "    \$config = require __DIR__ . '/../../config/env.php'; " .
+               "    \$db = new PDO('mysql:host='.\$config['DB_HOST'].';dbname='.\$config['DB_NAME'], \$config['DB_USER'], \$config['DB_PASS']); " .
+               "    \$stmt = \$db->prepare('UPDATE videos SET thumbnail_path = ? WHERE id = ?'); " .
+               "    \$stmt->execute([\$thumbnail, $videoId]); " .
+               "    echo 'Thumbnail generated: ' . \$thumbnail . PHP_EOL; " .
+               "} else { " .
+               "    echo 'Failed to generate thumbnail' . PHP_EOL; " .
+               "}\" > /dev/null 2>&1 &";
+
+        // Для Windows используем другой подход
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            $cmd = "start /B php -r \"...\" > NUL 2>&1";
+        }
+
+        exec($cmd);
+        error_log("Thumbnail generation started for video ID {$videoId}");
     }
 
     /**

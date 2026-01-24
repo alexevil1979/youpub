@@ -1,5 +1,15 @@
 <div class="catalog-item">
-    <span class="item-icon"><?= \App\Helpers\IconHelper::render('video', 20) ?></span>
+    <div class="item-icon">
+        <?php if (!empty($video['thumbnail_path'])): ?>
+            <img src="/storage/uploads/<?= htmlspecialchars($video['thumbnail_path']) ?>"
+                 alt="Превью"
+                 class="video-thumbnail"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+        <?php endif; ?>
+        <span class="video-icon-fallback" style="display: <?= !empty($video['thumbnail_path']) ? 'none' : 'inline-block' ?>;">
+            <?= \App\Helpers\IconHelper::render('video', 20) ?>
+        </span>
+    </div>
     <div class="item-info">
         <div class="item-title"><?= htmlspecialchars($video['title'] ?? $video['file_name']) ?></div>
         <div class="item-meta">
