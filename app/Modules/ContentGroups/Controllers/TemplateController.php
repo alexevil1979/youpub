@@ -104,12 +104,12 @@ class TemplateController extends Controller
     }
 
     /**
-     * Показать форму создания шаблона
+     * Показать форму создания шаблона (теперь показывает Shorts форму)
      */
     public function showCreate(): void
     {
         $csrfToken = (new \Core\Auth())->generateCsrfToken();
-        include __DIR__ . '/../../../../views/content_groups/templates/create.php';
+        include __DIR__ . '/../../../../views/content_groups/templates/create_v2.php';
     }
 
     /**
