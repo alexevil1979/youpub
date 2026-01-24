@@ -163,6 +163,12 @@ class TemplateService extends Service
         if (!empty($descriptionVariants) && isset($descriptionVariants[$hookType])) {
             // Новый подход: варианты по типам триггеров
             $hookVariants = $descriptionVariants[$hookType];
+
+            // Гарантируем, что hookVariants является непустым массивом
+            if (!is_array($hookVariants) || empty($hookVariants)) {
+                $hookVariants = ['Посмотрите это видео!'];
+            }
+
             $selectedVariant = $hookVariants[array_rand($hookVariants)];
 
             // Добавляем emoji из соответствующей группы
@@ -179,6 +185,12 @@ class TemplateService extends Service
         } else {
             // Обратная совместимость: старый подход
             $emojiList = !empty($template['emoji_list']) ? json_decode($template['emoji_list'], true) : ['🎬'];
+
+            // Гарантируем, что emojiList является массивом
+            if (!is_array($emojiList) || empty($emojiList)) {
+                $emojiList = ['🎬'];
+            }
+
             $vars['random_emoji'] = $emojiList[array_rand($emojiList)];
             $result['description'] = $this->processTemplate($template['description_template'] ?? '', $vars, $video['description'] ?? '');
         }
