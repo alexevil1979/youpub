@@ -105,6 +105,12 @@ $router->post('/content-groups/templates/{id}/update', [TemplateController::clas
 $router->post('/content-groups/templates/{id}/preview', [TemplateController::class, 'preview'], [AuthMiddleware::class]);
 $router->delete('/content-groups/templates/{id}', [TemplateController::class, 'delete'], [AuthMiddleware::class]);
 
+// Автогенерация Shorts (должны быть ПЕРЕД /content-groups/{id})
+$router->get('/content-groups/auto-shorts', [AutoShortsController::class, 'showGenerate'], [AuthMiddleware::class]);
+$router->post('/content-groups/auto-shorts/generate', [AutoShortsController::class, 'generate'], [AuthMiddleware::class]);
+$router->get('/content-groups/auto-shorts/result', [AutoShortsController::class, 'showResult'], [AuthMiddleware::class]);
+$router->post('/content-groups/auto-shorts/save', [AutoShortsController::class, 'save'], [AuthMiddleware::class]);
+
 // Умные расписания (должны быть ПЕРЕД /content-groups/{id})
 $router->get('/content-groups/schedules', [SmartScheduleController::class, 'index'], [AuthMiddleware::class]);
 $router->get('/content-groups/schedules/create', [SmartScheduleController::class, 'showCreate'], [AuthMiddleware::class]);

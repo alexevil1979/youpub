@@ -19,6 +19,7 @@ ob_start();
     <?php unset($_SESSION['success']); ?>
 <?php endif; ?>
 
+<a href="/content-groups/auto-shorts" class="btn btn-primary">🚀 Автогенерация Shorts</a>
 <a href="/content-groups/templates/create-shorts" class="btn btn-primary">🎯 Создать Shorts шаблон</a>
 <a href="/content-groups/templates/create" class="btn btn-secondary">📝 Простой шаблон</a>
 
