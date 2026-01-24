@@ -891,194 +891,171 @@ function fillFormWithSuggestion(data) {
     console.log('🎬 fillFormWithSuggestion: Начинаем работу');
     console.log('📦 Полученные данные:', data);
 
-    const content = data.content;
-    if (!content) {
-        throw new Error('Данные content отсутствуют в ответе');
-    }
-
-    console.log('📝 Начинаем заполнение формы...');
-    console.log(`🎯 Всего сгенерировано вариантов: ${data.variants_count || content.generated_variants || 1}`);
-    console.log(`📊 Уникальных названий: ${content.unique_titles || 1}`);
-    console.log(`📝 Уникальных описаний: ${content.unique_descriptions || 1}`);
-    console.log(`🏷️ Уникальных тегов: ${content.unique_tags || 1}`);
-
-    // Используем асинхронную обработку для предотвращения зависания
-    setTimeout(() => fillFormStep1(data), 10);
-}
-
-function fillFormStep1(data) {
     try {
-        console.log('🔄 Шаг 1: Заполняем основные поля');
         const content = data.content;
-
-        // Заполняем основные поля с проверками
-    // Название шаблона (первое поле title_variants)
-    const titleVariants = document.querySelectorAll('[name="title_variants[]"]');
-    if (titleVariants.length > 0 && content.title_template) {
-        titleVariants[0].value = content.title_template;
-        console.log('✅ Заполнено название:', content.title_template);
-    }
-
-    // Описание шаблона
-    const descTemplateInput = document.querySelector('[name="description_template"]');
-    if (descTemplateInput && content.description_template) {
-        descTemplateInput.value = content.description_template;
-        console.log('✅ Заполнено описание:', content.description_template);
-    }
-
-    // Теги
-    const tagsTemplateInput = document.querySelector('[name="tags_template"]');
-    if (tagsTemplateInput && content.tags_template) {
-        tagsTemplateInput.value = content.tags_template;
-        console.log('✅ Заполнены теги:', content.tags_template);
-    }
-
-    // Emoji
-    const emojiListInput = document.querySelector('[name="emoji_list"]');
-    if (emojiListInput && content.emoji_list) {
-        emojiListInput.value = content.emoji_list;
-        console.log('✅ Заполнен emoji:', content.emoji_list);
-    }
-
-    // Заполняем новые поля Shorts с проверками
-    if (content.hook_type) {
-        const hookSelect = document.querySelector('[name="hook_type"]');
-        if (hookSelect) {
-            hookSelect.value = content.hook_type;
-        }
-    }
-
-    // Варианты названий - добавляем поля динамически если нужно (максимум 20)
-    if (content.title_variants && Array.isArray(content.title_variants)) {
-        const titleContainer = document.getElementById('titleVariants');
-        const titleInputs = document.querySelectorAll('[name="title_variants[]"]');
-        const maxTitles = Math.min(content.title_variants.length, 5); // Ограничиваем до 5 для производительности
-
-        // Добавляем недостающие поля (без показа сообщений)
-        while (titleInputs.length < maxTitles) {
-            addVariant('titleVariants',
-                '<input type="text" name="title_variants[]" placeholder="Новый вариант названия" required>' +
-                '<button type="button" class="btn btn-sm btn-danger remove-variant" onclick="removeVariant(this)">❌</button>',
-                1, true);
+        if (!content) {
+            throw new Error('Данные content отсутствуют в ответе');
         }
 
-        // Заполняем значения
-        const updatedTitleInputs = document.querySelectorAll('[name="title_variants[]"]');
-        for (let i = 0; i < maxTitles; i++) {
-            const variant = content.title_variants[i];
-            if (updatedTitleInputs[i] && variant) {
-                updatedTitleInputs[i].value = variant;
-                console.log(`✅ Заполнен вариант названия ${i + 1}:`, variant);
+        console.log('📝 Начинаем заполнение формы...');
+        console.log(`🎯 Всего сгенерировано вариантов: ${data.variants_count || content.generated_variants || 1}`);
+        console.log(`📊 Уникальных названий: ${content.unique_titles || 1}`);
+        console.log(`📝 Уникальных описаний: ${content.unique_descriptions || 1}`);
+        console.log(`🏷️ Уникальных тегов: ${content.unique_tags || 1}`);
+
+        // Основные поля
+        const titleVariants = document.querySelectorAll('[name="title_variants[]"]');
+        if (titleVariants.length > 0 && content.title_template) {
+            titleVariants[0].value = content.title_template;
+            console.log('✅ Заполнено название:', content.title_template);
+        }
+
+        const descTemplateInput = document.querySelector('[name="description_template"]');
+        if (descTemplateInput && content.description_template) {
+            descTemplateInput.value = content.description_template;
+            console.log('✅ Заполнено описание:', content.description_template);
+        }
+
+        const tagsTemplateInput = document.querySelector('[name="tags_template"]');
+        if (tagsTemplateInput && content.tags_template) {
+            tagsTemplateInput.value = content.tags_template;
+            console.log('✅ Заполнены теги:', content.tags_template);
+        }
+
+        const emojiListInput = document.querySelector('[name="emoji_list"]');
+        if (emojiListInput && content.emoji_list) {
+            emojiListInput.value = content.emoji_list;
+            console.log('✅ Заполнен emoji:', content.emoji_list);
+        }
+
+        if (content.hook_type) {
+            const hookSelect = document.querySelector('[name="hook_type"]');
+            if (hookSelect) {
+                hookSelect.value = content.hook_type;
             }
         }
-    }
 
-    // Варианты описаний - добавляем поля динамически если нужно (максимум 15)
-    if (content.description_variants) {
-        let totalVariants = 0;
-        Object.entries(content.description_variants).forEach(([type, variants]) => {
-            if (Array.isArray(variants)) {
-                totalVariants += Math.min(variants.length, 5); // Максимум 5 на тип настроения
+        // Варианты названий (до 5)
+        if (content.title_variants && Array.isArray(content.title_variants)) {
+            const titleInputs = document.querySelectorAll('[name="title_variants[]"]');
+            const maxTitles = Math.min(content.title_variants.length, 5);
+
+            while (titleInputs.length < maxTitles) {
+                addVariant('titleVariants',
+                    '<input type="text" name="title_variants[]" placeholder="Новый вариант названия" required>' +
+                    '<button type="button" class="btn btn-sm btn-danger remove-variant" onclick="removeVariant(this)">❌</button>',
+                    1, true);
             }
-        });
-        totalVariants = Math.min(totalVariants, 15); // Общий максимум 15
 
-        // Добавляем недостающие поля описаний
-        const descInputs = document.querySelectorAll('[name="description_texts[]"]');
-        while (descInputs.length < totalVariants) {
-            addVariant('descriptionVariants',
-                '<select name="description_types[]" class="description-type" required>' +
-                    '<option value="">Тип триггера</option>' +
-                    '<option value="emotional">😱 Эмоция</option>' +
-                    '<option value="intrigue">🤔 Интрига</option>' +
-                    '<option value="atmosphere">🌙 Атмосфера</option>' +
-                    '<option value="question">❓ Вопрос</option>' +
-                    '<option value="cta">👇 CTA</option>' +
-                '</select>' +
-                '<textarea name="description_texts[]" rows="2" placeholder="Текст описания" required></textarea>' +
-                '<button type="button" class="btn btn-sm btn-danger remove-variant" onclick="removeVariant(this)">❌</button>',
-                1, true);
-        }
-
-        // Заполняем значения
-        let descIndex = 0;
-        const updatedDescTypes = document.querySelectorAll('[name="description_types[]"]');
-        const updatedDescTexts = document.querySelectorAll('[name="description_texts[]"]');
-
-        Object.entries(content.description_variants).forEach(([type, variants]) => {
-            if (Array.isArray(variants)) {
-                const limitedVariants = variants.slice(0, 5); // Максимум 5 на тип
-                limitedVariants.forEach(variant => {
-                    if (descIndex < updatedDescTypes.length && descIndex < updatedDescTexts.length) {
-                        if (updatedDescTypes[descIndex]) updatedDescTypes[descIndex].value = type;
-                        if (updatedDescTexts[descIndex]) updatedDescTexts[descIndex].value = variant;
-                        console.log(`✅ Заполнен вариант описания ${descIndex + 1} (${type}):`, variant);
-                        descIndex++;
-                    }
-                });
-            }
-        });
-    }
-
-    // Emoji группы
-    if (content.emoji_groups) {
-        Object.entries(content.emoji_groups).forEach(([type, emojis]) => {
-            const inputName = `emoji_${type}`;
-            const input = document.querySelector(`[name="${inputName}"]`);
-            if (input && Array.isArray(emojis)) {
-                input.value = emojis.join(', ');
-            }
-        });
-    }
-
-    // Остальные поля с проверками
-    const baseTagsInput = document.querySelector('[name="base_tags"]');
-    if (baseTagsInput && content.base_tags) {
-        baseTagsInput.value = content.base_tags;
-    }
-
-    const questionsInput = document.querySelector('[name="questions"]');
-    if (questionsInput && content.questions && Array.isArray(content.questions)) {
-        questionsInput.value = content.questions.join('\n');
-    }
-
-    // Закрепленные комментарии - добавляем поля динамически если нужно (максимум 10)
-    if (content.pinned_comments && Array.isArray(content.pinned_comments)) {
-        const pinnedInputs = document.querySelectorAll('[name="pinned_comments[]"]');
-        const maxComments = Math.min(content.pinned_comments.length, 3); // Ограничиваем до 3 для производительности
-
-        // Добавляем недостающие поля
-        while (pinnedInputs.length < maxComments) {
-            addVariant('pinnedCommentVariants',
-                '<input type="text" name="pinned_comments[]" placeholder="Новый вариант закрепленного комментария" required>' +
-                '<button type="button" class="btn btn-sm btn-danger remove-variant" onclick="removeVariant(this)">❌</button>',
-                1, true);
-        }
-
-        // Заполняем значения
-        const updatedPinnedInputs = document.querySelectorAll('[name="pinned_comments[]"]');
-        for (let i = 0; i < maxComments; i++) {
-            const comment = content.pinned_comments[i];
-            if (updatedPinnedInputs[i] && comment) {
-                updatedPinnedInputs[i].value = comment;
-                console.log(`✅ Заполнен закрепленный комментарий ${i + 1}:`, comment);
+            const updatedTitleInputs = document.querySelectorAll('[name="title_variants[]"]');
+            for (let i = 0; i < maxTitles; i++) {
+                const variant = content.title_variants[i];
+                if (updatedTitleInputs[i] && variant) {
+                    updatedTitleInputs[i].value = variant;
+                    console.log(`✅ Заполнен вариант названия ${i + 1}:`, variant);
+                }
             }
         }
-    }
 
-    const focusPointsInput = document.querySelector('[name="focus_points"]');
-    if (focusPointsInput && content.focus_points && Array.isArray(content.focus_points)) {
-        focusPointsInput.value = JSON.stringify(content.focus_points);
-    }
+        // Варианты описаний (до 5)
+        if (content.description_variants) {
+            let totalVariants = 0;
+            Object.entries(content.description_variants).forEach(([type, variants]) => {
+                if (Array.isArray(variants)) {
+                    totalVariants += Math.min(variants.length, 1);
+                }
+            });
+            totalVariants = Math.min(totalVariants, 5);
 
-        // Обновляем название шаблона
+            const descInputs = document.querySelectorAll('[name="description_texts[]"]');
+            while (descInputs.length < totalVariants) {
+                addVariant('descriptionVariants',
+                    '<select name="description_types[]" class="description-type" required>' +
+                        '<option value="">Тип триггера</option>' +
+                        '<option value="emotional">😱 Эмоция</option>' +
+                        '<option value="intrigue">🤔 Интрига</option>' +
+                        '<option value="atmosphere">🌙 Атмосфера</option>' +
+                        '<option value="question">❓ Вопрос</option>' +
+                        '<option value="cta">👇 CTA</option>' +
+                    '</select>' +
+                    '<textarea name="description_texts[]" rows="2" placeholder="Текст описания" required></textarea>' +
+                    '<button type="button" class="btn btn-sm btn-danger remove-variant" onclick="removeVariant(this)">❌</button>',
+                    1, true);
+            }
+
+            let descIndex = 0;
+            const updatedDescTypes = document.querySelectorAll('[name="description_types[]"]');
+            const updatedDescTexts = document.querySelectorAll('[name="description_texts[]"]');
+
+            Object.entries(content.description_variants).forEach(([type, variants]) => {
+                if (Array.isArray(variants)) {
+                    const limitedVariants = variants.slice(0, 1);
+                    limitedVariants.forEach(variant => {
+                        if (descIndex < updatedDescTypes.length && descIndex < updatedDescTexts.length) {
+                            if (updatedDescTypes[descIndex]) updatedDescTypes[descIndex].value = type;
+                            if (updatedDescTexts[descIndex]) updatedDescTexts[descIndex].value = variant;
+                            console.log(`✅ Заполнен вариант описания ${descIndex + 1} (${type}):`, variant);
+                            descIndex++;
+                        }
+                    });
+                }
+            });
+        }
+
+        // Emoji группы
+        if (content.emoji_groups) {
+            Object.entries(content.emoji_groups).forEach(([type, emojis]) => {
+                const inputName = `emoji_${type}`;
+                const input = document.querySelector(`[name="${inputName}"]`);
+                if (input && Array.isArray(emojis)) {
+                    input.value = emojis.join(', ');
+                }
+            });
+        }
+
+        // Остальные поля
+        const baseTagsInput = document.querySelector('[name="base_tags"]');
+        if (baseTagsInput && content.base_tags) {
+            baseTagsInput.value = content.base_tags;
+        }
+
+        const questionsInput = document.querySelector('[name="questions"]');
+        if (questionsInput && content.questions && Array.isArray(content.questions)) {
+            questionsInput.value = content.questions.join('\n');
+        }
+
+        if (content.pinned_comments && Array.isArray(content.pinned_comments)) {
+            const pinnedInputs = document.querySelectorAll('[name="pinned_comments[]"]');
+            const maxComments = Math.min(content.pinned_comments.length, 3);
+
+            while (pinnedInputs.length < maxComments) {
+                addVariant('pinnedCommentVariants',
+                    '<input type="text" name="pinned_comments[]" placeholder="Новый вариант закрепленного комментария" required>' +
+                    '<button type="button" class="btn btn-sm btn-danger remove-variant" onclick="removeVariant(this)">❌</button>',
+                    1, true);
+            }
+
+            const updatedPinnedInputs = document.querySelectorAll('[name="pinned_comments[]"]');
+            for (let i = 0; i < maxComments; i++) {
+                const comment = content.pinned_comments[i];
+                if (updatedPinnedInputs[i] && comment) {
+                    updatedPinnedInputs[i].value = comment;
+                    console.log(`✅ Заполнен закрепленный комментарий ${i + 1}:`, comment);
+                }
+            }
+        }
+
+        const focusPointsInput = document.querySelector('[name="focus_points"]');
+        if (focusPointsInput && content.focus_points && Array.isArray(content.focus_points)) {
+            focusPointsInput.value = JSON.stringify(content.focus_points);
+        }
+
         const nameInput = document.querySelector('[name="name"]');
         if (nameInput && data.idea) {
             nameInput.value = `Auto: ${data.idea}`;
             console.log('✅ Обновлено название шаблона');
         }
 
-        // Обновляем описание
         const descriptionInput = document.querySelector('[name="description"]');
         if (descriptionInput && data.idea) {
             descriptionInput.value = `Автоматически сгенерированный шаблон для: ${data.idea}`;
@@ -1087,10 +1064,9 @@ function fillFormStep1(data) {
 
         console.log('✅ Форма успешно заполнена сгенерированным контентом!');
         console.log('🔍 Проверьте поля формы - они должны быть заполнены автоматически.');
-
-        setTimeout(() => fillFormStep2(data), 50);
     } catch (error) {
-        console.error('💥 Ошибка в шаге 1:', error);
+        console.error('💥 Ошибка в fillFormWithSuggestion:', error);
+        console.error('Stack trace:', error.stack);
         throw error;
     }
 }
