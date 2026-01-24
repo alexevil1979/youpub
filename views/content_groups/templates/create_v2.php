@@ -957,30 +957,34 @@ function fillFormStep1(data) {
     // Варианты названий - добавляем поля динамически если нужно (максимум 20)
     if (content.title_variants && Array.isArray(content.title_variants)) {
         const titleContainer = document.getElementById('titleVariants');
-        const titleInputs = document.querySelectorAll('[name="title_variants[]"]');
-        const maxTitles = Math.min(content.title_variants.length, 5); // Ограничиваем до 5 для производительности
+        if (!titleContainer) {
+            console.warn('⚠️ Контейнер для вариантов названий не найден');
+        } else {
+            let titleInputs = document.querySelectorAll('[name="title_variants[]"]');
+            const maxTitles = Math.min(content.title_variants.length, 5); // Ограничиваем до 5 для производительности
 
-        // Добавляем недостающие поля (без показа сообщений)
-        let attempts = 0;
-        while (titleInputs.length < maxTitles && attempts < 10) {
-            addVariant('titleVariants',
-                '<input type="text" name="title_variants[]" placeholder="Новый вариант названия" required>' +
-                '<button type="button" class="btn btn-sm btn-danger remove-variant" onclick="removeVariant(this)">❌</button>',
-                1, true);
-            // Обновляем список после добавления
-            titleInputs = document.querySelectorAll('[name="title_variants[]"]');
-            attempts++;
-            if (titleInputs.length >= maxTitles) break;
-        }
-        console.log(`✅ Добавлено полей для названий: ${titleInputs.length} из ${maxTitles}`);
+            // Добавляем недостающие поля (без показа сообщений)
+            let attempts = 0;
+            while (titleInputs.length < maxTitles && attempts < 10) {
+                addVariant('titleVariants',
+                    '<input type="text" name="title_variants[]" placeholder="Новый вариант названия" required>' +
+                    '<button type="button" class="btn btn-sm btn-danger remove-variant" onclick="removeVariant(this)">❌</button>',
+                    1, true);
+                // Обновляем список после добавления
+                titleInputs = document.querySelectorAll('[name="title_variants[]"]');
+                attempts++;
+                if (titleInputs.length >= maxTitles) break;
+            }
+            console.log(`✅ Добавлено полей для названий: ${titleInputs.length} из ${maxTitles}`);
 
-        // Заполняем значения
-        const updatedTitleInputs = document.querySelectorAll('[name="title_variants[]"]');
-        for (let i = 0; i < maxTitles; i++) {
-            const variant = content.title_variants[i];
-            if (updatedTitleInputs[i] && variant) {
-                updatedTitleInputs[i].value = variant;
-                console.log(`✅ Заполнен вариант названия ${i + 1}:`, variant);
+            // Заполняем значения
+            const updatedTitleInputs = document.querySelectorAll('[name="title_variants[]"]');
+            for (let i = 0; i < maxTitles; i++) {
+                const variant = content.title_variants[i];
+                if (updatedTitleInputs[i] && variant) {
+                    updatedTitleInputs[i].value = variant;
+                    console.log(`✅ Заполнен вариант названия ${i + 1}:`, variant);
+                }
             }
         }
     }
@@ -995,47 +999,52 @@ function fillFormStep1(data) {
         });
         totalVariants = Math.min(totalVariants, 15); // Общий максимум 15
 
-        // Добавляем недостающие поля описаний
-        let descInputs = document.querySelectorAll('[name="description_texts[]"]');
-        let descAttempts = 0;
-        while (descInputs.length < totalVariants && descAttempts < 10) {
-            addVariant('descriptionVariants',
-                '<select name="description_types[]" class="description-type" required>' +
-                    '<option value="">Тип триггера</option>' +
-                    '<option value="emotional">😱 Эмоция</option>' +
-                    '<option value="intrigue">🤔 Интрига</option>' +
-                    '<option value="atmosphere">🌙 Атмосфера</option>' +
-                    '<option value="question">❓ Вопрос</option>' +
-                    '<option value="cta">👇 CTA</option>' +
-                '</select>' +
-                '<textarea name="description_texts[]" rows="2" placeholder="Текст описания" required></textarea>' +
-                '<button type="button" class="btn btn-sm btn-danger remove-variant" onclick="removeVariant(this)">❌</button>',
-                1, true);
-            // Обновляем список после добавления
-            descInputs = document.querySelectorAll('[name="description_texts[]"]');
-            descAttempts++;
-            if (descInputs.length >= totalVariants) break;
-        }
-        console.log(`✅ Добавлено полей для описаний: ${descInputs.length} из ${totalVariants}`);
-
-        // Заполняем значения
-        let descIndex = 0;
-        const updatedDescTypes = document.querySelectorAll('[name="description_types[]"]');
-        const updatedDescTexts = document.querySelectorAll('[name="description_texts[]"]');
-
-        Object.entries(content.description_variants).forEach(([type, variants]) => {
-            if (Array.isArray(variants)) {
-                const limitedVariants = variants.slice(0, 5); // Максимум 5 на тип
-                limitedVariants.forEach(variant => {
-                    if (descIndex < updatedDescTypes.length && descIndex < updatedDescTexts.length) {
-                        if (updatedDescTypes[descIndex]) updatedDescTypes[descIndex].value = type;
-                        if (updatedDescTexts[descIndex]) updatedDescTexts[descIndex].value = variant;
-                        console.log(`✅ Заполнен вариант описания ${descIndex + 1} (${type}):`, variant);
-                        descIndex++;
-                    }
-                });
+        const descriptionContainer = document.getElementById('descriptionVariants');
+        if (!descriptionContainer) {
+            console.warn('⚠️ Контейнер для вариантов описаний не найден');
+        } else {
+            // Добавляем недостающие поля описаний
+            let descInputs = document.querySelectorAll('[name="description_texts[]"]');
+            let descAttempts = 0;
+            while (descInputs.length < totalVariants && descAttempts < 10) {
+                addVariant('descriptionVariants',
+                    '<select name="description_types[]" class="description-type" required>' +
+                        '<option value="">Тип триггера</option>' +
+                        '<option value="emotional">😱 Эмоция</option>' +
+                        '<option value="intrigue">🤔 Интрига</option>' +
+                        '<option value="atmosphere">🌙 Атмосфера</option>' +
+                        '<option value="question">❓ Вопрос</option>' +
+                        '<option value="cta">👇 CTA</option>' +
+                    '</select>' +
+                    '<textarea name="description_texts[]" rows="2" placeholder="Текст описания" required></textarea>' +
+                    '<button type="button" class="btn btn-sm btn-danger remove-variant" onclick="removeVariant(this)">❌</button>',
+                    1, true);
+                // Обновляем список после добавления
+                descInputs = document.querySelectorAll('[name="description_texts[]"]');
+                descAttempts++;
+                if (descInputs.length >= totalVariants) break;
             }
-        });
+            console.log(`✅ Добавлено полей для описаний: ${descInputs.length} из ${totalVariants}`);
+
+            // Заполняем значения
+            let descIndex = 0;
+            const updatedDescTypes = document.querySelectorAll('[name="description_types[]"]');
+            const updatedDescTexts = document.querySelectorAll('[name="description_texts[]"]');
+
+            Object.entries(content.description_variants).forEach(([type, variants]) => {
+                if (Array.isArray(variants)) {
+                    const limitedVariants = variants.slice(0, 5); // Максимум 5 на тип
+                    limitedVariants.forEach(variant => {
+                        if (descIndex < updatedDescTypes.length && descIndex < updatedDescTexts.length) {
+                            if (updatedDescTypes[descIndex]) updatedDescTypes[descIndex].value = type;
+                            if (updatedDescTexts[descIndex]) updatedDescTexts[descIndex].value = variant;
+                            console.log(`✅ Заполнен вариант описания ${descIndex + 1} (${type}):`, variant);
+                            descIndex++;
+                        }
+                    });
+                }
+            });
+        }
     }
 
     // Emoji группы
@@ -1062,31 +1071,36 @@ function fillFormStep1(data) {
 
     // Закрепленные комментарии - добавляем поля динамически если нужно (максимум 10)
     if (content.pinned_comments && Array.isArray(content.pinned_comments)) {
-        const pinnedInputs = document.querySelectorAll('[name="pinned_comments[]"]');
-        const maxComments = Math.min(content.pinned_comments.length, 3); // Ограничиваем до 3 для производительности
+        const pinnedContainer = document.getElementById('pinnedCommentVariants');
+        if (!pinnedContainer) {
+            console.warn('⚠️ Контейнер для закрепленных комментариев не найден');
+        } else {
+            const pinnedInputs = document.querySelectorAll('[name="pinned_comments[]"]');
+            const maxComments = Math.min(content.pinned_comments.length, 3); // Ограничиваем до 3 для производительности
 
-        // Добавляем недостающие поля
-        let pinnedAttempts = 0;
-        let currentPinnedInputs = pinnedInputs;
-        while (currentPinnedInputs.length < maxComments && pinnedAttempts < 10) {
-            addVariant('pinnedCommentVariants',
-                '<input type="text" name="pinned_comments[]" placeholder="Новый вариант закрепленного комментария" required>' +
-                '<button type="button" class="btn btn-sm btn-danger remove-variant" onclick="removeVariant(this)">❌</button>',
-                1, true);
-            // Обновляем список после добавления
-            currentPinnedInputs = document.querySelectorAll('[name="pinned_comments[]"]');
-            pinnedAttempts++;
-            if (currentPinnedInputs.length >= maxComments) break;
-        }
-        console.log(`✅ Добавлено полей для комментариев: ${currentPinnedInputs.length} из ${maxComments}`);
+            // Добавляем недостающие поля
+            let pinnedAttempts = 0;
+            let currentPinnedInputs = pinnedInputs;
+            while (currentPinnedInputs.length < maxComments && pinnedAttempts < 10) {
+                addVariant('pinnedCommentVariants',
+                    '<input type="text" name="pinned_comments[]" placeholder="Новый вариант закрепленного комментария" required>' +
+                    '<button type="button" class="btn btn-sm btn-danger remove-variant" onclick="removeVariant(this)">❌</button>',
+                    1, true);
+                // Обновляем список после добавления
+                currentPinnedInputs = document.querySelectorAll('[name="pinned_comments[]"]');
+                pinnedAttempts++;
+                if (currentPinnedInputs.length >= maxComments) break;
+            }
+            console.log(`✅ Добавлено полей для комментариев: ${currentPinnedInputs.length} из ${maxComments}`);
 
-        // Заполняем значения
-        const updatedPinnedInputs = document.querySelectorAll('[name="pinned_comments[]"]');
-        for (let i = 0; i < maxComments && i < updatedPinnedInputs.length; i++) {
-            const comment = content.pinned_comments[i];
-            if (updatedPinnedInputs[i] && comment) {
-                updatedPinnedInputs[i].value = comment;
-                console.log(`✅ Заполнен закрепленный комментарий ${i + 1}:`, comment);
+            // Заполняем значения
+            const updatedPinnedInputs = document.querySelectorAll('[name="pinned_comments[]"]');
+            for (let i = 0; i < maxComments && i < updatedPinnedInputs.length; i++) {
+                const comment = content.pinned_comments[i];
+                if (updatedPinnedInputs[i] && comment) {
+                    updatedPinnedInputs[i].value = comment;
+                    console.log(`✅ Заполнен закрепленный комментарий ${i + 1}:`, comment);
+                }
             }
         }
     }
