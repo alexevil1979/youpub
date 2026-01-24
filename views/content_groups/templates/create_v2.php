@@ -928,10 +928,33 @@ function fillFormWithSuggestion(data) {
             console.log('✅ Заполнен emoji:', content.emoji_list);
         }
 
-        if (content.hook_type) {
-            const hookSelect = document.querySelector('[name="hook_type"]');
-            if (hookSelect) {
-                hookSelect.value = content.hook_type;
+        const normalizeHookType = (rawType) => {
+            if (!rawType) return '';
+            const type = String(rawType).toLowerCase();
+            if (['emotional', 'intriguing', 'atmospheric', 'visual', 'educational'].includes(type)) {
+                return type;
+            }
+            if (type.includes('emotion') || type.includes('эмоц')) return 'emotional';
+            if (type.includes('intrigue') || type.includes('интриг')) return 'intriguing';
+            if (type.includes('atmosphere') || type.includes('атмосфер') || type.includes('calm')) return 'atmospheric';
+            if (type.includes('visual') || type.includes('визу')) return 'visual';
+            if (type.includes('educat') || type.includes('обуч')) return 'educational';
+            return '';
+        };
+
+        const hookSelect = document.querySelector('[name="hook_type"]');
+        if (hookSelect) {
+            const derivedHookType =
+                normalizeHookType(content.hook_type) ||
+                normalizeHookType(content.content_type) ||
+                normalizeHookType((data.intent && data.intent.content_type) || '') ||
+                normalizeHookType((data.intent && data.intent.mood) || '');
+
+            if (derivedHookType) {
+                hookSelect.value = derivedHookType;
+                console.log('✅ Установлен основной тип контента:', derivedHookType);
+            } else {
+                console.warn('⚠️ Не удалось определить основной тип контента');
             }
         }
 
