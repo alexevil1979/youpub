@@ -36,7 +36,11 @@ class SmartQueueService extends Service
      */
     public function processGroupSchedule(array $schedule): array
     {
+        error_log("SmartQueueService::processGroupSchedule: ===== START PROCESSING SCHEDULE ID {$schedule['id']} =====");
+        error_log("SmartQueueService::processGroupSchedule: Schedule details - Group: " . ($schedule['group_name'] ?? 'unknown') . ", Platform: {$schedule['platform']}, Status: {$schedule['status']}, Publish_at: {$schedule['publish_at']}");
+
         if (empty($schedule['content_group_id'])) {
+            error_log("SmartQueueService::processGroupSchedule: ERROR - No content group specified");
             return ['success' => false, 'message' => 'No content group specified'];
         }
 
@@ -45,6 +49,8 @@ class SmartQueueService extends Service
             error_log("SmartQueueService::processGroupSchedule: Schedule ID {$schedule['id']} not ready. Publish_at: " . ($schedule['publish_at'] ?? 'NULL') . ", Status: " . ($schedule['status'] ?? 'NULL'));
             return ['success' => false, 'message' => 'Schedule not ready (limits or timing)'];
         }
+
+        error_log("SmartQueueService::processGroupSchedule: Schedule is ready for processing");
 
         // Получаем группу
         $group = $this->groupRepo->findById($schedule['content_group_id']);
@@ -190,9 +196,19 @@ class SmartQueueService extends Service
         }
 
         // Публикуем
-        error_log("SmartQueueService::processGroupSchedule: Calling publishVideo. Platform: {$schedule['platform']}, Temp schedule ID: {$tempScheduleId}");
-        $result = $this->publishVideo($schedule['platform'], $tempScheduleId, $templated);
-        error_log("SmartQueueService::processGroupSchedule: publishVideo result. Success: " . ($result['success'] ? 'true' : 'false') . ", Message: " . ($result['message'] ?? 'no message'));
+        error_log("SmartQueueService::processGroupSchedule: ===== CALLING PUBLISH VIDEO =====");
+        error_log("SmartQueueService::processGroupSchedule: Platform: {$schedule['platform']}, Temp schedule ID: {$tempScheduleId}, Video ID: {$groupFile['video_id']}");
+        error_log("SmartQueueService::processGroupSchedule: Template applied: " . (!empty($templated) ? 'yes' : 'no'));
+
+        try {
+            $result = $this->publishVideo($schedule['platform'], $tempScheduleId, $templated);
+            error_log("SmartQueueService::processGroupSchedule: ===== PUBLISH VIDEO COMPLETED =====");
+            error_log("SmartQueueService::processGroupSchedule: publishVideo result. Success: " . ($result['success'] ? 'true' : 'false') . ", Message: " . ($result['message'] ?? 'no message'));
+        } catch (Exception $e) {
+            error_log("SmartQueueService::processGroupSchedule: ===== PUBLISH VIDEO EXCEPTION =====");
+            error_log("SmartQueueService::processGroupSchedule: Exception in publishVideo: " . $e->getMessage());
+            $result = ['success' => false, 'message' => 'Exception during publication: ' . $e->getMessage()];
+        }
 
         // Обновляем статус временного расписания и файла в группе
         if ($result['success']) {
@@ -248,6 +264,9 @@ class SmartQueueService extends Service
                 $this->scheduleRepo->update($schedule['id'], ['publish_at' => $nextTime]);
             }
         }
+
+        error_log("SmartQueueService::processGroupSchedule: ===== END PROCESSING SCHEDULE ID {$schedule['id']} =====");
+        error_log("SmartQueueService::processGroupSchedule: Final result - Success: " . ($result['success'] ? 'true' : 'false') . ", Message: " . ($result['message'] ?? 'no message'));
 
         return $result;
     }
