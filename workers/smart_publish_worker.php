@@ -63,6 +63,34 @@ try {
                 continue;
             }
             
+            // Если расписание помечено как 'published', но есть неопубликованные видео - возвращаем в 'pending'
+            if (($schedule['status'] ?? '') === 'published' && !empty($schedule['content_group_id'])) {
+                $fileRepo = new \App\Modules\ContentGroups\Repositories\ContentGroupFileRepository();
+                $nextFile = $fileRepo->findNextUnpublished($schedule['content_group_id']);
+                
+                if ($nextFile) {
+                    // Есть неопубликованные видео - возвращаем в pending и обновляем publish_at
+                    $delayMinutes = $schedule['delay_between_posts'] ?? 30;
+                    $currentPublishAt = strtotime($schedule['publish_at'] ?? 'now');
+                    $nextPublishAt = date('Y-m-d H:i:s', $currentPublishAt + ($delayMinutes * 60));
+                    
+                    $scheduleRepo->update($schedule['id'], [
+                        'status' => 'pending',
+                        'publish_at' => $nextPublishAt
+                    ]);
+                    
+                    // Обновляем локальную копию расписания
+                    $schedule['status'] = 'pending';
+                    $schedule['publish_at'] = $nextPublishAt;
+                    
+                    logMessage("Schedule ID {$schedule['id']} restored to 'pending' (has unpublished videos), next publish: {$nextPublishAt}", $logFile);
+                } else {
+                    // Нет неопубликованных видео - пропускаем
+                    logMessage("Schedule ID {$schedule['id']} is 'published' and all videos are published, skipping", $logFile);
+                    continue;
+                }
+            }
+            
             // Вычисляем время до публикации для логирования
             $timeUntilPublish = '';
             if (!empty($schedule['publish_at'])) {
