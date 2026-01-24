@@ -677,8 +677,8 @@ function generateFromIdea() {
         if (data.success) {
             // Показываем результат в консоли
             console.log('🎯 Сгенерированный контент:');
-            console.log('- Название:', data.content.title);
-            console.log('- Описание:', data.content.description);
+            console.log('- Название:', data.content.title_template);
+            console.log('- Описание:', data.content.description_template);
             console.log('- Теги:', data.content.tags_template);
             console.log('- Emoji:', data.content.emoji_list);
             console.log('- Тип контента:', data.intent.content_type);
@@ -688,7 +688,7 @@ function generateFromIdea() {
             fillFormWithSuggestion(data);
 
             // Показываем уведомление с кратким результатом
-            const preview = `Название: "${data.content.title}"\nОписание: "${data.content.description}"\n\nПосмотрите в консоли (F12) для полного результата!`;
+            const preview = `Название: "${data.content.title_template}"\nОписание: "${data.content.description_template}"\n\nПосмотрите в консоли (F12) для полного результата!`;
             alert('✅ Контент успешно сгенерирован!\n\n' + preview);
         } else {
             console.error('Server returned error:', data.message);
@@ -759,24 +759,32 @@ function fillFormWithSuggestion(data) {
     console.log('📝 Начинаем заполнение формы...');
 
     // Заполняем основные поля с проверками
-    const titleTemplateInput = document.querySelector('[name="title_template"]');
-    if (titleTemplateInput && content.title_template) {
-        titleTemplateInput.value = content.title_template;
+    // Название шаблона (первое поле title_variants)
+    const titleVariants = document.querySelectorAll('[name="title_variants[]"]');
+    if (titleVariants.length > 0 && content.title_template) {
+        titleVariants[0].value = content.title_template;
+        console.log('✅ Заполнено название:', content.title_template);
     }
 
+    // Описание шаблона
     const descTemplateInput = document.querySelector('[name="description_template"]');
     if (descTemplateInput && content.description_template) {
         descTemplateInput.value = content.description_template;
+        console.log('✅ Заполнено описание:', content.description_template);
     }
 
+    // Теги
     const tagsTemplateInput = document.querySelector('[name="tags_template"]');
     if (tagsTemplateInput && content.tags_template) {
         tagsTemplateInput.value = content.tags_template;
+        console.log('✅ Заполнены теги:', content.tags_template);
     }
 
+    // Emoji
     const emojiListInput = document.querySelector('[name="emoji_list"]');
     if (emojiListInput && content.emoji_list) {
         emojiListInput.value = content.emoji_list;
+        console.log('✅ Заполнен emoji:', content.emoji_list);
     }
 
     // Заполняем новые поля Shorts с проверками
