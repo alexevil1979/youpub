@@ -32,17 +32,29 @@ if (!$targetMigration) {
         $filename = basename($file, '.sql');
         echo "- $filename\n";
     }
+    echo "\nДля выполнения конкретной миграции: php database/migrate.php 011\n";
     exit(1);
 }
 
 // Проверяем существование файла миграции
-$migrationFile = __DIR__ . "/migrations/{$targetMigration}.sql";
+$migrationPattern = __DIR__ . "/migrations/{$targetMigration}_*.sql";
 
-if (!file_exists($migrationFile)) {
+// Ищем файл с соответствующим номером
+$migrationFiles = glob($migrationPattern);
+if (empty($migrationFiles)) {
     echo "Ошибка: Миграция {$targetMigration} не найдена\n";
-    echo "Файл: {$migrationFile}\n";
+    echo "Паттерн поиска: {$migrationPattern}\n";
+    echo "Доступные миграции:\n";
+
+    $allMigrations = glob(__DIR__ . '/migrations/*.sql');
+    foreach ($allMigrations as $file) {
+        $filename = basename($file, '.sql');
+        echo "- $filename\n";
+    }
     exit(1);
 }
+
+$migrationFile = $migrationFiles[0]; // Берем первый найденный файл
 
 echo "Выполняем миграцию: {$targetMigration}\n";
 echo "Файл: {$migrationFile}\n\n";
