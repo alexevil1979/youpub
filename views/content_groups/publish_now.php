@@ -110,7 +110,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const previewTags = document.getElementById('publish-preview-tags');
 
     regenerateBtn.addEventListener('click', () => {
+        const originalTitle = regenerateBtn.title;
         regenerateBtn.disabled = true;
+        regenerateBtn.title = 'Генерация...';
+        regenerateBtn.style.opacity = '0.6';
+        
         fetch('/content-groups/<?= (int)$group['id'] ?>/files/<?= (int)$file['id'] ?>/publish-now/preview', {
             method: 'POST',
             headers: {
@@ -139,6 +143,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (previewTags) {
                 previewTags.textContent = preview.tags || '—';
             }
+            
+            // Визуальная обратная связь - кратковременное выделение
+            [previewTitle, previewDescription, previewTags].forEach(el => {
+                if (el) {
+                    el.style.transition = 'background-color 0.3s';
+                    el.style.backgroundColor = '#d4edda';
+                    setTimeout(() => {
+                        el.style.backgroundColor = '';
+                    }, 500);
+                }
+            });
         })
         .catch(error => {
             console.error('Preview regeneration error:', error);
@@ -146,6 +161,8 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .finally(() => {
             regenerateBtn.disabled = false;
+            regenerateBtn.title = originalTitle;
+            regenerateBtn.style.opacity = '';
         });
     });
 });
