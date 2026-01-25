@@ -18,9 +18,78 @@ ob_start();
     foreach ($allTemplates as $template) {
         $templatesMap[$template['id']] = $template;
     }
+    $groupIds = array_map(static fn($group) => (int)($group['id'] ?? 0), $groups);
+    $scheduleRepo = new \App\Repositories\ScheduleRepository();
+    $latestSchedules = $scheduleRepo->findLatestByGroupIds($groupIds);
+    $youtubeAccount = null;
+    $telegramAccount = null;
+    $tiktokAccount = null;
+    $instagramAccount = null;
+    $pinterestAccount = null;
+    try {
+        $youtubeAccount = (new \App\Repositories\YoutubeIntegrationRepository())->findDefaultByUserId($_SESSION['user_id']);
+    } catch (\Throwable $e) {
+        $youtubeAccount = null;
+    }
+    try {
+        $telegramAccount = (new \App\Repositories\TelegramIntegrationRepository())->findDefaultByUserId($_SESSION['user_id']);
+    } catch (\Throwable $e) {
+        $telegramAccount = null;
+    }
+    try {
+        $tiktokAccount = (new \App\Repositories\TiktokIntegrationRepository())->findDefaultByUserId($_SESSION['user_id']);
+    } catch (\Throwable $e) {
+        $tiktokAccount = null;
+    }
+    try {
+        $instagramAccount = (new \App\Repositories\InstagramIntegrationRepository())->findDefaultByUserId($_SESSION['user_id']);
+    } catch (\Throwable $e) {
+        $instagramAccount = null;
+    }
+    try {
+        $pinterestAccount = (new \App\Repositories\PinterestIntegrationRepository())->findDefaultByUserId($_SESSION['user_id']);
+    } catch (\Throwable $e) {
+        $pinterestAccount = null;
+    }
     ?>
     <div class="groups-grid">
         <?php foreach ($groups as $group): ?>
+            <?php
+            $groupId = (int)($group['id'] ?? 0);
+            $latestSchedule = $latestSchedules[$groupId] ?? null;
+            $platform = $latestSchedule['platform'] ?? null;
+            $formatAccountName = static function (string $platformName, ?array $account): string {
+                if (!$account) {
+                    return $platformName . ': не подключен';
+                }
+                $name = $account['account_name']
+                    ?? $account['channel_name']
+                    ?? $account['channel_username']
+                    ?? $account['username']
+                    ?? null;
+                if ($name) {
+                    if ($platformName === 'Telegram' && $account['channel_username']) {
+                        return $platformName . ': @' . $account['channel_username'];
+                    }
+                    return $platformName . ': ' . $name;
+                }
+                return $platformName . ': подключен';
+            };
+            $channelLabel = 'Канал: не назначен';
+            if ($platform === 'youtube') {
+                $channelLabel = $formatAccountName('YouTube', $youtubeAccount);
+            } elseif ($platform === 'telegram') {
+                $channelLabel = $formatAccountName('Telegram', $telegramAccount);
+            } elseif ($platform === 'tiktok') {
+                $channelLabel = $formatAccountName('TikTok', $tiktokAccount);
+            } elseif ($platform === 'instagram') {
+                $channelLabel = $formatAccountName('Instagram', $instagramAccount);
+            } elseif ($platform === 'pinterest') {
+                $channelLabel = $formatAccountName('Pinterest', $pinterestAccount);
+            } elseif ($platform === 'both') {
+                $channelLabel = $formatAccountName('YouTube', $youtubeAccount) . ' • ' . $formatAccountName('Telegram', $telegramAccount);
+            }
+            ?>
             <div class="group-card <?= $group['status'] === 'active' ? 'group-card-active' : 'group-card-paused' ?>">
                 <div class="group-card-header">
                     <h3 class="group-title"><?= htmlspecialchars($group['name']) ?></h3>
@@ -41,6 +110,10 @@ ob_start();
                         <?php else: ?>
                             <span class="info-value info-value-muted">Без шаблона</span>
                         <?php endif; ?>
+                    </div>
+                    <div class="group-info-item">
+                        <span class="info-label">Канал:</span>
+                        <span class="info-value info-value-muted"><?= htmlspecialchars($channelLabel) ?></span>
                     </div>
                 </div>
                 
