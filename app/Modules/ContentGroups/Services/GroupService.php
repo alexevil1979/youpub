@@ -357,4 +357,13 @@ class GroupService extends Service
             return ['success' => false, 'message' => 'Произошла ошибка при очистке статуса'];
         }
     }
+
+    /**
+     * Опубликовать файл группы прямо сейчас
+     */
+    public function publishGroupFileNow(int $groupId, int $fileId, int $userId): array
+    {
+        $smartQueue = new \App\Modules\ContentGroups\Services\SmartQueueService();
+        return $smartQueue->publishGroupFileNow($groupId, $fileId, $userId);
+    }
 }

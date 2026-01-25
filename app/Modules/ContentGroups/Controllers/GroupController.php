@@ -611,4 +611,102 @@ class GroupController extends Controller
             $this->error('Произошла ошибка при очистке статуса', 500);
         }
     }
+
+    /**
+     * Показать страницу публикации файла сейчас
+     */
+    public function showPublishNow(int $id, int $fileId): void
+    {
+        $userId = $_SESSION['user_id'] ?? null;
+        if (!$userId) {
+            header('Location: /login');
+            exit;
+        }
+
+        $group = $this->groupService->getGroupWithStats($id, $userId);
+        if (!$group) {
+            http_response_code(404);
+            echo 'Группа не найдена';
+            return;
+        }
+
+        $fileRepo = new \App\Modules\ContentGroups\Repositories\ContentGroupFileRepository();
+        $file = $fileRepo->findById($fileId);
+        if (!$file || (int)$file['group_id'] !== (int)$id) {
+            http_response_code(404);
+            echo 'Файл не найден';
+            return;
+        }
+
+        $videoRepo = new \App\Repositories\VideoRepository();
+        $video = $videoRepo->findById((int)$file['video_id']);
+        if (!$video) {
+            http_response_code(404);
+            echo 'Видео не найдено';
+            return;
+        }
+
+        $scheduleRepo = new \App\Repositories\ScheduleRepository();
+        $latestSchedules = $scheduleRepo->findLatestByGroupIds([(int)$id]);
+        $schedule = $latestSchedules[$id] ?? null;
+        $platform = $schedule['platform'] ?? 'youtube';
+        $templateId = $schedule['template_id'] ?? $group['template_id'] ?? null;
+
+        $templates = $this->templateService->getUserTemplates($userId, true);
+        $templateName = null;
+        if ($templateId) {
+            foreach ($templates as $template) {
+                if ((int)$template['id'] === (int)$templateId) {
+                    $templateName = $template['name'];
+                    break;
+                }
+            }
+        }
+
+        $context = [
+            'group_name' => $group['name'],
+            'index' => $file['order_index'] ?? 0,
+            'platform' => $platform,
+        ];
+        $preview = $this->templateService->applyTemplate($templateId, [
+            'id' => $video['id'],
+            'title' => $video['title'] ?? $video['file_name'] ?? '',
+            'description' => $video['description'] ?? '',
+            'tags' => $video['tags'] ?? '',
+        ], $context);
+
+        $canPublish = in_array($file['status'], ['new', 'queued', 'paused', 'error'], true);
+        $csrfToken = (new \Core\Auth())->generateCsrfToken();
+
+        include __DIR__ . '/../../../../views/content_groups/publish_now.php';
+    }
+
+    /**
+     * Опубликовать файл сейчас
+     */
+    public function publishNow(int $id, int $fileId): void
+    {
+        if (!$this->validateCsrf()) {
+            $_SESSION['error'] = 'Invalid CSRF token';
+            header('Location: /content-groups/' . $id . '/files/' . $fileId . '/publish-now');
+            exit;
+        }
+
+        $userId = $_SESSION['user_id'] ?? null;
+        if (!$userId) {
+            $_SESSION['error'] = 'Необходима авторизация';
+            header('Location: /login');
+            exit;
+        }
+
+        $result = $this->groupService->publishGroupFileNow($id, $fileId, $userId);
+        if ($result['success']) {
+            $_SESSION['success'] = 'Видео опубликовано';
+        } else {
+            $_SESSION['error'] = $result['message'] ?? 'Не удалось опубликовать видео';
+        }
+
+        header('Location: /content-groups/' . $id . '/files/' . $fileId . '/publish-now');
+        exit;
+    }
 }

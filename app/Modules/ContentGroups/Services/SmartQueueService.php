@@ -278,6 +278,126 @@ class SmartQueueService extends Service
     }
 
     /**
+     * Опубликовать конкретный файл группы прямо сейчас
+     */
+    public function publishGroupFileNow(int $groupId, int $fileId, int $userId): array
+    {
+        try {
+            $group = $this->groupRepo->findById($groupId);
+            if (!$group) {
+                return ['success' => false, 'message' => 'Группа не найдена'];
+            }
+            if ((int)$group['user_id'] !== $userId) {
+                return ['success' => false, 'message' => 'Нет доступа к этой группе'];
+            }
+            if (($group['status'] ?? '') === 'archived') {
+                return ['success' => false, 'message' => 'Группа в архиве'];
+            }
+
+            $groupFile = $this->fileRepo->findById($fileId);
+            if (!$groupFile || (int)$groupFile['group_id'] !== $groupId) {
+                return ['success' => false, 'message' => 'Файл не найден в группе'];
+            }
+
+            $allowedStatuses = ['new', 'queued', 'paused', 'error'];
+            if (!in_array($groupFile['status'], $allowedStatuses, true)) {
+                return ['success' => false, 'message' => 'Этот файл нельзя опубликовать сейчас'];
+            }
+
+            $videoRepo = new \App\Repositories\VideoRepository();
+            $video = $videoRepo->findById((int)$groupFile['video_id']);
+            if (!$video) {
+                return ['success' => false, 'message' => 'Видео не найдено'];
+            }
+            if (!file_exists($video['file_path'])) {
+                return ['success' => false, 'message' => 'Файл видео не найден'];
+            }
+
+            $latestSchedules = $this->scheduleRepo->findLatestByGroupIds([$groupId]);
+            $schedule = $latestSchedules[$groupId] ?? null;
+            $platform = $schedule['platform'] ?? 'youtube';
+            $templateId = $schedule['template_id'] ?? $group['template_id'] ?? null;
+
+            $context = [
+                'group_name' => $group['name'] ?? '',
+                'index' => $groupFile['order_index'] ?? 0,
+                'platform' => $platform,
+            ];
+
+            $templated = $this->templateService->applyTemplate($templateId, [
+                'id' => $video['id'],
+                'title' => $video['title'] ?? $video['file_name'] ?? '',
+                'description' => $video['description'] ?? '',
+                'tags' => $video['tags'] ?? '',
+            ], $context);
+
+            $this->db->beginTransaction();
+            try {
+                $stmt = $this->db->prepare("
+                    SELECT id 
+                    FROM schedules 
+                    WHERE video_id = ? 
+                    AND status = 'processing' 
+                    AND content_group_id IS NOT NULL
+                    AND created_at >= DATE_SUB(NOW(), INTERVAL 2 MINUTE)
+                    FOR UPDATE
+                ");
+                $stmt->execute([(int)$groupFile['video_id']]);
+                if ($stmt->fetch()) {
+                    $this->db->rollBack();
+                    return ['success' => false, 'message' => 'Видео уже публикуется, попробуйте позже'];
+                }
+
+                $tempScheduleId = $this->scheduleRepo->create([
+                    'user_id' => $userId,
+                    'video_id' => (int)$groupFile['video_id'],
+                    'content_group_id' => $groupId,
+                    'template_id' => $templateId,
+                    'platform' => $platform,
+                    'publish_at' => date('Y-m-d H:i:s'),
+                    'status' => 'processing',
+                ]);
+
+                if (!$tempScheduleId) {
+                    $this->db->rollBack();
+                    return ['success' => false, 'message' => 'Не удалось создать временное расписание'];
+                }
+
+                $this->fileRepo->updateFileStatus((int)$groupFile['id'], 'queued');
+                $this->db->commit();
+            } catch (\Exception $e) {
+                $this->db->rollBack();
+                return ['success' => false, 'message' => 'Ошибка подготовки публикации: ' . $e->getMessage()];
+            }
+
+            $result = $this->publishVideo($platform, $tempScheduleId, $templated);
+
+            if ($result['success']) {
+                $publicationId = $result['data']['publication_id'] ?? null;
+                $this->fileRepo->updateFileStatus((int)$groupFile['id'], 'published', $publicationId ? (int)$publicationId : null);
+                $this->scheduleRepo->update($tempScheduleId, [
+                    'status' => 'published',
+                    'error_message' => null,
+                ]);
+            } else {
+                $this->fileRepo->updateFileStatus((int)$groupFile['id'], 'error');
+                $this->fileRepo->update((int)$groupFile['id'], [
+                    'error_message' => $result['message'] ?? 'Unknown error'
+                ]);
+                $this->scheduleRepo->update($tempScheduleId, [
+                    'status' => 'failed',
+                    'error_message' => $result['message'] ?? 'Unknown error',
+                ]);
+            }
+
+            return $result;
+        } catch (\Exception $e) {
+            error_log("SmartQueueService::publishGroupFileNow error: " . $e->getMessage());
+            return ['success' => false, 'message' => 'Ошибка публикации: ' . $e->getMessage()];
+        }
+    }
+
+    /**
      * Публиковать видео
      */
     private function publishVideo(string $platform, int $scheduleId, array $templated): array
@@ -293,6 +413,34 @@ class SmartQueueService extends Service
                 $service = new TelegramService();
                 $this->updateVideoMetadata($scheduleId, $templated);
                 return $service->publishVideo($scheduleId);
+            
+            case 'both':
+                $this->updateVideoMetadata($scheduleId, $templated);
+                $youtubeService = new YoutubeService();
+                $telegramService = new TelegramService();
+                $youtubeResult = $youtubeService->publishVideo($scheduleId);
+                $telegramResult = $telegramService->publishVideo($scheduleId);
+                
+                $success = $youtubeResult['success'] && $telegramResult['success'];
+                $messages = [];
+                if (!$youtubeResult['success']) {
+                    $messages[] = 'YouTube: ' . ($youtubeResult['message'] ?? 'Ошибка');
+                }
+                if (!$telegramResult['success']) {
+                    $messages[] = 'Telegram: ' . ($telegramResult['message'] ?? 'Ошибка');
+                }
+                
+                $publicationId = $youtubeResult['data']['publication_id'] ?? $telegramResult['data']['publication_id'] ?? null;
+                
+                return [
+                    'success' => $success,
+                    'message' => $success ? 'Published on both platforms' : implode('; ', $messages),
+                    'data' => [
+                        'youtube' => $youtubeResult,
+                        'telegram' => $telegramResult,
+                        'publication_id' => $publicationId,
+                    ],
+                ];
             
             default:
                 return ['success' => false, 'message' => 'Unsupported platform'];

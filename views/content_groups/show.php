@@ -318,6 +318,14 @@ ob_start();
                         <td>
                             <div class="action-buttons">
                                 <a href="/videos/<?= $file['video_id'] ?>" class="btn btn-xs btn-primary" title="Просмотр"><?= \App\Helpers\IconHelper::render('view', 14, 'icon-inline') ?></a>
+                                <?php if (in_array($file['status'], ['new', 'queued', 'paused', 'error'], true)): ?>
+                                    <a href="/content-groups/<?= $group['id'] ?>/files/<?= $file['id'] ?>/publish-now"
+                                       class="btn btn-xs btn-success"
+                                       title="Опубликовать сейчас"
+                                       aria-label="Опубликовать сейчас">
+                                        <?= \App\Helpers\IconHelper::render('publish', 14, 'icon-inline') ?>
+                                    </a>
+                                <?php endif; ?>
                                 <?php if (isset($filePublications[$file['video_id']])): 
                                     $pub = $filePublications[$file['video_id']];
                                     $pubUrl = $pub['platform_url'] ?? '';
