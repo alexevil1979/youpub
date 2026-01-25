@@ -524,7 +524,7 @@ function markDoNotPublish(groupId, fileId) {
             'Content-Type': 'application/json',
             'X-Requested-With': 'XMLHttpRequest'
         },
-        body: JSON.stringify({status: 'paused'})
+        body: JSON.stringify({status: 'skipped'})
     })
     .then(response => {
         if (!response.ok) {
