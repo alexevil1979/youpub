@@ -240,7 +240,7 @@ class SmartScheduleController extends Controller
             ob_start();
             ?>
             <div class="alert alert-error">
-                <h2>Ошибка при загрузке умных расписаний</h2>
+                <h2>Ошибка при загрузке расписаний</h2>
                 <p><?= htmlspecialchars($e->getMessage()) ?></p>
                 <p><a href="/dashboard" class="btn btn-secondary">Вернуться на главную</a></p>
             </div>
@@ -928,9 +928,9 @@ class SmartScheduleController extends Controller
                 return;
             }
             
-            // Проверяем, что это умное расписание (с группой контента)
+            // Проверяем, что это групповое расписание (с группой контента)
             if (empty($schedule['content_group_id'])) {
-                $this->error('Это не умное расписание', 400);
+                $this->error('Это не групповое расписание', 400);
                 return;
             }
             
@@ -940,5 +940,74 @@ class SmartScheduleController extends Controller
             error_log("SmartScheduleController::delete: Exception - " . $e->getMessage());
             $this->error('Произошла ошибка при удалении расписания', 500);
         }
+    }
+
+    /**
+     * Массовое приостановление
+     */
+    public function bulkPause(): void
+    {
+        if (!$this->validateCsrf()) {
+            $this->error('Invalid CSRF token', 403);
+            return;
+        }
+
+        $userId = $_SESSION['user_id'] ?? 0;
+        $data = $this->getRequestData();
+        $ids = $data['ids'] ?? [];
+
+        if (empty($ids) || !is_array($ids)) {
+            $this->error('Invalid IDs', 400);
+            return;
+        }
+
+        $result = $this->scheduleService->bulkPause($ids, $userId);
+        $this->success($result['data'] ?? [], $result['message']);
+    }
+
+    /**
+     * Массовое возобновление
+     */
+    public function bulkResume(): void
+    {
+        if (!$this->validateCsrf()) {
+            $this->error('Invalid CSRF token', 403);
+            return;
+        }
+
+        $userId = $_SESSION['user_id'] ?? 0;
+        $data = $this->getRequestData();
+        $ids = $data['ids'] ?? [];
+
+        if (empty($ids) || !is_array($ids)) {
+            $this->error('Invalid IDs', 400);
+            return;
+        }
+
+        $result = $this->scheduleService->bulkResume($ids, $userId);
+        $this->success($result['data'] ?? [], $result['message']);
+    }
+
+    /**
+     * Массовое удаление
+     */
+    public function bulkDelete(): void
+    {
+        if (!$this->validateCsrf()) {
+            $this->error('Invalid CSRF token', 403);
+            return;
+        }
+
+        $userId = $_SESSION['user_id'] ?? 0;
+        $data = $this->getRequestData();
+        $ids = $data['ids'] ?? [];
+
+        if (empty($ids) || !is_array($ids)) {
+            $this->error('Invalid IDs', 400);
+            return;
+        }
+
+        $result = $this->scheduleService->bulkDelete($ids, $userId);
+        $this->success($result['data'] ?? [], $result['message']);
     }
 }

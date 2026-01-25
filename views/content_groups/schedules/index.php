@@ -1,9 +1,9 @@
 <?php
-$title = 'Умные расписания';
+$title = 'Расписания';
 ob_start();
 ?>
 
-<h1>Умные расписания</h1>
+<h1>Расписания</h1>
 
 <?php if (isset($_SESSION['error'])): ?>
     <div class="alert alert-error" style="margin-bottom: 1rem;">
@@ -19,7 +19,7 @@ ob_start();
     <?php unset($_SESSION['success']); ?>
 <?php endif; ?>
 
-<a href="/content-groups/schedules/create" class="btn btn-primary">Создать умное расписание</a>
+<a href="/content-groups/schedules/create" class="btn btn-primary">Создать расписание</a>
 
 <?php 
 // Убеждаемся, что переменные определены
@@ -29,6 +29,131 @@ if (!isset($smartSchedules)) {
 if (!isset($groups)) {
     $groups = [];
 }
+$filterStatus = $_GET['status'] ?? 'all';
+$filterPlatform = $_GET['platform'] ?? 'all';
+$filterDateFrom = $_GET['date_from'] ?? '';
+$filterDateTo = $_GET['date_to'] ?? '';
+$filterType = $_GET['type'] ?? 'all';
+$sortBy = $_GET['sort'] ?? 'publish_at_desc';
+
+$allowedStatuses = ['all', 'pending', 'published', 'failed', 'processing', 'paused'];
+$allowedPlatforms = ['all', 'youtube', 'telegram', 'tiktok', 'instagram', 'pinterest', 'both'];
+$allowedTypes = ['all', 'single', 'group'];
+$allowedSorts = ['publish_at_desc', 'publish_at_asc', 'created_at_desc', 'created_at_asc', 'status_asc', 'status_desc'];
+
+if (!in_array($filterStatus, $allowedStatuses, true)) {
+    $filterStatus = 'all';
+}
+if (!in_array($filterPlatform, $allowedPlatforms, true)) {
+    $filterPlatform = 'all';
+}
+if (!in_array($filterType, $allowedTypes, true)) {
+    $filterType = 'all';
+}
+if (!in_array($sortBy, $allowedSorts, true)) {
+    $sortBy = 'publish_at_desc';
+}
+if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $filterDateFrom)) {
+    $filterDateFrom = '';
+}
+if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $filterDateTo)) {
+    $filterDateTo = '';
+}
+
+$stats = [
+    'total' => count($smartSchedules),
+    'pending' => 0,
+    'published' => 0,
+    'failed' => 0,
+    'processing' => 0,
+    'paused' => 0,
+];
+
+foreach ($smartSchedules as $schedule) {
+    if (isset($schedule['status'])) {
+        if ($schedule['status'] === 'pending') $stats['pending']++;
+        elseif ($schedule['status'] === 'published') $stats['published']++;
+        elseif ($schedule['status'] === 'failed') $stats['failed']++;
+        elseif ($schedule['status'] === 'processing') $stats['processing']++;
+        elseif ($schedule['status'] === 'paused') $stats['paused']++;
+    }
+}
+
+$filteredSchedules = $smartSchedules;
+if ($filterStatus !== 'all') {
+    $filteredSchedules = array_filter($filteredSchedules, function($s) use ($filterStatus) {
+        return ($s['status'] ?? '') === $filterStatus;
+    });
+}
+if ($filterPlatform !== 'all') {
+    $filteredSchedules = array_filter($filteredSchedules, function($s) use ($filterPlatform) {
+        return ($s['platform'] ?? '') === $filterPlatform;
+    });
+}
+if ($filterType === 'group') {
+    $filteredSchedules = array_filter($filteredSchedules, function($s) {
+        return !empty($s['content_group_id']);
+    });
+} elseif ($filterType === 'single') {
+    $filteredSchedules = array_filter($filteredSchedules, function($s) {
+        return empty($s['content_group_id']);
+    });
+}
+if ($filterDateFrom) {
+    $filteredSchedules = array_filter($filteredSchedules, function($s) use ($filterDateFrom) {
+        if (empty($s['publish_at'])) {
+            return false;
+        }
+        return strtotime($s['publish_at']) >= strtotime($filterDateFrom);
+    });
+}
+if ($filterDateTo) {
+    $filteredSchedules = array_filter($filteredSchedules, function($s) use ($filterDateTo) {
+        if (empty($s['publish_at'])) {
+            return false;
+        }
+        return strtotime($s['publish_at']) <= strtotime($filterDateTo . ' 23:59:59');
+    });
+}
+
+$sortParts = explode('_', $sortBy);
+$sortField = $sortParts[0] ?? 'publish';
+$sortDir = strtolower($sortParts[2] ?? $sortParts[1] ?? 'desc');
+$sortDir = $sortDir === 'asc' ? 'asc' : 'desc';
+
+usort($filteredSchedules, function($a, $b) use ($sortField, $sortDir) {
+    $getTime = function($item, $key) {
+        if (!isset($item[$key]) || !$item[$key]) {
+            return 0;
+        }
+        return strtotime($item[$key]) ?: 0;
+    };
+
+    switch ($sortField) {
+        case 'created':
+            $aTime = $getTime($a, 'created_at');
+            $bTime = $getTime($b, 'created_at');
+            break;
+        case 'status':
+            $aTime = strcmp($a['status'] ?? '', $b['status'] ?? '');
+            $bTime = 0;
+            break;
+        case 'publish':
+        default:
+            $aTime = $getTime($a, 'publish_at');
+            $bTime = $getTime($b, 'publish_at');
+            break;
+    }
+
+    if ($sortField === 'status') {
+        return $sortDir === 'asc' ? $aTime : -$aTime;
+    }
+
+    if ($aTime === $bTime) return 0;
+    return ($sortDir === 'asc')
+        ? ($aTime < $bTime ? -1 : 1)
+        : ($aTime > $bTime ? -1 : 1);
+});
 $formatInterval = static function (int $seconds): string {
     $seconds = max(0, $seconds);
     $days = intdiv($seconds, 86400);
@@ -46,13 +171,109 @@ $formatInterval = static function (int $seconds): string {
 };
 ?>
 
-<?php if (empty($smartSchedules)): ?>
-    <p style="margin-top: 2rem;">Нет созданных умных расписаний. <a href="/content-groups/schedules/create">Создать расписание</a></p>
+<div class="schedules-header">
+    <div class="schedules-stats">
+        <div class="stat-item">
+            <span class="stat-value"><?= $stats['total'] ?></span>
+            <span class="stat-label">Всего</span>
+        </div>
+        <div class="stat-item stat-pending">
+            <span class="stat-value"><?= $stats['pending'] ?></span>
+            <span class="stat-label">Ожидают</span>
+        </div>
+        <div class="stat-item stat-published">
+            <span class="stat-value"><?= $stats['published'] ?></span>
+            <span class="stat-label">Опубликовано</span>
+        </div>
+        <div class="stat-item stat-processing">
+            <span class="stat-value"><?= $stats['processing'] ?></span>
+            <span class="stat-label">В процессе</span>
+        </div>
+        <div class="stat-item stat-failed">
+            <span class="stat-value"><?= $stats['failed'] ?></span>
+            <span class="stat-label">Ошибки</span>
+        </div>
+        <div class="stat-item stat-paused">
+            <span class="stat-value"><?= $stats['paused'] ?></span>
+            <span class="stat-label">На паузе</span>
+        </div>
+    </div>
+</div>
+
+<div class="filters-panel">
+    <form method="GET" action="/content-groups/schedules" class="filters-form" id="filtersForm">
+        <div class="filter-group">
+            <label for="filter_status">Статус:</label>
+            <select id="filter_status" name="status" onchange="applyFilters()">
+                <option value="all" <?= $filterStatus === 'all' ? 'selected' : '' ?>>Все</option>
+                <option value="pending" <?= $filterStatus === 'pending' ? 'selected' : '' ?>>Ожидают</option>
+                <option value="processing" <?= $filterStatus === 'processing' ? 'selected' : '' ?>>В процессе</option>
+                <option value="published" <?= $filterStatus === 'published' ? 'selected' : '' ?>>Опубликовано</option>
+                <option value="failed" <?= $filterStatus === 'failed' ? 'selected' : '' ?>>Ошибки</option>
+                <option value="paused" <?= $filterStatus === 'paused' ? 'selected' : '' ?>>На паузе</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="filter_platform">Платформа:</label>
+            <select id="filter_platform" name="platform" onchange="applyFilters()">
+                <option value="all" <?= $filterPlatform === 'all' ? 'selected' : '' ?>>Все</option>
+                <option value="youtube" <?= $filterPlatform === 'youtube' ? 'selected' : '' ?>>YouTube</option>
+                <option value="telegram" <?= $filterPlatform === 'telegram' ? 'selected' : '' ?>>Telegram</option>
+                <option value="tiktok" <?= $filterPlatform === 'tiktok' ? 'selected' : '' ?>>TikTok</option>
+                <option value="instagram" <?= $filterPlatform === 'instagram' ? 'selected' : '' ?>>Instagram</option>
+                <option value="pinterest" <?= $filterPlatform === 'pinterest' ? 'selected' : '' ?>>Pinterest</option>
+                <option value="both" <?= $filterPlatform === 'both' ? 'selected' : '' ?>>Обе (YouTube + Telegram)</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="filter_type">Тип:</label>
+            <select id="filter_type" name="type" onchange="applyFilters()">
+                <option value="all" <?= $filterType === 'all' ? 'selected' : '' ?>>Все</option>
+                <option value="single" <?= $filterType === 'single' ? 'selected' : '' ?>>Одиночные</option>
+                <option value="group" <?= $filterType === 'group' ? 'selected' : '' ?>>Групповые</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="filter_date_from">С:</label>
+            <input type="date" id="filter_date_from" name="date_from" value="<?= htmlspecialchars($filterDateFrom) ?>" onchange="applyFilters()">
+        </div>
+
+        <div class="filter-group">
+            <label for="filter_date_to">По:</label>
+            <input type="date" id="filter_date_to" name="date_to" value="<?= htmlspecialchars($filterDateTo) ?>" onchange="applyFilters()">
+        </div>
+
+        <div class="filter-group">
+            <label for="filter_sort">Сортировка:</label>
+            <select id="filter_sort" name="sort" onchange="applyFilters()">
+                <option value="publish_at_desc" <?= $sortBy === 'publish_at_desc' ? 'selected' : '' ?>>Сначала новые (публикация)</option>
+                <option value="publish_at_asc" <?= $sortBy === 'publish_at_asc' ? 'selected' : '' ?>>Сначала старые (публикация)</option>
+                <option value="created_at_desc" <?= $sortBy === 'created_at_desc' ? 'selected' : '' ?>>Сначала новые (создание)</option>
+                <option value="created_at_asc" <?= $sortBy === 'created_at_asc' ? 'selected' : '' ?>>Сначала старые (создание)</option>
+                <option value="status_asc" <?= $sortBy === 'status_asc' ? 'selected' : '' ?>>Статус (A→Z)</option>
+                <option value="status_desc" <?= $sortBy === 'status_desc' ? 'selected' : '' ?>>Статус (Z→A)</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="clearFilters()">Очистить</button>
+        </div>
+    </form>
+</div>
+
+<?php if (empty($filteredSchedules)): ?>
+    <p style="margin-top: 2rem;">Нет расписаний. <a href="/content-groups/schedules/create">Создать расписание</a></p>
 <?php else: ?>
     <div style="margin-top: 2rem;">
         <table style="width: 100%; border-collapse: collapse;">
             <thead>
                 <tr style="background: #f8f9fa;">
+                    <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6; width: 30px;">
+                        <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
+                    </th>
                     <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Группа</th>
                     <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Платформа</th>
                     <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Тип</th>
@@ -63,7 +284,7 @@ $formatInterval = static function (int $seconds): string {
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($smartSchedules as $schedule): 
+                <?php foreach ($filteredSchedules as $schedule): 
                     $groupId = isset($schedule['content_group_id']) ? (int)$schedule['content_group_id'] : 0;
                     $group = isset($groups[$groupId]) ? $groups[$groupId] : null;
                     $publishAtRaw = $schedule['publish_at'] ?? null;
@@ -101,6 +322,9 @@ $formatInterval = static function (int $seconds): string {
                     }
                 ?>
                     <tr style="border-bottom: 1px solid #dee2e6;" data-publish-at="<?= $nextPublishAt ? date('Y-m-d H:i:s', $nextPublishAt) : '' ?>" data-status="<?= $schedule['status'] ?? '' ?>">
+                        <td style="padding: 0.75rem;">
+                            <input type="checkbox" class="schedule-checkbox" value="<?= (int)$schedule['id'] ?>">
+                        </td>
                         <td style="padding: 0.75rem;">
                             <?php if ($group && isset($group['id']) && isset($group['name'])): ?>
                                 <a href="/content-groups/<?= (int)$group['id'] ?>"><?= htmlspecialchars($group['name']) ?></a>
@@ -322,11 +546,133 @@ $formatInterval = static function (int $seconds): string {
             </tbody>
         </table>
     </div>
+    <div class="bulk-actions" id="bulkActions" style="display: none; margin-top: 1rem;">
+        <div class="bulk-actions-content" style="display: flex; align-items: center; gap: 1rem;">
+            <span class="bulk-count">Выбрано: <strong id="selectedCount">0</strong></span>
+            <div class="bulk-buttons" style="display: flex; gap: 0.5rem;">
+                <button type="button" class="btn btn-sm btn-warning" onclick="bulkPause()">⏸ Приостановить</button>
+                <button type="button" class="btn btn-sm btn-success" onclick="bulkResume()">▶ Возобновить</button>
+                <button type="button" class="btn btn-sm btn-danger" onclick="bulkDelete()">🗑 Удалить</button>
+            </div>
+        </div>
+    </div>
 <?php endif; ?>
 
 <script>
+function applyFilters() {
+    document.getElementById('filtersForm').submit();
+}
+
+function clearFilters() {
+    window.location.href = '/content-groups/schedules';
+}
+
+function toggleSelectAll(checkbox) {
+    const checkboxes = document.querySelectorAll('.schedule-checkbox');
+    checkboxes.forEach(cb => cb.checked = checkbox.checked);
+    updateBulkActions();
+}
+
+function updateBulkActions() {
+    const checked = document.querySelectorAll('.schedule-checkbox:checked');
+    const bulkActions = document.getElementById('bulkActions');
+    const selectedCount = document.getElementById('selectedCount');
+    
+    if (checked.length > 0) {
+        bulkActions.style.display = 'block';
+        selectedCount.textContent = checked.length;
+    } else {
+        bulkActions.style.display = 'none';
+    }
+}
+
+document.querySelectorAll('.schedule-checkbox').forEach(cb => {
+    cb.addEventListener('change', updateBulkActions);
+});
+
+function bulkPause() {
+    const ids = Array.from(document.querySelectorAll('.schedule-checkbox:checked')).map(cb => cb.value);
+    if (ids.length === 0) return;
+    if (!confirm('Приостановить выбранные расписания?')) return;
+
+    fetch('/content-groups/schedules/bulk-pause', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ids})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Ошибка: ' + (data.message || 'Не удалось приостановить'));
+        }
+    })
+    .catch(e => {
+        console.error('Error:', e);
+        alert('Произошла ошибка');
+    });
+}
+
+function bulkResume() {
+    const ids = Array.from(document.querySelectorAll('.schedule-checkbox:checked')).map(cb => cb.value);
+    if (ids.length === 0) return;
+    if (!confirm('Возобновить выбранные расписания?')) return;
+
+    fetch('/content-groups/schedules/bulk-resume', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ids})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Ошибка: ' + (data.message || 'Не удалось возобновить'));
+        }
+    })
+    .catch(e => {
+        console.error('Error:', e);
+        alert('Произошла ошибка');
+    });
+}
+
+function bulkDelete() {
+    const ids = Array.from(document.querySelectorAll('.schedule-checkbox:checked')).map(cb => cb.value);
+    if (ids.length === 0) return;
+    if (!confirm('Удалить выбранные расписания?')) return;
+
+    fetch('/content-groups/schedules/bulk-delete', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ids})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Ошибка: ' + (data.message || 'Не удалось удалить'));
+        }
+    })
+    .catch(e => {
+        console.error('Error:', e);
+        alert('Произошла ошибка');
+    });
+}
+
 function deleteSchedule(id) {
-    if (!confirm('Удалить умное расписание?')) {
+    if (!confirm('Удалить расписание?')) {
         return;
     }
     

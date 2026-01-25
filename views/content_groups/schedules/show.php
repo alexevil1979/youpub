@@ -1,9 +1,9 @@
 <?php
-$title = 'Просмотр умного расписания';
+$title = 'Просмотр расписания';
 ob_start();
 ?>
 
-<h1>Просмотр умного расписания</h1>
+<h1>Просмотр расписания</h1>
 
 <?php if (isset($_SESSION['error'])): ?>
     <div class="alert alert-error" style="margin-bottom: 1rem;">

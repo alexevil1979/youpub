@@ -1,9 +1,9 @@
 <?php
-$title = 'Редактировать умное расписание';
+$title = 'Редактировать расписание';
 ob_start();
 ?>
 
-<h1>Редактировать умное расписание</h1>
+<h1>Редактировать расписание</h1>
 
 <?php if (isset($_SESSION['error'])): ?>
     <div class="alert alert-error" style="margin-bottom: 1rem;">

@@ -47,20 +47,20 @@ $router->post('/videos/{id}/publish', [VideoController::class, 'publishNow'], [A
 $router->post('/videos/{id}/toggle-status', [VideoController::class, 'toggleStatus'], [AuthMiddleware::class]);
 $router->delete('/videos/{id}', [VideoController::class, 'delete'], [AuthMiddleware::class]);
 
-// Расписания
-$router->get('/schedules', [ScheduleController::class, 'index'], [AuthMiddleware::class]);
-$router->get('/schedules/create', [ScheduleController::class, 'showCreate'], [AuthMiddleware::class]);
-$router->post('/schedules/create', [ScheduleController::class, 'create'], [AuthMiddleware::class]);
-$router->get('/schedules/{id}', [ScheduleController::class, 'show'], [AuthMiddleware::class]);
-$router->get('/schedules/{id}/edit', [ScheduleController::class, 'showEdit'], [AuthMiddleware::class]);
-$router->post('/schedules/{id}/update', [ScheduleController::class, 'update'], [AuthMiddleware::class]);
-$router->delete('/schedules/{id}', [ScheduleController::class, 'delete'], [AuthMiddleware::class]);
-$router->post('/schedules/{id}/pause', [ScheduleController::class, 'pause'], [AuthMiddleware::class]);
-$router->post('/schedules/{id}/resume', [ScheduleController::class, 'resume'], [AuthMiddleware::class]);
-$router->post('/schedules/{id}/duplicate', [ScheduleController::class, 'duplicate'], [AuthMiddleware::class]);
-$router->post('/schedules/bulk-pause', [ScheduleController::class, 'bulkPause'], [AuthMiddleware::class]);
-$router->post('/schedules/bulk-resume', [ScheduleController::class, 'bulkResume'], [AuthMiddleware::class]);
-$router->post('/schedules/bulk-delete', [ScheduleController::class, 'bulkDelete'], [AuthMiddleware::class]);
+// Расписания (используем умные расписания)
+$router->get('/schedules', [SmartScheduleController::class, 'index'], [AuthMiddleware::class]);
+$router->get('/schedules/create', [SmartScheduleController::class, 'showCreate'], [AuthMiddleware::class]);
+$router->post('/schedules/create', [SmartScheduleController::class, 'create'], [AuthMiddleware::class]);
+$router->get('/schedules/{id}', [SmartScheduleController::class, 'show'], [AuthMiddleware::class]);
+$router->get('/schedules/{id}/edit', [SmartScheduleController::class, 'showEdit'], [AuthMiddleware::class]);
+$router->post('/schedules/{id}/edit', [SmartScheduleController::class, 'update'], [AuthMiddleware::class]);
+$router->post('/schedules/{id}/update', [SmartScheduleController::class, 'update'], [AuthMiddleware::class]);
+$router->delete('/schedules/{id}', [SmartScheduleController::class, 'delete'], [AuthMiddleware::class]);
+$router->post('/schedules/{id}/pause', [SmartScheduleController::class, 'pause'], [AuthMiddleware::class]);
+$router->post('/schedules/{id}/resume', [SmartScheduleController::class, 'resume'], [AuthMiddleware::class]);
+$router->post('/schedules/bulk-pause', [SmartScheduleController::class, 'bulkPause'], [AuthMiddleware::class]);
+$router->post('/schedules/bulk-resume', [SmartScheduleController::class, 'bulkResume'], [AuthMiddleware::class]);
+$router->post('/schedules/bulk-delete', [SmartScheduleController::class, 'bulkDelete'], [AuthMiddleware::class]);
 
 // Интеграции
 $router->get('/integrations', [DashboardController::class, 'integrations'], [AuthMiddleware::class]);
@@ -123,6 +123,9 @@ $router->post('/content-groups/schedules/{id}/edit', [SmartScheduleController::c
 $router->post('/content-groups/schedules/{id}/pause', [SmartScheduleController::class, 'pause'], [AuthMiddleware::class]);
 $router->post('/content-groups/schedules/{id}/resume', [SmartScheduleController::class, 'resume'], [AuthMiddleware::class]);
 $router->delete('/content-groups/schedules/{id}', [SmartScheduleController::class, 'delete'], [AuthMiddleware::class]);
+$router->post('/content-groups/schedules/bulk-pause', [SmartScheduleController::class, 'bulkPause'], [AuthMiddleware::class]);
+$router->post('/content-groups/schedules/bulk-resume', [SmartScheduleController::class, 'bulkResume'], [AuthMiddleware::class]);
+$router->post('/content-groups/schedules/bulk-delete', [SmartScheduleController::class, 'bulkDelete'], [AuthMiddleware::class]);
 
 // Маршруты для конкретных групп (должны быть ПОСЛЕ специфичных маршрутов)
 $router->get('/content-groups/{id}', [GroupController::class, 'show'], [AuthMiddleware::class]);

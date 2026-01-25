@@ -1,10 +1,10 @@
 <?php
-$title = 'Создать умное расписание';
+$title = 'Создать расписание';
 ob_start();
 $selectedGroupId = isset($_GET['group_id']) ? (int)$_GET['group_id'] : 0;
 ?>
 
-<h1>Создать умное расписание</h1>
+<h1>Создать расписание</h1>
 
 <?php if (isset($_SESSION['error'])): ?>
     <div class="alert alert-error" style="margin-bottom: 1rem;">
