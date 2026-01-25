@@ -507,9 +507,25 @@ class SmartQueueService extends Service
             error_log("SmartQueueService::publishGroupFileNow: Template data - tags: " . mb_substr($templated['tags'] ?? 'N/A', 0, 200));
             
             // Обновляем метаданные видео СРАЗУ после создания расписания
-            $this->updateVideoMetadata($tempScheduleId, $templated);
+            try {
+                $this->updateVideoMetadata($tempScheduleId, $templated);
+                error_log("SmartQueueService::publishGroupFileNow: Video metadata updated successfully");
+            } catch (\Exception $e) {
+                error_log("SmartQueueService::publishGroupFileNow: Error updating metadata: " . $e->getMessage());
+                // Продолжаем публикацию, даже если обновление метаданных не удалось
+            }
             
-            $result = $this->publishVideo($platform, $tempScheduleId, $templated);
+            error_log("SmartQueueService::publishGroupFileNow: Starting publishVideo for schedule {$tempScheduleId}");
+            try {
+                $result = $this->publishVideo($platform, $tempScheduleId, $templated);
+                error_log("SmartQueueService::publishGroupFileNow: publishVideo completed. Success: " . ($result['success'] ? 'true' : 'false') . ", Message: " . ($result['message'] ?? 'no message'));
+            } catch (\Exception $e) {
+                error_log("SmartQueueService::publishGroupFileNow: Exception in publishVideo: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+                $result = [
+                    'success' => false,
+                    'message' => 'Ошибка при публикации: ' . $e->getMessage()
+                ];
+            }
 
             if ($result['success']) {
                 $publicationId = $result['data']['publication_id'] ?? null;
@@ -518,14 +534,17 @@ class SmartQueueService extends Service
                     'status' => 'published',
                     'error_message' => null,
                 ]);
+                error_log("SmartQueueService::publishGroupFileNow: Publication successful. Publication ID: {$publicationId}");
             } else {
+                $errorMessage = $result['message'] ?? 'Unknown error';
+                error_log("SmartQueueService::publishGroupFileNow: Publication failed. Error: {$errorMessage}");
                 $this->fileRepo->updateFileStatus((int)$groupFile['id'], 'error');
                 $this->fileRepo->update((int)$groupFile['id'], [
-                    'error_message' => $result['message'] ?? 'Unknown error'
+                    'error_message' => $errorMessage
                 ]);
                 $this->scheduleRepo->update($tempScheduleId, [
                     'status' => 'failed',
-                    'error_message' => $result['message'] ?? 'Unknown error',
+                    'error_message' => $errorMessage,
                 ]);
             }
 

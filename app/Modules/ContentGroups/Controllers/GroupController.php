@@ -689,6 +689,12 @@ class GroupController extends Controller
     public function publishNow(int $id, int $fileId): void
     {
         if (!$this->validateCsrf()) {
+            $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+            if ($isAjax) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Invalid CSRF token']);
+                exit;
+            }
             $_SESSION['error'] = 'Invalid CSRF token';
             header('Location: /content-groups/' . $id . '/files/' . $fileId . '/publish-now');
             exit;
@@ -696,6 +702,12 @@ class GroupController extends Controller
 
         $userId = $_SESSION['user_id'] ?? null;
         if (!$userId) {
+            $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+            if ($isAjax) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Необходима авторизация']);
+                exit;
+            }
             $_SESSION['error'] = 'Необходима авторизация';
             header('Location: /login');
             exit;
@@ -706,11 +718,30 @@ class GroupController extends Controller
             session_start();
         }
 
-        $result = $this->groupService->publishGroupFileNow($id, $fileId, $userId);
-        if ($result['success']) {
-            $_SESSION['success'] = 'Видео опубликовано';
-        } else {
-            $_SESSION['error'] = $result['message'] ?? 'Не удалось опубликовать видео';
+        $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+        
+        try {
+            $result = $this->groupService->publishGroupFileNow($id, $fileId, $userId);
+            
+            if ($isAjax) {
+                header('Content-Type: application/json');
+                echo json_encode($result);
+                exit;
+            }
+            
+            if ($result['success']) {
+                $_SESSION['success'] = 'Видео опубликовано';
+            } else {
+                $_SESSION['error'] = $result['message'] ?? 'Не удалось опубликовать видео';
+            }
+        } catch (\Exception $e) {
+            error_log("GroupController::publishNow error: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+            if ($isAjax) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Ошибка публикации: ' . $e->getMessage()]);
+                exit;
+            }
+            $_SESSION['error'] = 'Ошибка публикации: ' . $e->getMessage();
         }
 
         header('Location: /content-groups/' . $id . '/files/' . $fileId . '/publish-now');

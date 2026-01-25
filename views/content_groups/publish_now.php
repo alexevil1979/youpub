@@ -225,57 +225,136 @@ ob_start();
 
 <div class="form-actions">
     <a href="/content-groups/<?= (int)$group['id'] ?>" class="btn btn-secondary">Назад к группе</a>
-    <form method="POST" action="/content-groups/<?= (int)$group['id'] ?>/files/<?= (int)$file['id'] ?>/publish-now" style="display: inline;">
-        <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">
-        <button type="submit"
-                class="btn btn-success"
-                id="publish-now-btn"
-                <?= $canPublish ? '' : 'disabled' ?>
-                title="Опубликовать сейчас"
-                aria-label="Опубликовать сейчас"
-                onclick="return handlePublishClick(event);">
-            <?= \App\Helpers\IconHelper::render('publish', 16, 'icon-inline') ?>
-        </button>
-    </form>
+    <button type="button"
+            class="btn btn-success"
+            id="publish-now-btn"
+            <?= $canPublish ? '' : 'disabled' ?>
+            title="Опубликовать сейчас"
+            aria-label="Опубликовать сейчас">
+        <?= \App\Helpers\IconHelper::render('publish', 16, 'icon-inline') ?>
+    </button>
     <?php if (!$canPublish): ?>
         <span style="margin-left: 0.75rem; color: #e74c3c; font-size: 0.9rem;">Этот файл нельзя опубликовать сейчас</span>
     <?php endif; ?>
+    <div id="publish-status" style="margin-top: 1rem; display: none;"></div>
 </div>
 
 <script>
 // Защита от двойного клика на кнопку публикации
 let isPublishing = false;
-function handlePublishClick(event) {
+
+function showStatus(message, isError = false) {
+    const statusDiv = document.getElementById('publish-status');
+    if (statusDiv) {
+        statusDiv.style.display = 'block';
+        statusDiv.className = isError ? 'alert alert-error' : 'alert alert-success';
+        statusDiv.textContent = message;
+        
+        if (!isError) {
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+    }
+}
+
+function publishVideo() {
     if (isPublishing) {
-        event.preventDefault();
-        return false;
+        return;
     }
     
     if (!confirm('Опубликовать видео сейчас?')) {
-        return false;
+        return;
     }
     
     isPublishing = true;
     const btn = document.getElementById('publish-now-btn');
+    const statusDiv = document.getElementById('publish-status');
+    const originalText = btn ? btn.innerHTML : '';
+    
     if (btn) {
         btn.disabled = true;
         btn.style.opacity = '0.6';
-        const originalText = btn.innerHTML;
         btn.innerHTML = 'Публикация...';
+    }
+    
+    if (statusDiv) {
+        statusDiv.style.display = 'block';
+        statusDiv.className = 'alert';
+        statusDiv.textContent = 'Публикация видео...';
+    }
+    
+    const csrfToken = <?= json_encode($csrfToken) ?>;
+    const formData = new FormData();
+    formData.append('csrf_token', csrfToken);
+    
+    fetch('/content-groups/<?= (int)$group['id'] ?>/files/<?= (int)$file['id'] ?>/publish-now', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-Token': csrfToken
+        },
+        body: formData
+    })
+    .then(response => {
+        // Проверяем, это редирект или JSON ответ
+        if (response.redirected) {
+            // Если редирект, значит это обычный POST запрос
+            // Нужно перезагрузить страницу, чтобы увидеть сообщение
+            window.location.href = response.url;
+            return;
+        }
         
-        // Разблокируем через 10 секунд на случай ошибки
-        setTimeout(() => {
+        // Пытаемся получить JSON
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return response.json();
+        }
+        
+        // Если не JSON, значит HTML (редирект произошел)
+        window.location.reload();
+        return null;
+    })
+    .then(data => {
+        if (data === null) {
+            // Редирект произошел, страница перезагрузится
+            return;
+        }
+        
+        if (data && data.success) {
+            showStatus('Видео успешно опубликовано!', false);
+            // Перезагружаем страницу через 2 секунды, чтобы увидеть обновленный статус
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } else {
+            const errorMsg = data && data.message ? data.message : 'Не удалось опубликовать видео';
+            showStatus('Ошибка: ' + errorMsg, true);
             isPublishing = false;
             if (btn) {
                 btn.disabled = false;
                 btn.style.opacity = '';
                 btn.innerHTML = originalText;
             }
-        }, 10000);
-    }
-    
-    return true;
+        }
+    })
+    .catch(error => {
+        console.error('Publish error:', error);
+        showStatus('Ошибка при публикации: ' + error.message, true);
+        isPublishing = false;
+        if (btn) {
+            btn.disabled = false;
+            btn.style.opacity = '';
+            btn.innerHTML = originalText;
+        }
+    });
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    const publishBtn = document.getElementById('publish-now-btn');
+    if (publishBtn) {
+        publishBtn.addEventListener('click', publishVideo);
+    }
 
 document.addEventListener('DOMContentLoaded', () => {
     const regenerateBtn = document.getElementById('regenerate-preview-btn');
