@@ -401,28 +401,34 @@ class TemplateService extends Service
         }
 
         // Финальная проверка: описание всегда должно быть заполнено
-        if (empty(trim($result['description']))) {
-            $result['description'] = 'Посмотрите это видео! 🎬';
-            error_log("TemplateService::applyTemplate: Final fallback applied - description was empty");
+        $descriptionTrimmed = trim($result['description'] ?? '');
+        if (empty($descriptionTrimmed)) {
+            // Определяем язык названия для выбора правильного fallback
+            $titleLang = $this->detectLanguage($result['title'] ?? '');
+            $result['description'] = $titleLang === 'en' ? 'Watch this video! 🎬' : 'Посмотрите это видео! 🎬';
+            error_log("TemplateService::applyTemplate: Final fallback applied - description was empty, using " . ($titleLang === 'en' ? 'English' : 'Russian') . " fallback");
         }
 
-        // ФИНАЛЬНАЯ ПРОВЕРКА: название всегда должно быть заполнено
-        if (empty(trim($result['title']))) {
-            // Пробуем использовать название видео
+        // ФИНАЛЬНАЯ ПРОВЕРКА: название всегда должно быть заполнено и не быть "unknown"
+        $titleTrimmed = trim($result['title'] ?? '');
+        if (empty($titleTrimmed) || strtolower($titleTrimmed) === 'unknown') {
+            // Пробуем использовать название видео (но не "unknown")
             $videoTitle = trim($video['title'] ?? '');
             if (!empty($videoTitle) && strtolower($videoTitle) !== 'unknown') {
                 $result['title'] = $videoTitle;
-                error_log("TemplateService::applyTemplate: Title was empty, using video title: {$videoTitle}");
+                error_log("TemplateService::applyTemplate: Title was empty/unknown, using video title: {$videoTitle}");
             } else {
                 // Используем имя файла
                 $fileName = trim($video['file_name'] ?? '');
                 if (!empty($fileName)) {
                     $result['title'] = pathinfo($fileName, PATHINFO_FILENAME);
-                    error_log("TemplateService::applyTemplate: Title was empty, using file name: {$result['title']}");
+                    // Убираем расширение если осталось
+                    $result['title'] = preg_replace('/\.[^.]+$/', '', $result['title']);
+                    error_log("TemplateService::applyTemplate: Title was empty/unknown, using file name: {$result['title']}");
                 } else {
                     // Последний fallback
                     $result['title'] = $template['name'] ?? 'Untitled Video';
-                    error_log("TemplateService::applyTemplate: Title was empty, using template name or fallback: {$result['title']}");
+                    error_log("TemplateService::applyTemplate: Title was empty/unknown, using template name or fallback: {$result['title']}");
                 }
             }
         }
@@ -434,10 +440,17 @@ class TemplateService extends Service
             $originalTitle = $result['title'];
             $result['title'] = $this->filterRussianWords($result['title']);
             
-            // Если после фильтрации title стал пустым, используем fallback
-            if (empty(trim($result['title']))) {
-                $result['title'] = $video['file_name'] ?? 'Untitled Video';
-                error_log("TemplateService::applyTemplate: Title became empty after Russian filter, using file name fallback: {$result['title']}");
+            // Если после фильтрации title стал пустым или "unknown", используем fallback
+            $titleAfterFilter = trim($result['title'] ?? '');
+            if (empty($titleAfterFilter) || strtolower($titleAfterFilter) === 'unknown') {
+                $fileName = $video['file_name'] ?? '';
+                if (!empty($fileName)) {
+                    $result['title'] = pathinfo($fileName, PATHINFO_FILENAME);
+                    $result['title'] = preg_replace('/\.[^.]+$/', '', $result['title']);
+                } else {
+                    $result['title'] = 'Untitled Video';
+                }
+                error_log("TemplateService::applyTemplate: Title became empty/unknown after Russian filter, using file name fallback: {$result['title']}");
             }
             
             // Фильтруем русские слова из описания

@@ -246,18 +246,33 @@ class YoutubeService extends Service
         // ПРИОРИТЕТ: Если переданы метаданные напрямую, используем их вместо данных из БД
         if ($metadata && !empty($metadata['title'])) {
             $title = trim($metadata['title']);
-            error_log("YoutubeService::publishVideo: Using title from metadata parameter: " . mb_substr($title, 0, 100));
+            // КРИТИЧНО: Проверяем на "unknown" даже если title не пустой
+            if (strtolower($title) === 'unknown' || empty($title)) {
+                $title = $video['file_name'] ?? 'Untitled Video';
+                error_log("YoutubeService::publishVideo: Title from metadata was 'unknown' or empty, using file_name: {$title}");
+            } else {
+                error_log("YoutubeService::publishVideo: Using title from metadata parameter: " . mb_substr($title, 0, 100));
+            }
         } else {
             $title = trim($video['title'] ?? '');
             if (empty($title) || $title === 'Untitled Video' || strtolower($title) === 'unknown') {
                 $title = $video['file_name'] ?? 'Untitled Video';
-                error_log("YoutubeService::publishVideo: Title was empty/unknown, using file_name: {$title}");
+                if (empty($title)) {
+                    $title = 'Untitled Video';
+                }
+                error_log("YoutubeService::publishVideo: Title was empty/unknown, using file_name or fallback: {$title}");
             }
         }
         
         if ($metadata && !empty($metadata['description'])) {
             $description = trim($metadata['description']);
-            error_log("YoutubeService::publishVideo: Using description from metadata parameter (length: " . mb_strlen($description) . ")");
+            // КРИТИЧНО: Проверяем, что описание не пустое после trim
+            if (empty($description)) {
+                $description = 'Watch this video! 🎬';
+                error_log("YoutubeService::publishVideo: Description from metadata was empty after trim, using fallback");
+            } else {
+                error_log("YoutubeService::publishVideo: Using description from metadata parameter (length: " . mb_strlen($description) . ")");
+            }
         } else {
             $description = trim($video['description'] ?? '');
             if (empty($description)) {

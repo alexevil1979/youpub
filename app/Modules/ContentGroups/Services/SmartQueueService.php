@@ -348,9 +348,16 @@ class SmartQueueService extends Service
                     'platform' => $platform,
                 ];
 
+                // ВАЖНО: Проверяем video['title'] - если "unknown", используем file_name
+                $videoTitle = $video['title'] ?? '';
+                if (empty($videoTitle) || strtolower(trim($videoTitle)) === 'unknown') {
+                    $videoTitle = $video['file_name'] ?? '';
+                    error_log("SmartQueueService::publishGroupFileNow: Video title was empty/unknown, using file_name: {$videoTitle}");
+                }
+                
                 $templated = $this->templateService->applyTemplate($templateId, [
                     'id' => $video['id'],
-                    'title' => $video['title'] ?? $video['file_name'] ?? '',
+                    'title' => $videoTitle,
                     'description' => $video['description'] ?? '',
                     'tags' => $video['tags'] ?? '',
                 ], $context);
@@ -573,11 +580,20 @@ class SmartQueueService extends Service
                 ];
                 
                 // ВАЖНО: Проверяем, что title не пустой и не "unknown"
-                if (empty($metadata['title']) || strtolower($metadata['title']) === 'unknown') {
+                $titleToCheck = trim($metadata['title'] ?? '');
+                if (empty($titleToCheck) || strtolower($titleToCheck) === 'unknown') {
                     error_log("SmartQueueService::publishVideo: WARNING - Title is empty or 'unknown' in templated data!");
                     error_log("SmartQueueService::publishVideo: Templated data - title: " . ($templated['title'] ?? 'N/A') . ", description: " . (empty($templated['description']) ? 'empty' : mb_substr($templated['description'], 0, 50)));
-                    // Не передаем пустой title, пусть YoutubeService использует fallback
+                    // Не передаем пустой/unknown title, пусть YoutubeService использует fallback
                     $metadata['title'] = null;
+                }
+                
+                // ВАЖНО: Проверяем, что description не пустой
+                $descToCheck = trim($metadata['description'] ?? '');
+                if (empty($descToCheck)) {
+                    error_log("SmartQueueService::publishVideo: WARNING - Description is empty in templated data!");
+                    // Не передаем пустое описание, пусть YoutubeService использует fallback
+                    $metadata['description'] = null;
                 }
                 
                 error_log("SmartQueueService::publishVideo: Publishing to YouTube with schedule ID: {$scheduleId}");
