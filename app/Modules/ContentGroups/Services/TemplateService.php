@@ -304,6 +304,7 @@ class TemplateService extends Service
         $result['tags'] = implode(', ', $finalTags);
 
         // Добавляем хештеги в название и ограничиваем длину до 100 символов
+        // ВАЖНО: хештеги добавляются ДО фильтрации русских слов, чтобы потом пересобрать их из отфильтрованных тегов
         if (!empty($finalTags)) {
             // Извлекаем хештеги из тегов (убираем # если есть, затем добавляем обратно)
             $hashtags = [];
@@ -378,9 +379,12 @@ class TemplateService extends Service
             error_log("TemplateService::applyTemplate: Final fallback applied - description was empty");
         }
 
-        // Проверяем язык названия и фильтруем русские слова из описания и тегов, если название на английском
+        // Проверяем язык названия и фильтруем русские слова из всех полей, если название содержит английские слова
         $titleLanguage = $this->detectLanguage($result['title']);
         if ($titleLanguage === 'en') {
+            // Фильтруем русские слова из самого названия
+            $result['title'] = $this->filterRussianWords($result['title']);
+            
             // Фильтруем русские слова из описания
             $originalDescription = $result['description'];
             $result['description'] = $this->filterRussianWords($result['description']);
@@ -469,12 +473,16 @@ class TemplateService extends Service
 
     /**
      * Определить язык текста
+     * Если есть хотя бы одно английское слово, считаем что контент на английском
      */
     private function detectLanguage(string $text): string
     {
         $hasLatin = (bool)preg_match('/[a-z]/i', $text);
         $hasCyrillic = (bool)preg_match('/[а-яё]/iu', $text);
-        if ($hasLatin && !$hasCyrillic) {
+        
+        // Если есть латинские буквы (даже если есть и кириллица), считаем английским
+        // Это нужно для фильтрации русских слов из смешанного контента
+        if ($hasLatin) {
             return 'en';
         }
         return 'ru';
