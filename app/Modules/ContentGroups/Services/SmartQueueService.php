@@ -397,6 +397,15 @@ class SmartQueueService extends Service
                 return ['success' => false, 'message' => 'Ошибка подготовки публикации: ' . $e->getMessage()];
             }
 
+            // ВАЖНО: Обновляем метаданные видео ПЕРЕД публикацией, чтобы YoutubeService использовал правильные данные
+            error_log("SmartQueueService::publishGroupFileNow: Updating video metadata before publication");
+            error_log("SmartQueueService::publishGroupFileNow: Template data - title: " . mb_substr($templated['title'] ?? 'N/A', 0, 100));
+            error_log("SmartQueueService::publishGroupFileNow: Template data - description: " . mb_substr($templated['description'] ?? 'N/A', 0, 100));
+            error_log("SmartQueueService::publishGroupFileNow: Template data - tags: " . mb_substr($templated['tags'] ?? 'N/A', 0, 200));
+            
+            // Обновляем метаданные видео СРАЗУ после создания расписания
+            $this->updateVideoMetadata($tempScheduleId, $templated);
+            
             $result = $this->publishVideo($platform, $tempScheduleId, $templated);
 
             if ($result['success']) {
@@ -429,20 +438,24 @@ class SmartQueueService extends Service
      */
     private function publishVideo(string $platform, int $scheduleId, array $templated): array
     {
+        // Метаданные уже обновлены в publishGroupFileNow перед вызовом publishVideo
+        // Здесь только публикуем с уже обновленными данными
         switch ($platform) {
             case 'youtube':
                 $service = new YoutubeService();
-                // Обновляем видео с шаблонными данными перед публикацией
-                $this->updateVideoMetadata($scheduleId, $templated);
+                // Метаданные уже обновлены, просто публикуем
+                error_log("SmartQueueService::publishVideo: Publishing to YouTube with schedule ID: {$scheduleId}");
                 return $service->publishVideo($scheduleId);
             
             case 'telegram':
                 $service = new TelegramService();
-                $this->updateVideoMetadata($scheduleId, $templated);
+                // Метаданные уже обновлены, просто публикуем
+                error_log("SmartQueueService::publishVideo: Publishing to Telegram with schedule ID: {$scheduleId}");
                 return $service->publishVideo($scheduleId);
             
             case 'both':
-                $this->updateVideoMetadata($scheduleId, $templated);
+                // Метаданные уже обновлены, просто публикуем
+                error_log("SmartQueueService::publishVideo: Publishing to both platforms with schedule ID: {$scheduleId}");
                 $youtubeService = new YoutubeService();
                 $telegramService = new TelegramService();
                 $youtubeResult = $youtubeService->publishVideo($scheduleId);
