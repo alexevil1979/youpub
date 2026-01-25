@@ -352,7 +352,7 @@ ob_start();
                                             class="btn btn-xs btn-warning"
                                             onclick="clearFilePublication(<?= $group['id'] ?>, <?= $file['id'] ?>)"
                                             title="Сбросить публикацию и статус для повторной публикации">
-                                        Сброс
+                                        <?= \App\Helpers\IconHelper::render('copy', 14, 'icon-inline') ?>
                                     </button>
                                 <?php endif; ?>
                                 <?php if ($file['status'] === 'new' || $file['status'] === 'queued'): ?>
@@ -360,7 +360,7 @@ ob_start();
                                             class="btn btn-xs btn-danger"
                                             onclick="markDoNotPublish(<?= $group['id'] ?>, <?= $file['id'] ?>)"
                                             title="Не публиковать этот файл">
-                                        Не публиковать
+                                        <?= \App\Helpers\IconHelper::render('error', 14, 'icon-inline') ?>
                                     </button>
                                 <?php endif; ?>
                                 <button type="button" class="btn btn-xs <?= ($file['status'] === 'new' || $file['status'] === 'queued') ? 'btn-warning' : 'btn-success' ?>" 
