@@ -145,9 +145,10 @@ ob_start();
     </div>
     
     <div style="margin-bottom: 1rem;">
-        <strong style="color: #495057;">Emoji группы для типа "<?= htmlspecialchars($hookType) ?>" (нормализован: "<?= htmlspecialchars($normalizedHookType) ?>"):</strong>
+        <strong style="color: #495057;">Emoji группы для типа "<?= htmlspecialchars($hookType) ?>" (нормализован: "<?= htmlspecialchars($normalizedHookType ?? $hookType) ?>"):</strong>
         <?php 
-        $hookEmojis = isset($emojiGroups[$normalizedHookType]) ? (is_array($emojiGroups[$normalizedHookType]) ? $emojiGroups[$normalizedHookType] : explode(',', $emojiGroups[$normalizedHookType])) : [];
+        $normalizedHookTypeForEmoji = $normalizedHookType ?? $hookType;
+        $hookEmojis = isset($emojiGroups[$normalizedHookTypeForEmoji]) ? (is_array($emojiGroups[$normalizedHookTypeForEmoji]) ? $emojiGroups[$normalizedHookTypeForEmoji] : explode(',', $emojiGroups[$normalizedHookTypeForEmoji])) : [];
         ?>
         <?php if (empty($hookEmojis)): ?>
             <div style="color: #dc3545; margin-top: 0.5rem;">
