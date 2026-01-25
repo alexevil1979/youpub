@@ -275,7 +275,7 @@ foreach ($allGroups as $group) {
                     <td><?= ucfirst($video['status']) ?></td>
                     <td><?= date('d.m.Y H:i', strtotime($video['created_at'])) ?></td>
                     <td>
-                        <a href="/videos/<?= $video['id'] ?>" class="btn btn-sm btn-primary" title="Просмотр">
+                        <a href="/videos/<?= $video['id'] ?>" class="btn-action" title="Просмотр" aria-label="Просмотр">
                             <?= \App\Helpers\IconHelper::render('view', 16, 'icon-inline') ?>
                         </a>
                         <?php if (isset($videoPublications[$video['id']])): 
@@ -302,22 +302,23 @@ foreach ($allGroups as $group) {
                             }
                             if ($pubUrl):
                         ?>
-                            <a href="<?= htmlspecialchars($pubUrl) ?>" target="_blank" class="btn btn-sm btn-success" title="Перейти к публикации на <?= ucfirst($pub['platform']) ?>">
+                            <a href="<?= htmlspecialchars($pubUrl) ?>" target="_blank" class="btn-action btn-action-publish" title="Перейти к публикации на <?= ucfirst($pub['platform']) ?>" aria-label="Перейти к публикации">
                                 <?= \App\Helpers\IconHelper::render('publish', 16, 'icon-inline') ?>
                             </a>
                         <?php endif; endif; ?>
-                        <a href="/schedules/create?video_id=<?= $video['id'] ?>" class="btn btn-sm btn-success" title="Запланировать">
+                        <a href="/schedules/create?video_id=<?= $video['id'] ?>" class="btn-action" title="Запланировать" aria-label="Запланировать">
                             <?= \App\Helpers\IconHelper::render('calendar', 16, 'icon-inline') ?>
                         </a>
-                        <button type="button" class="btn btn-sm btn-info" onclick="showAddToGroupModal(<?= $video['id'] ?>)" title="В группу">
+                        <button type="button" class="btn-action" onclick="showAddToGroupModal(<?= $video['id'] ?>)" title="В группу" aria-label="В группу">
                             <?= \App\Helpers\IconHelper::render('folder', 16, 'icon-inline') ?>
                         </button>
-                        <button type="button" class="btn btn-sm <?= ($video['status'] === 'active' || $video['status'] === 'uploaded' || $video['status'] === 'ready') ? 'btn-warning' : 'btn-success' ?>" 
+                        <button type="button" class="btn-action <?= ($video['status'] === 'active' || $video['status'] === 'uploaded' || $video['status'] === 'ready') ? 'btn-pause' : 'btn-play' ?>" 
                                 onclick="toggleVideoStatus(<?= $video['id'] ?>)"
-                                title="<?= ($video['status'] === 'active' || $video['status'] === 'uploaded' || $video['status'] === 'ready') ? 'Выключить' : 'Включить' ?>">
+                                title="<?= ($video['status'] === 'active' || $video['status'] === 'uploaded' || $video['status'] === 'ready') ? 'Выключить' : 'Включить' ?>"
+                                aria-label="<?= ($video['status'] === 'active' || $video['status'] === 'uploaded' || $video['status'] === 'ready') ? 'Выключить' : 'Включить' ?>">
                             <?= ($video['status'] === 'active' || $video['status'] === 'uploaded' || $video['status'] === 'ready') ? \App\Helpers\IconHelper::render('pause', 16, 'icon-inline') : \App\Helpers\IconHelper::render('play', 16, 'icon-inline') ?>
                         </button>
-                        <button type="button" class="btn btn-sm btn-danger" onclick="deleteVideo(<?= $video['id'] ?>)" title="Удалить">
+                        <button type="button" class="btn-action btn-delete" onclick="deleteVideo(<?= $video['id'] ?>)" title="Удалить" aria-label="Удалить">
                             <?= \App\Helpers\IconHelper::render('delete', 16, 'icon-inline') ?>
                         </button>
                     </td>
