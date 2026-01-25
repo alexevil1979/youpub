@@ -57,73 +57,101 @@ class YoutubeService extends Service
             return ['success' => false, 'message' => 'Video file not found'];
         }
 
-        // СТРОГАЯ проверка на дубликаты перед публикацией
-        // 1. Проверяем, есть ли уже успешная публикация для этого расписания
-        $existingPublication = $this->publicationRepo->findByScheduleId($scheduleId);
-        if ($existingPublication && $existingPublication['status'] === 'success') {
-            error_log("YoutubeService::publishVideo: Schedule {$scheduleId} already has successful publication (ID: {$existingPublication['id']})");
-            return [
-                'success' => true,
-                'message' => 'Video already published',
-                'data' => [
-                    'publication_id' => $existingPublication['id'],
-                    'video_url' => $existingPublication['platform_url'] ?? ''
-                ]
-            ];
-        }
-        
-        // 2. Проверяем, не публикуется ли уже это видео на YouTube в последние 10 минут
-        $stmt = $this->db->prepare("
-            SELECT id, platform_id, created_at 
-            FROM publications 
-            WHERE video_id = ? 
-            AND platform = 'youtube'
-            AND status = 'success'
-            AND created_at >= DATE_SUB(NOW(), INTERVAL 10 MINUTE)
-            ORDER BY created_at DESC
-            LIMIT 1
-        ");
-        $stmt->execute([$schedule['video_id']]);
-        $recentPublication = $stmt->fetch();
-        if ($recentPublication) {
-            error_log("YoutubeService::publishVideo: Video {$schedule['video_id']} was recently published to YouTube (publication ID: {$recentPublication['id']}, created: {$recentPublication['created_at']})");
-            // Обновляем статус расписания на published, чтобы не создавать дубликаты
-            $this->scheduleRepo->update($scheduleId, [
-                'status' => 'published',
-                'error_message' => 'Duplicate publication prevented'
-            ]);
-            return [
-                'success' => true,
-                'message' => 'Video already published (duplicate prevented)',
-                'data' => [
-                    'publication_id' => $recentPublication['id'],
-                    'video_url' => 'https://youtube.com/watch?v=' . ($recentPublication['platform_id'] ?? '')
-                ]
-            ];
-        }
-        
-        // 3. Проверяем, нет ли других активных расписаний для этого видео
-        $scheduleStmt = $this->db->prepare("
-            SELECT id, status, created_at 
-            FROM schedules 
-            WHERE video_id = ? 
-            AND id != ?
-            AND status IN ('processing', 'pending')
-            AND created_at >= DATE_SUB(NOW(), INTERVAL 10 MINUTE)
-            LIMIT 1
-        ");
-        $scheduleStmt->execute([$schedule['video_id'], $scheduleId]);
-        $otherSchedule = $scheduleStmt->fetch();
-        if ($otherSchedule) {
-            error_log("YoutubeService::publishVideo: Video {$schedule['video_id']} has another active schedule (ID: {$otherSchedule['id']}, status: {$otherSchedule['status']})");
-            // Отменяем это расписание
-            $this->scheduleRepo->update($scheduleId, [
-                'status' => 'cancelled',
-                'error_message' => 'Another schedule is processing this video'
-            ]);
+        // СТРОГАЯ проверка на дубликаты перед публикацией с блокировкой
+        // Используем транзакцию для атомарной проверки
+        $this->db->beginTransaction();
+        try {
+            // 1. Проверяем, есть ли уже успешная публикация для этого расписания
+            $existingPublication = $this->publicationRepo->findByScheduleId($scheduleId);
+            if ($existingPublication && $existingPublication['status'] === 'success') {
+                $this->db->rollBack();
+                error_log("YoutubeService::publishVideo: Schedule {$scheduleId} already has successful publication (ID: {$existingPublication['id']})");
+                return [
+                    'success' => true,
+                    'message' => 'Video already published',
+                    'data' => [
+                        'publication_id' => $existingPublication['id'],
+                        'video_url' => $existingPublication['platform_url'] ?? ''
+                    ]
+                ];
+            }
+            
+            // 2. Блокируем все расписания для этого видео и проверяем дубликаты
+            $scheduleStmt = $this->db->prepare("
+                SELECT id, status, created_at 
+                FROM schedules 
+                WHERE video_id = ? 
+                AND created_at >= DATE_SUB(NOW(), INTERVAL 15 MINUTE)
+                FOR UPDATE
+            ");
+            $scheduleStmt->execute([$schedule['video_id']]);
+            $allSchedules = $scheduleStmt->fetchAll();
+            
+            // Проверяем другие активные расписания
+            $otherActiveSchedules = array_filter($allSchedules, function($s) use ($scheduleId) {
+                return $s['id'] != $scheduleId && in_array($s['status'], ['processing', 'pending', 'published']);
+            });
+            
+            if (!empty($otherActiveSchedules)) {
+                $this->db->rollBack();
+                error_log("YoutubeService::publishVideo: Video {$schedule['video_id']} has other active schedule(s): " . count($otherActiveSchedules));
+                foreach ($otherActiveSchedules as $os) {
+                    error_log("YoutubeService::publishVideo: Other schedule ID: {$os['id']}, status: {$os['status']}, created: {$os['created_at']}");
+                }
+                // Отменяем это расписание
+                $this->scheduleRepo->update($scheduleId, [
+                    'status' => 'cancelled',
+                    'error_message' => 'Another schedule is processing this video'
+                ]);
+                return [
+                    'success' => false,
+                    'message' => 'Another publication is already in progress for this video'
+                ];
+            }
+            
+            // 3. Проверяем успешные публикации за последние 15 минут
+            $pubStmt = $this->db->prepare("
+                SELECT id, platform_id, created_at 
+                FROM publications 
+                WHERE video_id = ? 
+                AND platform = 'youtube'
+                AND status = 'success'
+                AND created_at >= DATE_SUB(NOW(), INTERVAL 15 MINUTE)
+                ORDER BY created_at DESC
+                LIMIT 1
+            ");
+            $pubStmt->execute([$schedule['video_id']]);
+            $recentPublication = $pubStmt->fetch();
+            if ($recentPublication) {
+                $this->db->rollBack();
+                error_log("YoutubeService::publishVideo: Video {$schedule['video_id']} was recently published to YouTube (publication ID: {$recentPublication['id']}, created: {$recentPublication['created_at']})");
+                // Обновляем статус расписания на published
+                $this->scheduleRepo->update($scheduleId, [
+                    'status' => 'published',
+                    'error_message' => 'Duplicate publication prevented - video was recently published'
+                ]);
+                return [
+                    'success' => true,
+                    'message' => 'Video already published (duplicate prevented)',
+                    'data' => [
+                        'publication_id' => $recentPublication['id'],
+                        'video_url' => 'https://youtube.com/watch?v=' . ($recentPublication['platform_id'] ?? '')
+                    ]
+                ];
+            }
+            
+            // Все проверки пройдены, коммитим транзакцию
+            $this->db->commit();
+            error_log("YoutubeService::publishVideo: All duplicate checks passed for schedule {$scheduleId}, proceeding with publication");
+        } catch (\Exception $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            error_log("YoutubeService::publishVideo: Error in duplicate check transaction: " . $e->getMessage());
+            // Не продолжаем публикацию при ошибке проверки
             return [
                 'success' => false,
-                'message' => 'Another publication is already in progress for this video'
+                'message' => 'Error checking for duplicates: ' . $e->getMessage()
             ];
         }
 

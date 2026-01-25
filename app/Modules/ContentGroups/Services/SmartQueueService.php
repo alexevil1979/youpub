@@ -401,48 +401,54 @@ class SmartQueueService extends Service
                 }
                 
                 // СТРОГАЯ проверка: нет ли активных расписаний для этого видео ИЛИ успешных публикаций
-                // Проверяем расписания
+                // Блокируем все расписания для этого видео
                 $stmt = $this->db->prepare("
-                    SELECT id, status 
+                    SELECT id, status, created_at 
                     FROM schedules 
                     WHERE video_id = ? 
-                    AND status IN ('processing', 'pending', 'published')
-                    AND (
-                        content_group_id = ?
-                        OR content_group_id IS NULL
-                    )
-                    AND created_at >= DATE_SUB(NOW(), INTERVAL 10 MINUTE)
+                    AND created_at >= DATE_SUB(NOW(), INTERVAL 15 MINUTE)
                     FOR UPDATE
                 ");
-                $stmt->execute([(int)$groupFile['video_id'], $groupId]);
-                $activeSchedules = $stmt->fetchAll();
+                $stmt->execute([(int)$groupFile['video_id']]);
+                $allSchedules = $stmt->fetchAll();
+                
+                // Проверяем активные расписания
+                $activeSchedules = array_filter($allSchedules, function($sched) {
+                    return in_array($sched['status'], ['processing', 'pending', 'published']);
+                });
                 
                 if (!empty($activeSchedules)) {
                     $this->db->rollBack();
                     error_log("SmartQueueService::publishGroupFileNow: Video {$groupFile['video_id']} already has active schedule(s): " . count($activeSchedules));
                     foreach ($activeSchedules as $sched) {
-                        error_log("SmartQueueService::publishGroupFileNow: Active schedule ID: {$sched['id']}, status: {$sched['status']}");
+                        error_log("SmartQueueService::publishGroupFileNow: Active schedule ID: {$sched['id']}, status: {$sched['status']}, created: {$sched['created_at']}");
                     }
                     return ['success' => false, 'message' => 'Видео уже публикуется или опубликовано, попробуйте позже'];
                 }
                 
-                // Проверяем успешные публикации за последние 10 минут
+                // Проверяем успешные публикации за последние 15 минут
                 $pubStmt = $this->db->prepare("
-                    SELECT id 
+                    SELECT id, platform_id, created_at 
                     FROM publications 
                     WHERE video_id = ? 
                     AND platform = ?
                     AND status = 'success'
-                    AND created_at >= DATE_SUB(NOW(), INTERVAL 10 MINUTE)
+                    AND created_at >= DATE_SUB(NOW(), INTERVAL 15 MINUTE)
+                    ORDER BY created_at DESC
                     LIMIT 1
                 ");
                 $pubStmt->execute([(int)$groupFile['video_id'], $platform]);
-                if ($pubStmt->fetch()) {
+                $recentPub = $pubStmt->fetch();
+                if ($recentPub) {
                     $this->db->rollBack();
-                    error_log("SmartQueueService::publishGroupFileNow: Video {$groupFile['video_id']} was recently published to {$platform}");
-                    return ['success' => false, 'message' => 'Это видео недавно было опубликовано на ' . $platform];
+                    error_log("SmartQueueService::publishGroupFileNow: Video {$groupFile['video_id']} was recently published to {$platform} (publication ID: {$recentPub['id']}, created: {$recentPub['created_at']})");
+                    return ['success' => false, 'message' => 'Это видео недавно было опубликовано на ' . $platform . '. Попробуйте позже.'];
                 }
+                
+                error_log("SmartQueueService::publishGroupFileNow: All checks passed, creating schedule for video {$groupFile['video_id']}");
 
+                // Создаем расписание с проверкой на дубликаты на уровне БД
+                // Используем INSERT IGNORE или проверку перед вставкой
                 $tempScheduleId = $this->scheduleRepo->create([
                     'user_id' => $userId,
                     'video_id' => (int)$groupFile['video_id'],
@@ -453,7 +459,36 @@ class SmartQueueService extends Service
                     'status' => 'processing',
                 ]);
                 
+                if (!$tempScheduleId) {
+                    $this->db->rollBack();
+                    error_log("SmartQueueService::publishGroupFileNow: Failed to create schedule");
+                    return ['success' => false, 'message' => 'Не удалось создать расписание'];
+                }
+                
                 error_log("SmartQueueService::publishGroupFileNow: Created schedule ID: {$tempScheduleId} for video {$groupFile['video_id']}");
+                
+                // Финальная проверка: убеждаемся, что мы единственное активное расписание для этого видео
+                $finalCheckStmt = $this->db->prepare("
+                    SELECT COUNT(*) as count
+                    FROM schedules 
+                    WHERE video_id = ? 
+                    AND status IN ('processing', 'pending')
+                    AND id != ?
+                    AND created_at >= DATE_SUB(NOW(), INTERVAL 15 MINUTE)
+                ");
+                $finalCheckStmt->execute([(int)$groupFile['video_id'], $tempScheduleId]);
+                $finalCheck = $finalCheckStmt->fetch();
+                
+                if ($finalCheck && (int)$finalCheck['count'] > 0) {
+                    // Отменяем только что созданное расписание
+                    $this->scheduleRepo->update($tempScheduleId, [
+                        'status' => 'cancelled',
+                        'error_message' => 'Another schedule was found after creation'
+                    ]);
+                    $this->db->rollBack();
+                    error_log("SmartQueueService::publishGroupFileNow: Found other active schedules after creation, cancelled schedule {$tempScheduleId}");
+                    return ['success' => false, 'message' => 'Видео уже публикуется другим расписанием'];
+                }
 
                 if (!$tempScheduleId) {
                     $this->db->rollBack();
