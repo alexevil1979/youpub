@@ -90,6 +90,18 @@ ob_start();
     $baseTags = !empty($templateData['base_tags']) ? array_map('trim', explode(',', $templateData['base_tags'])) : [];
     $emojiGroups = !empty($templateData['emoji_groups']) ? json_decode($templateData['emoji_groups'], true) : [];
     $hookType = $templateData['hook_type'] ?? 'emotional';
+    
+    // Маппинг между значениями hook_type из БД и ключами в description_variants
+    $hookTypeMapping = [
+        'atmospheric' => 'atmosphere',
+        'intriguing' => 'intrigue',
+        'emotional' => 'emotional',
+        'visual' => 'visual',
+        'educational' => 'educational',
+        'question' => 'question',
+        'cta' => 'cta',
+    ];
+    $normalizedHookType = $hookTypeMapping[$hookType] ?? $hookType;
     ?>
     
     <div style="margin-bottom: 1rem;">
@@ -114,13 +126,13 @@ ob_start();
     </div>
     
     <div style="margin-bottom: 1rem;">
-        <strong style="color: #495057;">Описания (description_variants) для типа "<?= htmlspecialchars($hookType) ?>":</strong>
+        <strong style="color: #495057;">Описания (description_variants) для типа "<?= htmlspecialchars($hookType) ?>" (нормализован: "<?= htmlspecialchars($normalizedHookType) ?>"):</strong>
         <?php 
-        $hookDescriptions = isset($descriptionVariants[$hookType]) ? $descriptionVariants[$hookType] : [];
+        $hookDescriptions = isset($descriptionVariants[$normalizedHookType]) ? $descriptionVariants[$normalizedHookType] : [];
         ?>
         <?php if (empty($hookDescriptions)): ?>
             <div style="color: #dc3545; margin-top: 0.5rem;">
-                ⚠️ Вариантов нет для типа "<?= htmlspecialchars($hookType) ?>"
+                ⚠️ Вариантов нет для типа "<?= htmlspecialchars($hookType) ?>" (нормализован: "<?= htmlspecialchars($normalizedHookType) ?>")
                 <?php if (!empty($descriptionVariants)): ?>
                     <div style="margin-top: 0.25rem; font-size: 0.9em;">
                         Доступные типы: <?= implode(', ', array_keys($descriptionVariants)) ?>
@@ -145,14 +157,13 @@ ob_start();
     </div>
     
     <div style="margin-bottom: 1rem;">
-        <strong style="color: #495057;">Emoji группы для типа "<?= htmlspecialchars($hookType) ?>" (нормализован: "<?= htmlspecialchars($normalizedHookType ?? $hookType) ?>"):</strong>
+        <strong style="color: #495057;">Emoji группы для типа "<?= htmlspecialchars($hookType) ?>" (нормализован: "<?= htmlspecialchars($normalizedHookType) ?>"):</strong>
         <?php 
-        $normalizedHookTypeForEmoji = $normalizedHookType ?? $hookType;
-        $hookEmojis = isset($emojiGroups[$normalizedHookTypeForEmoji]) ? (is_array($emojiGroups[$normalizedHookTypeForEmoji]) ? $emojiGroups[$normalizedHookTypeForEmoji] : explode(',', $emojiGroups[$normalizedHookTypeForEmoji])) : [];
+        $hookEmojis = isset($emojiGroups[$normalizedHookType]) ? (is_array($emojiGroups[$normalizedHookType]) ? $emojiGroups[$normalizedHookType] : explode(',', $emojiGroups[$normalizedHookType])) : [];
         ?>
         <?php if (empty($hookEmojis)): ?>
             <div style="color: #dc3545; margin-top: 0.5rem;">
-                ⚠️ Emoji нет для типа "<?= htmlspecialchars($hookType) ?>"
+                ⚠️ Emoji нет для типа "<?= htmlspecialchars($hookType) ?>" (нормализован: "<?= htmlspecialchars($normalizedHookType) ?>")
             </div>
         <?php else: ?>
             <div style="margin-top: 0.5rem; padding: 0.5rem; background: white; border-radius: 4px;">
@@ -319,6 +330,27 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 <?php
-$content = ob_get_clean();
-include __DIR__ . '/../layout.php';
+try {
+    $content = ob_get_clean();
+    if ($content === false) {
+        error_log("Templates create_v2 view: Failed to get buffer content");
+        $content = '<div class="alert alert-error">Ошибка при загрузке содержимого</div>';
+    }
+    
+    $layoutPath = __DIR__ . '/../../layout.php';
+    if (!file_exists($layoutPath)) {
+        error_log("Templates create_v2 view: Layout file not found: {$layoutPath}");
+        http_response_code(500);
+        echo "Layout file not found. Please check server logs.";
+        exit;
+    }
+    
+    include $layoutPath;
+} catch (\Throwable $e) {
+    error_log("Templates create_v2 view: Fatal error: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+    ob_end_clean();
+    http_response_code(500);
+    echo "Fatal error loading template creation page. Please check server logs.";
+    exit;
+}
 ?>
