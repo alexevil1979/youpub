@@ -646,12 +646,28 @@ class SmartQueueService extends Service
                 $videoRepo->update($schedule['video_id'], $updateData);
                 error_log("SmartQueueService::updateVideoMetadata: Updated video ID {$schedule['video_id']} with template data. Fields: " . implode(', ', array_keys($updateData)));
                 
+                // ВАЖНО: Принудительно обновляем кэш/соединение, чтобы изменения были видны сразу
+                // Используем прямой SQL запрос для гарантии обновления
+                $db = \Core\Database::getInstance();
+                foreach ($updateData as $field => $value) {
+                    $stmt = $db->prepare("UPDATE videos SET {$field} = ? WHERE id = ?");
+                    $stmt->execute([$value, $schedule['video_id']]);
+                }
+                
                 // Проверяем, что данные действительно обновились
                 $updatedVideo = $videoRepo->findById($schedule['video_id']);
                 error_log("SmartQueueService::updateVideoMetadata: Verified update - title: " . mb_substr($updatedVideo['title'] ?? 'N/A', 0, 100));
                 error_log("SmartQueueService::updateVideoMetadata: Verified update - description: " . mb_substr($updatedVideo['description'] ?? 'N/A', 0, 100));
+                
+                if (empty($updatedVideo['title']) || strtolower($updatedVideo['title']) === 'unknown') {
+                    error_log("SmartQueueService::updateVideoMetadata: ERROR - Title is still empty/unknown after update!");
+                }
+                if (empty($updatedVideo['description'])) {
+                    error_log("SmartQueueService::updateVideoMetadata: ERROR - Description is still empty after update!");
+                }
             } else {
                 error_log("SmartQueueService::updateVideoMetadata: No data to update for video ID {$schedule['video_id']}");
+                error_log("SmartQueueService::updateVideoMetadata: Templated data - title: " . ($templated['title'] ?? 'N/A') . ", description: " . (empty($templated['description']) ? 'empty' : mb_substr($templated['description'], 0, 50)));
             }
         } catch (\Exception $e) {
             error_log("SmartQueueService::updateVideoMetadata: Error - " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());

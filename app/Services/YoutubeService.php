@@ -241,13 +241,32 @@ class YoutubeService extends Service
         }
 
         // Используем данные из видео (могут быть обновлены шаблоном)
-        $title = $video['title'] ?? 'Untitled Video';
-        $description = $video['description'] ?? '';
-        $tags = $video['tags'] ?? '';
+        // ВАЖНО: Проверяем, что метаданные не пустые, иначе используем fallback
+        $title = trim($video['title'] ?? '');
+        if (empty($title) || $title === 'Untitled Video' || strtolower($title) === 'unknown') {
+            $title = $video['file_name'] ?? 'Untitled Video';
+            error_log("YoutubeService::publishVideo: Title was empty/unknown, using file_name: {$title}");
+        }
+        
+        $description = trim($video['description'] ?? '');
+        if (empty($description)) {
+            $description = 'Watch this video! 🎬';
+            error_log("YoutubeService::publishVideo: Description was empty, using fallback");
+        }
+        
+        $tags = trim($video['tags'] ?? '');
 
         error_log("YoutubeService::publishVideo: Publishing with title: " . mb_substr($title, 0, 100));
         error_log("YoutubeService::publishVideo: Publishing with description: " . mb_substr($description, 0, 100));
         error_log("YoutubeService::publishVideo: Publishing with tags: " . mb_substr($tags, 0, 200));
+        
+        // Дополнительная проверка: если метаданные все еще пустые, это проблема
+        if (empty($title) || strtolower($title) === 'unknown') {
+            error_log("YoutubeService::publishVideo: WARNING - Title is still empty/unknown after fallback!");
+        }
+        if (empty($description)) {
+            error_log("YoutubeService::publishVideo: WARNING - Description is still empty after fallback!");
+        }
 
         try {
             // ФИНАЛЬНАЯ проверка перед загрузкой: убеждаемся, что расписание все еще в статусе 'processing'
