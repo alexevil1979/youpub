@@ -229,10 +229,11 @@ ob_start();
         <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">
         <button type="submit"
                 class="btn btn-success"
+                id="publish-now-btn"
                 <?= $canPublish ? '' : 'disabled' ?>
                 title="Опубликовать сейчас"
                 aria-label="Опубликовать сейчас"
-                onclick="return confirm('Опубликовать видео сейчас?');">
+                onclick="return handlePublishClick(event);">
             <?= \App\Helpers\IconHelper::render('publish', 16, 'icon-inline') ?>
         </button>
     </form>
@@ -242,6 +243,40 @@ ob_start();
 </div>
 
 <script>
+// Защита от двойного клика на кнопку публикации
+let isPublishing = false;
+function handlePublishClick(event) {
+    if (isPublishing) {
+        event.preventDefault();
+        return false;
+    }
+    
+    if (!confirm('Опубликовать видео сейчас?')) {
+        return false;
+    }
+    
+    isPublishing = true;
+    const btn = document.getElementById('publish-now-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+        const originalText = btn.innerHTML;
+        btn.innerHTML = 'Публикация...';
+        
+        // Разблокируем через 10 секунд на случай ошибки
+        setTimeout(() => {
+            isPublishing = false;
+            if (btn) {
+                btn.disabled = false;
+                btn.style.opacity = '';
+                btn.innerHTML = originalText;
+            }
+        }, 10000);
+    }
+    
+    return true;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const regenerateBtn = document.getElementById('regenerate-preview-btn');
     if (!regenerateBtn) {

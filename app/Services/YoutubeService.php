@@ -137,9 +137,15 @@ class YoutubeService extends Service
                 ];
             }
             
-            // Все проверки пройдены, коммитим транзакцию
+            // Все проверки пройдены, обновляем статус на 'processing' ВНУТРИ транзакции
+            // Это гарантирует, что только один запрос сможет начать загрузку
+            if ($schedule['status'] !== 'processing') {
+                $this->scheduleRepo->update($scheduleId, ['status' => 'processing']);
+            }
+            
+            // Коммитим транзакцию ТОЛЬКО после обновления статуса
             $this->db->commit();
-            error_log("YoutubeService::publishVideo: All duplicate checks passed for schedule {$scheduleId}, proceeding with publication");
+            error_log("YoutubeService::publishVideo: All duplicate checks passed for schedule {$scheduleId}, status set to processing, proceeding with publication");
         } catch (\Exception $e) {
             if ($this->db->inTransaction()) {
                 $this->db->rollBack();
@@ -161,12 +167,43 @@ class YoutubeService extends Service
         error_log("YoutubeService::publishVideo: Publishing with description: " . mb_substr($description, 0, 100));
         error_log("YoutubeService::publishVideo: Publishing with tags: " . mb_substr($tags, 0, 200));
 
-        // Обновление статуса расписания только если он еще не 'processing'
-        if ($schedule['status'] !== 'processing') {
-            $this->scheduleRepo->update($scheduleId, ['status' => 'processing']);
-        }
-
         try {
+            // ФИНАЛЬНАЯ проверка перед загрузкой: убеждаемся, что расписание все еще в статусе 'processing'
+            // и нет других активных расписаний (на случай, если что-то изменилось между проверкой и загрузкой)
+            $finalCheckStmt = $this->db->prepare("
+                SELECT id, status 
+                FROM schedules 
+                WHERE video_id = ? 
+                AND status IN ('processing', 'pending')
+                AND id != ?
+                AND created_at >= DATE_SUB(NOW(), INTERVAL 2 MINUTE)
+                LIMIT 1
+            ");
+            $finalCheckStmt->execute([$schedule['video_id'], $scheduleId]);
+            $finalCheck = $finalCheckStmt->fetch();
+            
+            if ($finalCheck) {
+                error_log("YoutubeService::publishVideo: Found other active schedule (ID: {$finalCheck['id']}) before upload, cancelling schedule {$scheduleId}");
+                $this->scheduleRepo->update($scheduleId, [
+                    'status' => 'cancelled',
+                    'error_message' => 'Another schedule found before upload'
+                ]);
+                return [
+                    'success' => false,
+                    'message' => 'Another publication is already in progress for this video'
+                ];
+            }
+            
+            // Проверяем, что расписание все еще в статусе 'processing'
+            $currentSchedule = $this->scheduleRepo->findById($scheduleId);
+            if (!$currentSchedule || $currentSchedule['status'] !== 'processing') {
+                error_log("YoutubeService::publishVideo: Schedule {$scheduleId} status changed to '{$currentSchedule['status']}', aborting upload");
+                return [
+                    'success' => false,
+                    'message' => 'Schedule status changed, publication cancelled'
+                ];
+            }
+            
             // Проверяем и обновляем токен при необходимости
             $accessToken = $this->getValidAccessToken($integration);
             if (!$accessToken) {
