@@ -333,13 +333,13 @@ document.addEventListener('DOMContentLoaded', () => {
 try {
     $content = ob_get_clean();
     if ($content === false) {
-        error_log("Templates create_v2 view: Failed to get buffer content");
+        error_log("publish_now view: Failed to get buffer content");
         $content = '<div class="alert alert-error">Ошибка при загрузке содержимого</div>';
     }
     
-    $layoutPath = __DIR__ . '/../../layout.php';
+    $layoutPath = __DIR__ . '/../layout.php';
     if (!file_exists($layoutPath)) {
-        error_log("Templates create_v2 view: Layout file not found: {$layoutPath}");
+        error_log("publish_now view: Layout file not found: {$layoutPath}");
         http_response_code(500);
         echo "Layout file not found. Please check server logs.";
         exit;
