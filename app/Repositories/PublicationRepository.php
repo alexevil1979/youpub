@@ -136,6 +136,17 @@ class PublicationRepository extends Repository
         return $latestByVideo;
     }
 
+    /**
+     * Найти публикацию по schedule_id
+     */
+    public function findByScheduleId(int $scheduleId): ?array
+    {
+        $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE schedule_id = ? ORDER BY created_at DESC LIMIT 1");
+        $stmt->execute([$scheduleId]);
+        $result = $stmt->fetch();
+        return $result ?: null;
+    }
+
     private function sanitizeOrderBy(array $orderBy, array $allowedFields): array
     {
         $sanitized = [];

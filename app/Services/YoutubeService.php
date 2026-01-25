@@ -57,13 +57,56 @@ class YoutubeService extends Service
             return ['success' => false, 'message' => 'Video file not found'];
         }
 
+        // Проверяем, не публикуется ли уже это расписание
+        // Проверяем, есть ли уже успешная публикация для этого расписания
+        $existingPublication = $this->publicationRepo->findByScheduleId($scheduleId);
+        if ($existingPublication && $existingPublication['status'] === 'success') {
+            error_log("YoutubeService::publishVideo: Schedule {$scheduleId} already has successful publication (ID: {$existingPublication['id']})");
+            return [
+                'success' => true,
+                'message' => 'Video already published',
+                'data' => [
+                    'publication_id' => $existingPublication['id'],
+                    'video_url' => $existingPublication['platform_url'] ?? ''
+                ]
+            ];
+        }
+        
+        // Проверяем, не публикуется ли уже это видео для этого расписания
+        if ($schedule['status'] === 'processing') {
+            // Проверяем, есть ли другие активные публикации для этого видео в последние 2 минуты
+            $stmt = $this->db->prepare("
+                SELECT id 
+                FROM publications 
+                WHERE video_id = ? 
+                AND platform = 'youtube'
+                AND status = 'success'
+                AND created_at >= DATE_SUB(NOW(), INTERVAL 2 MINUTE)
+                LIMIT 1
+            ");
+            $stmt->execute([$schedule['video_id']]);
+            if ($stmt->fetch()) {
+                error_log("YoutubeService::publishVideo: Video {$schedule['video_id']} was recently published to YouTube");
+                return [
+                    'success' => false,
+                    'message' => 'This video was recently published to YouTube'
+                ];
+            }
+        }
+
         // Используем данные из видео (могут быть обновлены шаблоном)
         $title = $video['title'] ?? 'Untitled Video';
         $description = $video['description'] ?? '';
         $tags = $video['tags'] ?? '';
 
-        // Обновление статуса расписания
-        $this->scheduleRepo->update($scheduleId, ['status' => 'processing']);
+        error_log("YoutubeService::publishVideo: Publishing with title: " . mb_substr($title, 0, 100));
+        error_log("YoutubeService::publishVideo: Publishing with description: " . mb_substr($description, 0, 100));
+        error_log("YoutubeService::publishVideo: Publishing with tags: " . mb_substr($tags, 0, 200));
+
+        // Обновление статуса расписания только если он еще не 'processing'
+        if ($schedule['status'] !== 'processing') {
+            $this->scheduleRepo->update($scheduleId, ['status' => 'processing']);
+        }
 
         try {
             // Проверяем и обновляем токен при необходимости
