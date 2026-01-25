@@ -184,9 +184,25 @@ class TemplateService extends Service
         $hookType = $template['hook_type'] ?? 'emotional';
         $descriptionGenerated = false;
 
-        if (!empty($descriptionVariants) && isset($descriptionVariants[$hookType])) {
+        // Маппинг между значениями hook_type из БД и ключами в description_variants
+        $hookTypeMapping = [
+            'atmospheric' => 'atmosphere',  // БД: atmospheric -> форма: atmosphere
+            'intriguing' => 'intrigue',     // БД: intriguing -> форма: intrigue
+            'emotional' => 'emotional',      // Совпадает
+            'visual' => 'visual',           // Совпадает
+            'educational' => 'educational', // Совпадает
+            'question' => 'question',       // Совпадает
+            'cta' => 'cta',                // Совпадает
+        ];
+        
+        // Нормализуем hookType для поиска в description_variants
+        $normalizedHookType = $hookTypeMapping[$hookType] ?? $hookType;
+
+        if (!empty($descriptionVariants) && isset($descriptionVariants[$normalizedHookType])) {
             // Новый подход: варианты по типам триггеров
-            $hookVariants = $descriptionVariants[$hookType];
+            $hookVariants = $descriptionVariants[$normalizedHookType];
+            
+            error_log("TemplateService::applyTemplate: Found description variants for hook_type '{$hookType}' (normalized: '{$normalizedHookType}'), count: " . count($hookVariants));
 
             // Гарантируем, что hookVariants является непустым массивом
             if (!is_array($hookVariants) || empty($hookVariants)) {
@@ -199,8 +215,9 @@ class TemplateService extends Service
 
             // Добавляем emoji из соответствующей группы с полной рандомизацией
             $emojiGroups = !empty($template['emoji_groups']) ? json_decode($template['emoji_groups'], true) : [];
-            if (isset($emojiGroups[$hookType])) {
-                $emojiList = array_filter(array_map('trim', explode(',', $emojiGroups[$hookType])));
+            // Используем нормализованный тип для поиска emoji
+            if (isset($emojiGroups[$normalizedHookType])) {
+                $emojiList = array_filter(array_map('trim', explode(',', $emojiGroups[$normalizedHookType])));
                 if (!empty($emojiList)) {
                     // Полная рандомизация emoji
                     shuffle($emojiList);
@@ -215,8 +232,12 @@ class TemplateService extends Service
 
             $result['description'] = $this->processTemplate($selectedVariant, $vars, $video['description'] ?? '');
             $descriptionGenerated = !empty($result['description']);
-            error_log("TemplateService::applyTemplate: Generated description from variants (hookType: {$hookType}), length: " . mb_strlen($result['description']));
+            error_log("TemplateService::applyTemplate: Generated description from variants (hookType: {$hookType}, normalized: {$normalizedHookType}), length: " . mb_strlen($result['description']));
         } else {
+            error_log("TemplateService::applyTemplate: No description variants found for hook_type '{$hookType}' (normalized: '{$normalizedHookType}')");
+            if (!empty($descriptionVariants)) {
+                error_log("TemplateService::applyTemplate: Available description variant keys: " . implode(', ', array_keys($descriptionVariants)));
+            }
             // Обратная совместимость: старый подход
             $emojiList = !empty($template['emoji_list']) ? json_decode($template['emoji_list'], true) : ['🎬'];
 
