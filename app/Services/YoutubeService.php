@@ -57,8 +57,8 @@ class YoutubeService extends Service
             return ['success' => false, 'message' => 'Video file not found'];
         }
 
-        // Проверяем, не публикуется ли уже это расписание
-        // Проверяем, есть ли уже успешная публикация для этого расписания
+        // СТРОГАЯ проверка на дубликаты перед публикацией
+        // 1. Проверяем, есть ли уже успешная публикация для этого расписания
         $existingPublication = $this->publicationRepo->findByScheduleId($scheduleId);
         if ($existingPublication && $existingPublication['status'] === 'success') {
             error_log("YoutubeService::publishVideo: Schedule {$scheduleId} already has successful publication (ID: {$existingPublication['id']})");
@@ -72,26 +72,59 @@ class YoutubeService extends Service
             ];
         }
         
-        // Проверяем, не публикуется ли уже это видео для этого расписания
-        if ($schedule['status'] === 'processing') {
-            // Проверяем, есть ли другие активные публикации для этого видео в последние 2 минуты
-            $stmt = $this->db->prepare("
-                SELECT id 
-                FROM publications 
-                WHERE video_id = ? 
-                AND platform = 'youtube'
-                AND status = 'success'
-                AND created_at >= DATE_SUB(NOW(), INTERVAL 2 MINUTE)
-                LIMIT 1
-            ");
-            $stmt->execute([$schedule['video_id']]);
-            if ($stmt->fetch()) {
-                error_log("YoutubeService::publishVideo: Video {$schedule['video_id']} was recently published to YouTube");
-                return [
-                    'success' => false,
-                    'message' => 'This video was recently published to YouTube'
-                ];
-            }
+        // 2. Проверяем, не публикуется ли уже это видео на YouTube в последние 10 минут
+        $stmt = $this->db->prepare("
+            SELECT id, platform_id, created_at 
+            FROM publications 
+            WHERE video_id = ? 
+            AND platform = 'youtube'
+            AND status = 'success'
+            AND created_at >= DATE_SUB(NOW(), INTERVAL 10 MINUTE)
+            ORDER BY created_at DESC
+            LIMIT 1
+        ");
+        $stmt->execute([$schedule['video_id']]);
+        $recentPublication = $stmt->fetch();
+        if ($recentPublication) {
+            error_log("YoutubeService::publishVideo: Video {$schedule['video_id']} was recently published to YouTube (publication ID: {$recentPublication['id']}, created: {$recentPublication['created_at']})");
+            // Обновляем статус расписания на published, чтобы не создавать дубликаты
+            $this->scheduleRepo->update($scheduleId, [
+                'status' => 'published',
+                'error_message' => 'Duplicate publication prevented'
+            ]);
+            return [
+                'success' => true,
+                'message' => 'Video already published (duplicate prevented)',
+                'data' => [
+                    'publication_id' => $recentPublication['id'],
+                    'video_url' => 'https://youtube.com/watch?v=' . ($recentPublication['platform_id'] ?? '')
+                ]
+            ];
+        }
+        
+        // 3. Проверяем, нет ли других активных расписаний для этого видео
+        $scheduleStmt = $this->db->prepare("
+            SELECT id, status, created_at 
+            FROM schedules 
+            WHERE video_id = ? 
+            AND id != ?
+            AND status IN ('processing', 'pending')
+            AND created_at >= DATE_SUB(NOW(), INTERVAL 10 MINUTE)
+            LIMIT 1
+        ");
+        $scheduleStmt->execute([$schedule['video_id'], $scheduleId]);
+        $otherSchedule = $scheduleStmt->fetch();
+        if ($otherSchedule) {
+            error_log("YoutubeService::publishVideo: Video {$schedule['video_id']} has another active schedule (ID: {$otherSchedule['id']}, status: {$otherSchedule['status']})");
+            // Отменяем это расписание
+            $this->scheduleRepo->update($scheduleId, [
+                'status' => 'cancelled',
+                'error_message' => 'Another schedule is processing this video'
+            ]);
+            return [
+                'success' => false,
+                'message' => 'Another publication is already in progress for this video'
+            ];
         }
 
         // Используем данные из видео (могут быть обновлены шаблоном)

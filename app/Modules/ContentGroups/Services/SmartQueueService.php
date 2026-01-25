@@ -400,21 +400,47 @@ class SmartQueueService extends Service
                     return ['success' => false, 'message' => 'Этот файл нельзя опубликовать сейчас (статус: ' . $lockedFile['status'] . ')'];
                 }
                 
-                // Проверяем, нет ли активных расписаний для этого видео
+                // СТРОГАЯ проверка: нет ли активных расписаний для этого видео ИЛИ успешных публикаций
+                // Проверяем расписания
                 $stmt = $this->db->prepare("
-                    SELECT id 
+                    SELECT id, status 
                     FROM schedules 
                     WHERE video_id = ? 
-                    AND status IN ('processing', 'pending')
-                    AND content_group_id = ?
-                    AND created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+                    AND status IN ('processing', 'pending', 'published')
+                    AND (
+                        content_group_id = ?
+                        OR content_group_id IS NULL
+                    )
+                    AND created_at >= DATE_SUB(NOW(), INTERVAL 10 MINUTE)
                     FOR UPDATE
                 ");
                 $stmt->execute([(int)$groupFile['video_id'], $groupId]);
-                if ($stmt->fetch()) {
+                $activeSchedules = $stmt->fetchAll();
+                
+                if (!empty($activeSchedules)) {
                     $this->db->rollBack();
-                    error_log("SmartQueueService::publishGroupFileNow: Video {$groupFile['video_id']} already has active schedule");
-                    return ['success' => false, 'message' => 'Видео уже публикуется, попробуйте позже'];
+                    error_log("SmartQueueService::publishGroupFileNow: Video {$groupFile['video_id']} already has active schedule(s): " . count($activeSchedules));
+                    foreach ($activeSchedules as $sched) {
+                        error_log("SmartQueueService::publishGroupFileNow: Active schedule ID: {$sched['id']}, status: {$sched['status']}");
+                    }
+                    return ['success' => false, 'message' => 'Видео уже публикуется или опубликовано, попробуйте позже'];
+                }
+                
+                // Проверяем успешные публикации за последние 10 минут
+                $pubStmt = $this->db->prepare("
+                    SELECT id 
+                    FROM publications 
+                    WHERE video_id = ? 
+                    AND platform = ?
+                    AND status = 'success'
+                    AND created_at >= DATE_SUB(NOW(), INTERVAL 10 MINUTE)
+                    LIMIT 1
+                ");
+                $pubStmt->execute([(int)$groupFile['video_id'], $platform]);
+                if ($pubStmt->fetch()) {
+                    $this->db->rollBack();
+                    error_log("SmartQueueService::publishGroupFileNow: Video {$groupFile['video_id']} was recently published to {$platform}");
+                    return ['success' => false, 'message' => 'Это видео недавно было опубликовано на ' . $platform];
                 }
 
                 $tempScheduleId = $this->scheduleRepo->create([
@@ -426,6 +452,8 @@ class SmartQueueService extends Service
                     'publish_at' => date('Y-m-d H:i:s'),
                     'status' => 'processing',
                 ]);
+                
+                error_log("SmartQueueService::publishGroupFileNow: Created schedule ID: {$tempScheduleId} for video {$groupFile['video_id']}");
 
                 if (!$tempScheduleId) {
                     $this->db->rollBack();
