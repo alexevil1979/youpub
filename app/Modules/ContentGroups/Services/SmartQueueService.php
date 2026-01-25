@@ -318,18 +318,33 @@ class SmartQueueService extends Service
             $platform = $schedule['platform'] ?? 'youtube';
             $templateId = $schedule['template_id'] ?? $group['template_id'] ?? null;
 
-            $context = [
-                'group_name' => $group['name'] ?? '',
-                'index' => $groupFile['order_index'] ?? 0,
-                'platform' => $platform,
-            ];
+            // Проверяем, есть ли сохраненное оформление в сессии (из превью)
+            $previewKey = "{$groupId}_{$fileId}";
+            $templated = null;
+            
+            if (isset($_SESSION['publish_previews'][$previewKey])) {
+                $templated = $_SESSION['publish_previews'][$previewKey];
+                // Удаляем из сессии после использования
+                unset($_SESSION['publish_previews'][$previewKey]);
+                error_log("SmartQueueService::publishGroupFileNow: Using saved preview for key: {$previewKey}");
+            }
+            
+            // Если сохраненного оформления нет, генерируем новое
+            if (!$templated) {
+                $context = [
+                    'group_name' => $group['name'] ?? '',
+                    'index' => $groupFile['order_index'] ?? 0,
+                    'platform' => $platform,
+                ];
 
-            $templated = $this->templateService->applyTemplate($templateId, [
-                'id' => $video['id'],
-                'title' => $video['title'] ?? $video['file_name'] ?? '',
-                'description' => $video['description'] ?? '',
-                'tags' => $video['tags'] ?? '',
-            ], $context);
+                $templated = $this->templateService->applyTemplate($templateId, [
+                    'id' => $video['id'],
+                    'title' => $video['title'] ?? $video['file_name'] ?? '',
+                    'description' => $video['description'] ?? '',
+                    'tags' => $video['tags'] ?? '',
+                ], $context);
+                error_log("SmartQueueService::publishGroupFileNow: Generated new template (no saved preview found)");
+            }
 
             $this->db->beginTransaction();
             try {

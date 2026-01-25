@@ -701,6 +701,11 @@ class GroupController extends Controller
             exit;
         }
 
+        // Инициализируем сессию, если не инициализирована
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
         $result = $this->groupService->publishGroupFileNow($id, $fileId, $userId);
         if ($result['success']) {
             $_SESSION['success'] = 'Видео опубликовано';
@@ -720,6 +725,11 @@ class GroupController extends Controller
         if (!$this->validateCsrf()) {
             $this->error('Invalid CSRF token', 403);
             return;
+        }
+
+        // Инициализируем сессию, если не инициализирована
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
         }
 
         $userId = $_SESSION['user_id'] ?? null;
@@ -765,6 +775,13 @@ class GroupController extends Controller
             'description' => $video['description'] ?? '',
             'tags' => $video['tags'] ?? '',
         ], $context);
+
+        // Сохраняем сгенерированное оформление в сессии для использования при публикации
+        if (!isset($_SESSION['publish_previews'])) {
+            $_SESSION['publish_previews'] = [];
+        }
+        $previewKey = "{$id}_{$fileId}";
+        $_SESSION['publish_previews'][$previewKey] = $preview;
 
         $this->success(['preview' => $preview]);
     }
