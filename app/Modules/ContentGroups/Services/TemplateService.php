@@ -107,12 +107,14 @@ class TemplateService extends Service
         }
 
         // Подготовка контекста для переменных
+        // Добавляем случайное число для дополнительной рандомизации при перегенерации
         $vars = array_merge([
             'title' => $video['title'] ?? '',
             'group_name' => $context['group_name'] ?? '',
             'index' => $context['index'] ?? '',
             'date' => date('d.m.Y'),
             'platform' => $context['platform'] ?? 'youtube',
+            'random' => mt_rand(1, 1000), // Для дополнительной рандомизации в шаблонах
         ], $context);
 
         $result = [
@@ -125,6 +127,8 @@ class TemplateService extends Service
         ];
 
         // НОВЫЙ ПОДХОД: Работа с массивами вариантов для Shorts
+        // Инициализируем генератор случайных чисел для лучшей рандомизации
+        mt_srand();
 
         // 1. ГЕНЕРАЦИЯ НАЗВАНИЯ (A/B тестирование)
         $titleVariants = !empty($template['title_variants']) ? json_decode($template['title_variants'], true) : [];
@@ -139,12 +143,12 @@ class TemplateService extends Service
             if (!empty($availableVariants)) {
                 $result['title'] = $availableVariants[array_rand($availableVariants)];
             } else {
-                // Если все начала использованы, берём первый вариант
-                $result['title'] = $titleVariants[0];
+                // Если все начала использованы, выбираем случайный из всех вариантов
+                $result['title'] = $titleVariants[array_rand($titleVariants)];
             }
         } elseif ($hasTitleVariants) {
-            // Без A/B тестирования: первый вариант
-            $result['title'] = $titleVariants[0];
+            // Без A/B тестирования: случайный выбор для перегенерации
+            $result['title'] = $titleVariants[array_rand($titleVariants)];
         } else {
             // Обратная совместимость: старый подход
             $emojiList = !empty($template['emoji_list']) ? json_decode($template['emoji_list'], true) : ['🎬'];
@@ -154,6 +158,8 @@ class TemplateService extends Service
                 $emojiList = ['🎬'];
             }
 
+            // Полная рандомизация emoji для старого подхода
+            shuffle($emojiList);
             $vars['random_emoji'] = $emojiList[array_rand($emojiList)];
             $result['title'] = $this->processTemplate($template['title_template'] ?? '', $vars, $video['title'] ?? '');
         }
@@ -184,14 +190,20 @@ class TemplateService extends Service
 
             $selectedVariant = $hookVariants[array_rand($hookVariants)];
 
-            // Добавляем emoji из соответствующей группы
+            // Добавляем emoji из соответствующей группы с полной рандомизацией
             $emojiGroups = !empty($template['emoji_groups']) ? json_decode($template['emoji_groups'], true) : [];
             if (isset($emojiGroups[$hookType])) {
-                $emojiList = explode(',', $emojiGroups[$hookType]);
-                // Максимум 2 emoji, реальный random
-                shuffle($emojiList);
-                $selectedEmojis = array_slice($emojiList, 0, min(2, count($emojiList)));
-                $selectedVariant .= ' ' . implode(' ', $selectedEmojis);
+                $emojiList = array_filter(array_map('trim', explode(',', $emojiGroups[$hookType])));
+                if (!empty($emojiList)) {
+                    // Полная рандомизация emoji
+                    shuffle($emojiList);
+                    // Выбираем случайное количество emoji (1-2)
+                    $emojiCount = min(rand(1, 2), count($emojiList));
+                    $selectedEmojis = array_slice($emojiList, 0, $emojiCount);
+                    if (!empty($selectedEmojis)) {
+                        $selectedVariant .= ' ' . implode(' ', $selectedEmojis);
+                    }
+                }
             }
 
             $result['description'] = $this->processTemplate($selectedVariant, $vars, $video['description'] ?? '');
@@ -206,6 +218,8 @@ class TemplateService extends Service
                 $emojiList = ['🎬'];
             }
 
+            // Полная рандомизация emoji для старого подхода
+            shuffle($emojiList);
             $vars['random_emoji'] = $emojiList[array_rand($emojiList)];
             $descriptionTemplate = $template['description_template'] ?? '';
             $result['description'] = $this->processTemplate($descriptionTemplate, $vars, $video['description'] ?? '');
@@ -220,27 +234,40 @@ class TemplateService extends Service
             error_log("TemplateService::applyTemplate: Using fallback description (original was empty: " . (empty($originalDescription) ? 'yes' : 'no') . "), length: " . mb_strlen($result['description']));
         }
 
-        // 3. ГЕНЕРАЦИЯ ТЕГОВ (ротация)
+        // 3. ГЕНЕРАЦИЯ ТЕГОВ (ротация с рандомизацией)
         $baseTags = !empty($template['base_tags']) ? array_map('trim', explode(',', $template['base_tags'])) : [];
         $tagVariants = !empty($template['tag_variants']) ? json_decode($template['tag_variants'], true) : [];
 
         $finalTags = $baseTags; // Начинаем с основных тегов
 
         if (!empty($tagVariants)) {
-            // Ротация: выбираем дополнительные теги из вариантов
-            shuffle($tagVariants);
+            // Ротация: выбираем дополнительные теги из вариантов с полной рандомизацией
+            // Перемешиваем массив вариантов для случайного порядка
+            $shuffledVariants = $tagVariants;
+            shuffle($shuffledVariants);
+            
             $additionalTags = [];
-            foreach ($tagVariants as $tagSet) {
+            foreach ($shuffledVariants as $tagSet) {
                 $tags = array_map('trim', explode(',', $tagSet));
+                // Перемешиваем теги внутри каждого набора
+                shuffle($tags);
                 $additionalTags = array_merge($additionalTags, $tags);
-                if (count($additionalTags) >= 5) break; // Хватит для 3-5 дополнительных тегов
+                if (count($additionalTags) >= 10) break; // Собираем больше тегов для лучшей рандомизации
             }
 
+            // Перемешиваем все собранные дополнительные теги
             shuffle($additionalTags);
-            $selectedAdditional = array_slice($additionalTags, 0, 5 - count($baseTags));
+            
+            // Выбираем случайное количество дополнительных тегов (от 2 до 5)
+            $maxAdditional = max(2, min(5, 10 - count($baseTags)));
+            $countAdditional = count($baseTags) > 0 ? min($maxAdditional, count($additionalTags)) : min(5, count($additionalTags));
+            $selectedAdditional = array_slice($additionalTags, 0, $countAdditional);
             $finalTags = array_merge($finalTags, $selectedAdditional);
         }
 
+        // Перемешиваем финальный список тегов для случайного порядка
+        shuffle($finalTags);
+        
         // Очищаем и форматируем теги
         $finalTags = array_unique(array_filter($finalTags));
         $result['tags'] = implode(', ', $finalTags);
