@@ -654,10 +654,12 @@ class GroupController extends Controller
 
         $templates = $this->templateService->getUserTemplates($userId, true);
         $templateName = null;
+        $templateData = null;
         if ($templateId) {
             foreach ($templates as $template) {
                 if ((int)$template['id'] === (int)$templateId) {
                     $templateName = $template['name'];
+                    $templateData = $template;
                     break;
                 }
             }
