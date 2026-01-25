@@ -579,8 +579,8 @@ class TemplateController extends Controller
                 'questions' => !empty($questions) && is_array($questions) ? json_encode($questions, JSON_UNESCAPED_UNICODE) : null,
                 'pinned_comments' => !empty($pinnedComments) && is_array($pinnedComments) ? json_encode($pinnedComments, JSON_UNESCAPED_UNICODE) : null,
                 'cta_types' => !empty($this->getParam('cta_types', [])) && is_array($this->getParam('cta_types', [])) ? json_encode($this->getParam('cta_types', []), JSON_UNESCAPED_UNICODE) : null,
-                'enable_ab_testing' => isset($this->getParam('enable_ab_testing', '1')) ? (int)($this->getParam('enable_ab_testing', '1') === '1') : 1,
-                'is_active' => isset($this->getParam('is_active', '1')) ? (int)($this->getParam('is_active', '1') === '1') : 1,
+                'enable_ab_testing' => (int)($this->getParam('enable_ab_testing', '1') === '1'),
+                'is_active' => (int)($this->getParam('is_active', '1') === '1'),
             ];
 
             $templateRepo->update($id, $data);
