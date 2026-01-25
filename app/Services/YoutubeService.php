@@ -166,14 +166,14 @@ class YoutubeService extends Service
                 ];
             }
             
-            // 3. Проверяем успешные публикации только за последние 2 минуты
+            // 3. Проверяем успешные публикации только за последние 15 секунд
             $pubStmt = $this->db->prepare("
                 SELECT id, platform_id, created_at 
                 FROM publications 
                 WHERE video_id = ? 
                 AND platform = 'youtube'
                 AND status = 'success'
-                AND created_at >= DATE_SUB(NOW(), INTERVAL 2 MINUTE)
+                AND created_at >= DATE_SUB(NOW(), INTERVAL 15 SECOND)
                 ORDER BY created_at DESC
                 LIMIT 1
             ");

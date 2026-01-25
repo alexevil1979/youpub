@@ -422,14 +422,14 @@ class SmartQueueService extends Service
                     return ['success' => false, 'message' => 'Видео уже публикуется, попробуйте позже'];
                 }
                 
-                // Проверяем успешные публикации только за последние 2 минуты (чтобы не блокировать повторные публикации)
+                // Проверяем успешные публикации только за последние 15 секунд (чтобы не блокировать повторные публикации)
                 $pubStmt = $this->db->prepare("
                     SELECT id, platform_id, created_at 
                     FROM publications 
                     WHERE video_id = ? 
                     AND platform = ?
                     AND status = 'success'
-                    AND created_at >= DATE_SUB(NOW(), INTERVAL 2 MINUTE)
+                    AND created_at >= DATE_SUB(NOW(), INTERVAL 15 SECOND)
                     ORDER BY created_at DESC
                     LIMIT 1
                 ");
@@ -438,7 +438,7 @@ class SmartQueueService extends Service
                 if ($recentPub) {
                     $this->db->rollBack();
                     error_log("SmartQueueService::publishGroupFileNow: Video {$groupFile['video_id']} was just published to {$platform} (publication ID: {$recentPub['id']}, created: {$recentPub['created_at']})");
-                    return ['success' => false, 'message' => 'Это видео только что было опубликовано на ' . $platform . '. Подождите несколько секунд.'];
+                    return ['success' => false, 'message' => 'Это видео только что было опубликовано на ' . $platform . '. Подождите 15 секунд.'];
                 }
                 
                 error_log("SmartQueueService::publishGroupFileNow: All checks passed, creating schedule for video {$groupFile['video_id']}");
