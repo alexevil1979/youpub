@@ -283,6 +283,11 @@ class SmartQueueService extends Service
     public function publishGroupFileNow(int $groupId, int $fileId, int $userId): array
     {
         try {
+            // Инициализируем сессию, если не инициализирована
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+            
             $group = $this->groupRepo->findById($groupId);
             if (!$group) {
                 return ['success' => false, 'message' => 'Группа не найдена'];
@@ -327,6 +332,12 @@ class SmartQueueService extends Service
                 // Удаляем из сессии после использования
                 unset($_SESSION['publish_previews'][$previewKey]);
                 error_log("SmartQueueService::publishGroupFileNow: Using saved preview for key: {$previewKey}");
+                error_log("SmartQueueService::publishGroupFileNow: Saved preview title: " . ($templated['title'] ?? 'N/A'));
+                error_log("SmartQueueService::publishGroupFileNow: Saved preview description: " . mb_substr($templated['description'] ?? 'N/A', 0, 100));
+                error_log("SmartQueueService::publishGroupFileNow: Saved preview tags: " . ($templated['tags'] ?? 'N/A'));
+            } else {
+                error_log("SmartQueueService::publishGroupFileNow: No saved preview found for key: {$previewKey}");
+                error_log("SmartQueueService::publishGroupFileNow: Session keys: " . (isset($_SESSION['publish_previews']) ? implode(', ', array_keys($_SESSION['publish_previews'])) : 'no publish_previews in session'));
             }
             
             // Если сохраненного оформления нет, генерируем новое
@@ -344,6 +355,7 @@ class SmartQueueService extends Service
                     'tags' => $video['tags'] ?? '',
                 ], $context);
                 error_log("SmartQueueService::publishGroupFileNow: Generated new template (no saved preview found)");
+                error_log("SmartQueueService::publishGroupFileNow: Generated title: " . ($templated['title'] ?? 'N/A'));
             }
 
             $this->db->beginTransaction();
@@ -480,6 +492,7 @@ class SmartQueueService extends Service
 
             if (!empty($templated['title'])) {
                 $updateData['title'] = $templated['title'];
+                error_log("SmartQueueService::updateVideoMetadata: Title to update: " . mb_substr($templated['title'], 0, 100));
             }
             // Обновляем description, если он сгенерирован шаблоном (не пустой)
             // TemplateService теперь всегда генерирует description (с fallback), поэтому проверяем !empty
@@ -491,11 +504,17 @@ class SmartQueueService extends Service
             }
             if (!empty($templated['tags'])) {
                 $updateData['tags'] = $templated['tags'];
+                error_log("SmartQueueService::updateVideoMetadata: Tags to update: " . mb_substr($templated['tags'], 0, 200));
             }
 
             if (!empty($updateData)) {
                 $videoRepo->update($schedule['video_id'], $updateData);
                 error_log("SmartQueueService::updateVideoMetadata: Updated video ID {$schedule['video_id']} with template data. Fields: " . implode(', ', array_keys($updateData)));
+                
+                // Проверяем, что данные действительно обновились
+                $updatedVideo = $videoRepo->findById($schedule['video_id']);
+                error_log("SmartQueueService::updateVideoMetadata: Verified update - title: " . mb_substr($updatedVideo['title'] ?? 'N/A', 0, 100));
+                error_log("SmartQueueService::updateVideoMetadata: Verified update - description: " . mb_substr($updatedVideo['description'] ?? 'N/A', 0, 100));
             } else {
                 error_log("SmartQueueService::updateVideoMetadata: No data to update for video ID {$schedule['video_id']}");
             }
