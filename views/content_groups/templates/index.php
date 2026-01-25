@@ -51,44 +51,76 @@ if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $filterDateTo)) {
 }
 
 $filteredTemplates = array_filter($templates, function($template) use ($searchQuery, $filterStatus, $filterDateFrom, $filterDateTo) {
-    if ($filterStatus === 'active' && empty($template['is_active'])) {
+    try {
+        // Проверяем, что $template является массивом
+        if (!is_array($template)) {
+            return false;
+        }
+        
+        if ($filterStatus === 'active' && empty($template['is_active'])) {
+            return false;
+        }
+        if ($filterStatus === 'inactive' && !empty($template['is_active'])) {
+            return false;
+        }
+        if ($searchQuery !== '') {
+            $name = (string)($template['name'] ?? '');
+            $desc = (string)($template['description'] ?? '');
+            // Используем stripos вместо mb_stripos для совместимости
+            if (function_exists('mb_stripos')) {
+                if (mb_stripos($name, $searchQuery) === false && mb_stripos($desc, $searchQuery) === false) {
+                    return false;
+                }
+            } else {
+                if (stripos($name, $searchQuery) === false && stripos($desc, $searchQuery) === false) {
+                    return false;
+                }
+            }
+        }
+        if ($filterDateFrom !== '' || $filterDateTo !== '') {
+            $createdAt = $template['created_at'] ?? null;
+            $createdTs = $createdAt ? @strtotime($createdAt) : 0;
+            if ($createdTs === false) {
+                $createdTs = 0;
+            }
+            if ($filterDateFrom !== '' && $createdTs < @strtotime($filterDateFrom)) {
+                return false;
+            }
+            if ($filterDateTo !== '' && $createdTs > @strtotime($filterDateTo . ' 23:59:59')) {
+                return false;
+            }
+        }
+        return true;
+    } catch (\Throwable $e) {
+        error_log("Error filtering template: " . $e->getMessage());
         return false;
     }
-    if ($filterStatus === 'inactive' && !empty($template['is_active'])) {
-        return false;
-    }
-    if ($searchQuery !== '') {
-        $name = (string)($template['name'] ?? '');
-        $desc = (string)($template['description'] ?? '');
-        if (mb_stripos($name, $searchQuery) === false && mb_stripos($desc, $searchQuery) === false) {
-            return false;
-        }
-    }
-    if ($filterDateFrom !== '' || $filterDateTo !== '') {
-        $createdAt = $template['created_at'] ?? null;
-        $createdTs = $createdAt ? strtotime($createdAt) : 0;
-        if ($filterDateFrom !== '' && $createdTs < strtotime($filterDateFrom)) {
-            return false;
-        }
-        if ($filterDateTo !== '' && $createdTs > strtotime($filterDateTo . ' 23:59:59')) {
-            return false;
-        }
-    }
-    return true;
 });
 
 $filteredTemplates = array_values($filteredTemplates);
-usort($filteredTemplates, function($a, $b) use ($sortBy) {
-    $aTime = !empty($a['created_at']) ? strtotime($a['created_at']) : 0;
-    $bTime = !empty($b['created_at']) ? strtotime($b['created_at']) : 0;
-    if ($aTime === $bTime) {
-        return 0;
-    }
-    if ($sortBy === 'created_at_asc') {
-        return $aTime < $bTime ? -1 : 1;
-    }
-    return $aTime > $bTime ? -1 : 1;
-});
+try {
+    usort($filteredTemplates, function($a, $b) use ($sortBy) {
+        try {
+            $aTime = !empty($a['created_at']) ? @strtotime($a['created_at']) : 0;
+            $bTime = !empty($b['created_at']) ? @strtotime($b['created_at']) : 0;
+            if ($aTime === false) $aTime = 0;
+            if ($bTime === false) $bTime = 0;
+            if ($aTime === $bTime) {
+                return 0;
+            }
+            if ($sortBy === 'created_at_asc') {
+                return $aTime < $bTime ? -1 : 1;
+            }
+            return $aTime > $bTime ? -1 : 1;
+        } catch (\Throwable $e) {
+            error_log("Error sorting templates: " . $e->getMessage());
+            return 0;
+        }
+    });
+} catch (\Throwable $e) {
+    error_log("Error in usort: " . $e->getMessage());
+    // Продолжаем с неотсортированным массивом
+}
 ?>
 
 <div class="filters-panel" style="margin-top: 1rem;">
@@ -152,21 +184,32 @@ usort($filteredTemplates, function($a, $b) use ($sortBy) {
             </thead>
             <tbody>
                 <?php foreach ($filteredTemplates as $template): ?>
+                    <?php if (!is_array($template)) continue; ?>
                     <tr>
-                        <td><?= htmlspecialchars($template['name']) ?></td>
+                        <td><?= htmlspecialchars($template['name'] ?? 'Без названия') ?></td>
                         <td><?= htmlspecialchars($template['description'] ?? '') ?></td>
                         <td>
-                            <?= !empty($template['created_at']) ? date('d.m.Y H:i', strtotime($template['created_at'])) : '-' ?>
+                            <?php 
+                            $createdAt = $template['created_at'] ?? null;
+                            if (!empty($createdAt)) {
+                                $timestamp = @strtotime($createdAt);
+                                echo $timestamp !== false ? date('d.m.Y H:i', $timestamp) : '-';
+                            } else {
+                                echo '-';
+                            }
+                            ?>
                         </td>
                         <td>
-                            <span class="status-badge status-<?= $template['is_active'] ? 'active' : 'inactive' ?>">
-                                <?= $template['is_active'] ? 'Активен' : 'Неактивен' ?>
+                            <span class="status-badge status-<?= !empty($template['is_active']) ? 'active' : 'inactive' ?>">
+                                <?= !empty($template['is_active']) ? 'Активен' : 'Неактивен' ?>
                             </span>
                         </td>
                         <td>
                             <div class="action-buttons">
-                                <a href="/content-groups/templates/<?= $template['id'] ?>/edit" class="btn btn-xs btn-primary" title="Редактировать"><?= \App\Helpers\IconHelper::render('edit', 14, 'icon-inline') ?></a>
-                                <button type="button" class="btn btn-xs btn-danger" onclick="deleteTemplate(<?= $template['id'] ?>)" title="Удалить"><?= \App\Helpers\IconHelper::render('delete', 14, 'icon-inline') ?></button>
+                                <?php if (!empty($template['id'])): ?>
+                                    <a href="/content-groups/templates/<?= (int)$template['id'] ?>/edit" class="btn btn-xs btn-primary" title="Редактировать"><?= \App\Helpers\IconHelper::render('edit', 14, 'icon-inline') ?></a>
+                                    <button type="button" class="btn btn-xs btn-danger" onclick="deleteTemplate(<?= (int)$template['id'] ?>)" title="Удалить"><?= \App\Helpers\IconHelper::render('delete', 14, 'icon-inline') ?></button>
+                                <?php endif; ?>
                             </div>
                         </td>
                     </tr>
