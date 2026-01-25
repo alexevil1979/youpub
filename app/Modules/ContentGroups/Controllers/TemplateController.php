@@ -12,13 +12,31 @@ use App\Modules\ContentGroups\Services\AutoShortsGenerator;
 class TemplateController extends Controller
 {
     private TemplateService $templateService;
-    private AutoShortsGenerator $autoGenerator;
+    private ?AutoShortsGenerator $autoGenerator = null;
 
     public function __construct()
     {
         parent::__construct();
-        $this->templateService = new TemplateService();
-        $this->autoGenerator = new AutoShortsGenerator();
+        try {
+            $this->templateService = new TemplateService();
+        } catch (\Throwable $e) {
+            error_log("TemplateController::__construct: Error initializing TemplateService: " . $e->getMessage());
+            throw $e;
+        }
+        // AutoShortsGenerator инициализируем лениво, только когда нужно
+    }
+    
+    private function getAutoGenerator(): AutoShortsGenerator
+    {
+        if ($this->autoGenerator === null) {
+            try {
+                $this->autoGenerator = new AutoShortsGenerator();
+            } catch (\Throwable $e) {
+                error_log("TemplateController::getAutoGenerator: Error initializing AutoShortsGenerator: " . $e->getMessage());
+                throw $e;
+            }
+        }
+        return $this->autoGenerator;
     }
 
     /**
@@ -66,12 +84,16 @@ class TemplateController extends Controller
             
             // Проверяем существование файла представления
             $viewPath = __DIR__ . '/../../../../views/content_groups/templates/index.php';
+            error_log("TemplateController::index: View path: {$viewPath}");
             if (!file_exists($viewPath)) {
+                error_log("TemplateController::index: View file not found: {$viewPath}");
                 throw new \Exception("View file not found: {$viewPath}");
             }
             
+            error_log("TemplateController::index: Including view file");
             // Включаем представление
             include $viewPath;
+            error_log("TemplateController::index: View file included successfully");
             
         } catch (\Exception $e) {
             error_log("TemplateController::index: Exception - " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
@@ -172,7 +194,7 @@ class TemplateController extends Controller
                 }
 
                 // Генерируем контент
-                $generatedResult = $this->autoGenerator->generateFromIdea($videoIdea);
+                $generatedResult = $this->getAutoGenerator()->generateFromIdea($videoIdea);
 
                 // Заполняем поля на основе сгенерированного контента
                 $content = $generatedResult['content'];
@@ -548,17 +570,10 @@ class TemplateController extends Controller
             }
 
             // Проверяем, что autoGenerator инициализирован
-            if (!$this->autoGenerator) {
-                error_log('TemplateController::suggestContent: AutoGenerator not initialized');
-                header('Content-Type: application/json');
-                echo json_encode(['success' => false, 'message' => 'Система генерации не инициализирована']);
-                exit;
-            }
-
             // Генерируем контент (20-30 вариантов)
             $variantCount = 25; // Генерируем 25 вариантов для богатого выбора
             error_log('TemplateController::suggestContent: Calling autoGenerator->generateMultipleVariants with ' . $variantCount . ' variants');
-            $variants = $this->autoGenerator->generateMultipleVariants($idea, $variantCount);
+            $variants = $this->getAutoGenerator()->generateMultipleVariants($idea, $variantCount);
             error_log('TemplateController::suggestContent: Generation completed successfully, got ' . count($variants) . ' variants');
 
             if (empty($variants)) {

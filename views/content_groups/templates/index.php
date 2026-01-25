@@ -252,6 +252,27 @@ function deleteTemplate(id) {
 </script>
 
 <?php
-$content = ob_get_clean();
-include __DIR__ . '/../../layout.php';
+try {
+    $content = ob_get_clean();
+    if ($content === false) {
+        error_log("Templates index view: Failed to get buffer content");
+        $content = '<div class="alert alert-error">Ошибка при загрузке содержимого</div>';
+    }
+    
+    $layoutPath = __DIR__ . '/../../layout.php';
+    if (!file_exists($layoutPath)) {
+        error_log("Templates index view: Layout file not found: {$layoutPath}");
+        http_response_code(500);
+        echo "Layout file not found. Please check server logs.";
+        exit;
+    }
+    
+    include $layoutPath;
+} catch (\Throwable $e) {
+    error_log("Templates index view: Fatal error: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+    ob_end_clean();
+    http_response_code(500);
+    echo "Fatal error loading templates page. Please check server logs.";
+    exit;
+}
 ?>
