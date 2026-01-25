@@ -49,27 +49,33 @@ ob_start();
     <h3>Как будет опубликовано</h3>
     <div style="margin-top: 1rem;">
         <div style="margin-bottom: 0.75rem;">
-            <strong>Название:</strong>
-            <div style="color: #2c3e50; word-break: break-word;">
+            <?php $isYoutube = in_array($platform, ['youtube', 'both'], true); ?>
+            <strong><?= $isYoutube ? 'Название (YouTube)' : 'Название' ?>:</strong>
+            <div id="publish-preview-title" style="color: #2c3e50; word-break: break-word;">
                 <?= htmlspecialchars($preview['title'] ?? 'Без названия') ?>
             </div>
         </div>
-        <?php if (!empty($preview['description'])): ?>
-            <div style="margin-bottom: 0.75rem;">
-                <strong>Описание:</strong>
-                <div style="color: #666; white-space: pre-wrap;">
-                    <?= htmlspecialchars($preview['description']) ?>
-                </div>
+        <div style="margin-bottom: 0.75rem;">
+            <strong><?= $isYoutube ? 'Описание (YouTube)' : 'Описание' ?>:</strong>
+            <div id="publish-preview-description" style="color: #666; white-space: pre-wrap;">
+                <?= htmlspecialchars($preview['description'] ?? '—') ?>
             </div>
-        <?php endif; ?>
-        <?php if (!empty($preview['tags'])): ?>
-            <div>
-                <strong>Теги:</strong>
-                <div style="color: #666; word-break: break-word;">
-                    <?= htmlspecialchars($preview['tags']) ?>
-                </div>
+        </div>
+        <div>
+            <strong>Теги (YouTube):</strong>
+            <div id="publish-preview-tags" style="color: #666; word-break: break-word;">
+                <?= htmlspecialchars($preview['tags'] ?? '—') ?>
             </div>
-        <?php endif; ?>
+        </div>
+    </div>
+    <div style="margin-top: 1rem;">
+        <button type="button"
+                class="btn btn-sm btn-secondary"
+                id="regenerate-preview-btn"
+                title="Перегенерировать оформление"
+                aria-label="Перегенерировать оформление">
+            <?= \App\Helpers\IconHelper::render('shuffle', 16, 'icon-inline') ?>
+        </button>
     </div>
 </div>
 
@@ -77,14 +83,73 @@ ob_start();
     <a href="/content-groups/<?= (int)$group['id'] ?>" class="btn btn-secondary">Назад к группе</a>
     <form method="POST" action="/content-groups/<?= (int)$group['id'] ?>/files/<?= (int)$file['id'] ?>/publish-now" style="display: inline;">
         <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">
-        <button type="submit" class="btn btn-success" <?= $canPublish ? '' : 'disabled' ?> onclick="return confirm('Опубликовать видео сейчас?');">
-            Опубликовать сейчас
+        <button type="submit"
+                class="btn btn-success"
+                <?= $canPublish ? '' : 'disabled' ?>
+                title="Опубликовать сейчас"
+                aria-label="Опубликовать сейчас"
+                onclick="return confirm('Опубликовать видео сейчас?');">
+            <?= \App\Helpers\IconHelper::render('publish', 16, 'icon-inline') ?>
         </button>
     </form>
     <?php if (!$canPublish): ?>
         <span style="margin-left: 0.75rem; color: #e74c3c; font-size: 0.9rem;">Этот файл нельзя опубликовать сейчас</span>
     <?php endif; ?>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const regenerateBtn = document.getElementById('regenerate-preview-btn');
+    if (!regenerateBtn) {
+        return;
+    }
+
+    const csrfToken = <?= json_encode($csrfToken) ?>;
+    const previewTitle = document.getElementById('publish-preview-title');
+    const previewDescription = document.getElementById('publish-preview-description');
+    const previewTags = document.getElementById('publish-preview-tags');
+
+    regenerateBtn.addEventListener('click', () => {
+        regenerateBtn.disabled = true;
+        fetch('/content-groups/<?= (int)$group['id'] ?>/files/<?= (int)$file['id'] ?>/publish-now/preview', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({})
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(err.message || 'Ошибка сервера (HTTP ' + response.status + ')');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            const preview = data.data && data.data.preview ? data.data.preview : {};
+            if (previewTitle) {
+                previewTitle.textContent = preview.title || 'Без названия';
+            }
+            if (previewDescription) {
+                previewDescription.textContent = preview.description || '—';
+            }
+            if (previewTags) {
+                previewTags.textContent = preview.tags || '—';
+            }
+        })
+        .catch(error => {
+            console.error('Preview regeneration error:', error);
+            alert('Не удалось перегенерировать оформление: ' + error.message);
+        })
+        .finally(() => {
+            regenerateBtn.disabled = false;
+        });
+    });
+});
+</script>
 
 <?php
 $content = ob_get_clean();

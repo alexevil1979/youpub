@@ -139,6 +139,7 @@ $router->post('/content-groups/{id}/toggle-status', [GroupController::class, 'to
 $router->post('/content-groups/{id}/files/{fileId}/toggle-status', [GroupController::class, 'toggleFileStatus'], [AuthMiddleware::class]);
 $router->get('/content-groups/{id}/files/{fileId}/publish-now', [GroupController::class, 'showPublishNow'], [AuthMiddleware::class]);
 $router->post('/content-groups/{id}/files/{fileId}/publish-now', [GroupController::class, 'publishNow'], [AuthMiddleware::class]);
+$router->post('/content-groups/{id}/files/{fileId}/publish-now/preview', [GroupController::class, 'regeneratePublishPreview'], [AuthMiddleware::class]);
 $router->post('/content-groups/{id}/files/{fileId}/clear-publication', [GroupController::class, 'clearFilePublication'], [AuthMiddleware::class]);
 $router->post('/content-groups/{id}/files/clear-publication', [GroupController::class, 'clearFilesPublication'], [AuthMiddleware::class]);
 $router->post('/content-groups/{id}/duplicate', [GroupController::class, 'duplicate'], [AuthMiddleware::class]);

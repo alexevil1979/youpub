@@ -709,4 +709,61 @@ class GroupController extends Controller
         header('Location: /content-groups/' . $id . '/files/' . $fileId . '/publish-now');
         exit;
     }
+
+    /**
+     * Перегенерировать превью публикации по шаблону
+     */
+    public function regeneratePublishPreview(int $id, int $fileId): void
+    {
+        if (!$this->validateCsrf()) {
+            $this->error('Invalid CSRF token', 403);
+            return;
+        }
+
+        $userId = $_SESSION['user_id'] ?? null;
+        if (!$userId) {
+            $this->error('Необходима авторизация', 401);
+            return;
+        }
+
+        $group = $this->groupService->getGroupWithStats($id, $userId);
+        if (!$group) {
+            $this->error('Группа не найдена', 404);
+            return;
+        }
+
+        $fileRepo = new \App\Modules\ContentGroups\Repositories\ContentGroupFileRepository();
+        $file = $fileRepo->findById($fileId);
+        if (!$file || (int)$file['group_id'] !== (int)$id) {
+            $this->error('Файл не найден', 404);
+            return;
+        }
+
+        $videoRepo = new \App\Repositories\VideoRepository();
+        $video = $videoRepo->findById((int)$file['video_id']);
+        if (!$video) {
+            $this->error('Видео не найдено', 404);
+            return;
+        }
+
+        $scheduleRepo = new \App\Repositories\ScheduleRepository();
+        $latestSchedules = $scheduleRepo->findLatestByGroupIds([(int)$id]);
+        $schedule = $latestSchedules[$id] ?? null;
+        $platform = $schedule['platform'] ?? 'youtube';
+        $templateId = $schedule['template_id'] ?? $group['template_id'] ?? null;
+
+        $context = [
+            'group_name' => $group['name'],
+            'index' => $file['order_index'] ?? 0,
+            'platform' => $platform,
+        ];
+        $preview = $this->templateService->applyTemplate($templateId, [
+            'id' => $video['id'],
+            'title' => $video['title'] ?? $video['file_name'] ?? '',
+            'description' => $video['description'] ?? '',
+            'tags' => $video['tags'] ?? '',
+        ], $context);
+
+        $this->success(['preview' => $preview]);
+    }
 }
