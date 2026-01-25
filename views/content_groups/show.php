@@ -345,6 +345,14 @@ ob_start();
                                         Сброс
                                     </button>
                                 <?php endif; ?>
+                                <?php if ($file['status'] === 'new' || $file['status'] === 'queued'): ?>
+                                    <button type="button"
+                                            class="btn btn-xs btn-danger"
+                                            onclick="markDoNotPublish(<?= $group['id'] ?>, <?= $file['id'] ?>)"
+                                            title="Не публиковать этот файл">
+                                        Не публиковать
+                                    </button>
+                                <?php endif; ?>
                                 <button type="button" class="btn btn-xs <?= ($file['status'] === 'new' || $file['status'] === 'queued') ? 'btn-warning' : 'btn-success' ?>" 
                                         onclick="toggleFileStatus(<?= $group['id'] ?>, <?= $file['id'] ?>, '<?= $file['status'] ?>')"
                                         title="<?= ($file['status'] === 'new' || $file['status'] === 'queued') ? 'Приостановить' : 'Возобновить' ?>">
@@ -484,6 +492,42 @@ function clearFilePublication(groupId, fileId) {
             setTimeout(() => window.location.reload(), 1000);
         } else {
             const errorMsg = data.message || 'Не удалось сбросить публикацию';
+            showToast('Ошибка: ' + errorMsg, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Произошла ошибка: ' + error.message, 'error');
+    });
+}
+
+function markDoNotPublish(groupId, fileId) {
+    if (!confirm('Пометить файл как "не публиковать"?')) {
+        return;
+    }
+
+    fetch('/content-groups/' + groupId + '/files/' + fileId + '/toggle-status', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({status: 'paused'})
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.message || 'Ошибка сервера (HTTP ' + response.status + ')');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showToast('Файл помечен как "не публиковать"', 'success');
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            const errorMsg = data.message || 'Не удалось обновить статус';
             showToast('Ошибка: ' + errorMsg, 'error');
         }
     })
