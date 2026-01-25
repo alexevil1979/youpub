@@ -58,7 +58,7 @@ ob_start();
         <div style="margin-bottom: 0.75rem;">
             <strong><?= $isYoutube ? 'Описание (YouTube)' : 'Описание' ?>:</strong>
             <div id="publish-preview-description" style="color: #666; white-space: pre-wrap;">
-                <?= htmlspecialchars($preview['description'] ?? '—') ?>
+                <?= htmlspecialchars(trim($preview['description'] ?? '') ?: 'Посмотрите это видео! 🎬') ?>
             </div>
         </div>
         <div>
@@ -138,7 +138,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 previewTitle.textContent = preview.title || 'Без названия';
             }
             if (previewDescription) {
-                previewDescription.textContent = preview.description || '—';
+                // TemplateService всегда генерирует описание с fallback, но на всякий случай проверяем
+                const description = preview.description || 'Посмотрите это видео! 🎬';
+                previewDescription.textContent = description.trim() || 'Посмотрите это видео! 🎬';
             }
             if (previewTags) {
                 previewTags.textContent = preview.tags || '—';

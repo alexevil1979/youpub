@@ -86,7 +86,7 @@ class TemplateService extends Service
         if (!$templateId) {
             return [
                 'title' => $video['title'] ?? '',
-                'description' => $video['description'] ?? '',
+                'description' => $video['description'] ?: 'Посмотрите это видео! 🎬',
                 'tags' => $video['tags'] ?? '',
                 'question' => '',
                 'pinned_comment' => '',
@@ -98,7 +98,7 @@ class TemplateService extends Service
         if (!$template) {
             return [
                 'title' => $video['title'] ?? '',
-                'description' => $video['description'] ?? '',
+                'description' => $video['description'] ?: 'Посмотрите это видео! 🎬',
                 'tags' => $video['tags'] ?? '',
                 'question' => '',
                 'pinned_comment' => '',
@@ -214,9 +214,10 @@ class TemplateService extends Service
         }
 
         // Fallback: если описание не сгенерировано, используем исходное или дефолтное
-        if (empty($result['description'])) {
-            $result['description'] = $video['description'] ?? 'Посмотрите это видео! 🎬';
-            error_log("TemplateService::applyTemplate: Using fallback description, length: " . mb_strlen($result['description']));
+        if (empty(trim($result['description']))) {
+            $originalDescription = trim($video['description'] ?? '');
+            $result['description'] = !empty($originalDescription) ? $originalDescription : 'Посмотрите это видео! 🎬';
+            error_log("TemplateService::applyTemplate: Using fallback description (original was empty: " . (empty($originalDescription) ? 'yes' : 'no') . "), length: " . mb_strlen($result['description']));
         }
 
         // 3. ГЕНЕРАЦИЯ ТЕГОВ (ротация)
@@ -254,6 +255,12 @@ class TemplateService extends Service
         $pinnedComments = !empty($template['pinned_comments']) ? json_decode($template['pinned_comments'], true) : [];
         if (!empty($pinnedComments)) {
             $result['pinned_comment'] = $pinnedComments[array_rand($pinnedComments)];
+        }
+
+        // Финальная проверка: описание всегда должно быть заполнено
+        if (empty(trim($result['description']))) {
+            $result['description'] = 'Посмотрите это видео! 🎬';
+            error_log("TemplateService::applyTemplate: Final fallback applied - description was empty");
         }
 
         return $result;
