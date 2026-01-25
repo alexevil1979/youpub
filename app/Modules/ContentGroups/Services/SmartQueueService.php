@@ -567,10 +567,19 @@ class SmartQueueService extends Service
                 $service = new YoutubeService();
                 // Передаем метаданные напрямую, чтобы не зависеть от обновления БД
                 $metadata = [
-                    'title' => $templated['title'] ?? null,
-                    'description' => $templated['description'] ?? null,
-                    'tags' => $templated['tags'] ?? null,
+                    'title' => !empty($templated['title']) ? trim($templated['title']) : null,
+                    'description' => !empty($templated['description']) ? trim($templated['description']) : null,
+                    'tags' => !empty($templated['tags']) ? trim($templated['tags']) : null,
                 ];
+                
+                // ВАЖНО: Проверяем, что title не пустой и не "unknown"
+                if (empty($metadata['title']) || strtolower($metadata['title']) === 'unknown') {
+                    error_log("SmartQueueService::publishVideo: WARNING - Title is empty or 'unknown' in templated data!");
+                    error_log("SmartQueueService::publishVideo: Templated data - title: " . ($templated['title'] ?? 'N/A') . ", description: " . (empty($templated['description']) ? 'empty' : mb_substr($templated['description'], 0, 50)));
+                    // Не передаем пустой title, пусть YoutubeService использует fallback
+                    $metadata['title'] = null;
+                }
+                
                 error_log("SmartQueueService::publishVideo: Publishing to YouTube with schedule ID: {$scheduleId}");
                 error_log("SmartQueueService::publishVideo: Passing metadata - title: " . mb_substr($metadata['title'] ?? 'N/A', 0, 100));
                 return $service->publishVideo($scheduleId, $metadata);
