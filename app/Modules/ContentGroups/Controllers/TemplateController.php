@@ -189,9 +189,19 @@ class TemplateController extends Controller
 
             } else {
                 // Обычная обработка полей
-                $titleVariants = $this->getParam('title_variants', []);
+                // Читаем title_variants из POST (может быть массивом из title_variants[])
+                $titleVariantsRaw = $this->getParam('title_variants', []);
+                $titleVariants = is_array($titleVariantsRaw) ? $titleVariantsRaw : [];
+                // Удаляем пустые значения, но сохраняем непустые
+                $titleVariants = array_filter(array_map('trim', $titleVariants), function($v) { return !empty($v); });
+                
                 $descriptionTypes = $this->getParam('description_types', []);
                 $descriptionTexts = $this->getParam('description_texts', []);
+                
+                // Логируем для отладки
+                error_log("TemplateController::create - title_variants count: " . count($titleVariants));
+                error_log("TemplateController::create - description_types count: " . (is_array($descriptionTypes) ? count($descriptionTypes) : 0));
+                error_log("TemplateController::create - description_texts count: " . (is_array($descriptionTexts) ? count($descriptionTexts) : 0));
 
                 // Группируем описания по типам
                 $descriptionVariants = [];
@@ -257,6 +267,13 @@ class TemplateController extends Controller
                 }
             }
 
+            // Логируем перед сохранением
+            error_log("TemplateController::create - Final data before save:");
+            error_log("  title_variants: " . (is_array($titleVariants) ? count($titleVariants) . " items" : "not array"));
+            error_log("  description_variants: " . (is_array($descriptionVariants) ? count($descriptionVariants) . " types" : "not array"));
+            error_log("  base_tags: " . ($baseTags ?: "empty"));
+            error_log("  tag_variants: " . (is_array($tagVariants) ? count($tagVariants) . " items" : "not array"));
+            
             $data = [
                 'name' => $this->getParam('name', ''),
                 'description' => $this->getParam('description', ''),
@@ -269,11 +286,11 @@ class TemplateController extends Controller
                 // Новые поля для Shorts
                 'hook_type' => $this->getParam('hook_type', 'emotional'),
                 'focus_points' => $this->getParam('focus_points', []),
-                'title_variants' => !empty($titleVariants) ? array_filter($titleVariants) : null,
+                'title_variants' => !empty($titleVariants) ? array_values($titleVariants) : null, // array_values для переиндексации
                 'description_variants' => !empty($descriptionVariants) ? $descriptionVariants : null,
                 'emoji_groups' => !empty($emojiGroups) ? $emojiGroups : null,
                 'base_tags' => $this->getParam('base_tags', ''),
-                'tag_variants' => $this->getParam('tag_variants', []),
+                'tag_variants' => is_array($tagVariants) ? array_filter(array_map('trim', $tagVariants), function($v) { return !empty($v); }) : [],
                 'questions' => $questions,
                 'pinned_comments' => $pinnedComments,
                 'cta_types' => $this->getParam('cta_types', []),
@@ -382,7 +399,12 @@ class TemplateController extends Controller
             }
             
             // Обработка новых полей для Shorts (аналогично create)
-            $titleVariants = $this->getParam('title_variants', []);
+            // Читаем title_variants из POST (может быть массивом из title_variants[])
+            $titleVariantsRaw = $this->getParam('title_variants', []);
+            $titleVariants = is_array($titleVariantsRaw) ? $titleVariantsRaw : [];
+            // Удаляем пустые значения, но сохраняем непустые
+            $titleVariants = array_filter(array_map('trim', $titleVariants), function($v) { return !empty($v); });
+            
             $descriptionTypes = $this->getParam('description_types', []);
             $descriptionTexts = $this->getParam('description_texts', []);
 
@@ -441,6 +463,10 @@ class TemplateController extends Controller
                 $pinnedComments = [];
             }
 
+            $baseTags = $this->getParam('base_tags', '');
+            $tagVariantsRaw = $this->getParam('tag_variants', []);
+            $tagVariants = is_array($tagVariantsRaw) ? array_filter(array_map('trim', $tagVariantsRaw), function($v) { return !empty($v); }) : [];
+            
             $data = [
                 'name' => $this->getParam('name', ''),
                 'description' => $this->getParam('description', ''),
@@ -453,11 +479,11 @@ class TemplateController extends Controller
                 // Новые поля для Shorts
                 'hook_type' => $this->getParam('hook_type', 'emotional'),
                 'focus_points' => $this->getParam('focus_points', []),
-                'title_variants' => !empty($titleVariants) ? array_filter($titleVariants) : null,
+                'title_variants' => !empty($titleVariants) ? array_values($titleVariants) : null, // array_values для переиндексации
                 'description_variants' => !empty($descriptionVariants) ? $descriptionVariants : null,
                 'emoji_groups' => !empty($emojiGroups) ? $emojiGroups : null,
-                'base_tags' => $this->getParam('base_tags', ''),
-                'tag_variants' => $this->getParam('tag_variants', []),
+                'base_tags' => $baseTags,
+                'tag_variants' => $tagVariants,
                 'questions' => $questions,
                 'pinned_comments' => $pinnedComments,
                 'cta_types' => $this->getParam('cta_types', []),
