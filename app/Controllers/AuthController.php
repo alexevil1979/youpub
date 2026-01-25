@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use Core\Controller;
 use Core\Auth;
+use Core\RateLimiter;
 
 /**
  * Контроллер авторизации
@@ -37,23 +38,45 @@ class AuthController extends Controller
      */
     public function login(): void
     {
-        $email = $this->getParam('email');
-        $password = $this->getParam('password');
+        if (!$this->validateCsrf()) {
+            if (strpos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false) {
+                $this->error('Invalid CSRF token', 403);
+            } else {
+                $_SESSION['error'] = 'Сессия устарела. Обновите страницу и попробуйте снова.';
+                header('Location: /login');
+            }
+            return;
+        }
+
+        $emailInput = trim((string)$this->getParam('email', ''));
+        $password = (string)$this->getParam('password', '');
+        $email = filter_var($emailInput, FILTER_VALIDATE_EMAIL) ?: '';
 
         if (!$email || !$password) {
             $this->error('Email and password are required');
             return;
         }
 
+        $rateLimiter = new RateLimiter();
+        $ip = $this->auth->getClientIp();
+        $rateKey = 'auth_login:' . strtolower($email) . ':' . $ip;
+        $rate = $rateLimiter->check($rateKey, 5, 600);
+        if (!$rate['allowed']) {
+            $this->error('Too many attempts. Please try again later.', 429);
+            return;
+        }
+
         $result = $this->auth->login($email, $password);
 
         if ($result['success']) {
+            $rateLimiter->clear($rateKey);
             if (strpos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false) {
                 $this->success($result['user'], $result['message']);
             } else {
                 header('Location: /dashboard');
             }
         } else {
+            $rateLimiter->hit($rateKey, 5, 600);
             if (strpos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false) {
                 $this->error($result['message'], 401);
             } else {
@@ -82,23 +105,44 @@ class AuthController extends Controller
      */
     public function register(): void
     {
-        $email = $this->getParam('email');
-        $password = $this->getParam('password');
-        $name = $this->getParam('name');
+        if (!$this->validateCsrf()) {
+            if (strpos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false) {
+                $this->error('Invalid CSRF token', 403);
+            } else {
+                $_SESSION['error'] = 'Сессия устарела. Обновите страницу и попробуйте снова.';
+                header('Location: /register');
+            }
+            return;
+        }
+
+        $emailInput = trim((string)$this->getParam('email', ''));
+        $password = (string)$this->getParam('password', '');
+        $name = trim((string)$this->getParam('name', ''));
+        $email = filter_var($emailInput, FILTER_VALIDATE_EMAIL) ?: '';
 
         if (!$email || !$password) {
             $this->error('Email and password are required');
             return;
         }
 
-        if (strlen($password) < 6) {
-            $this->error('Password must be at least 6 characters');
+        if (strlen($password) < 12 || !preg_match('/[a-z]/', $password) || !preg_match('/[A-Z]/', $password) || !preg_match('/[0-9]/', $password)) {
+            $this->error('Password must be at least 12 characters and contain uppercase, lowercase, and numbers');
+            return;
+        }
+
+        $rateLimiter = new RateLimiter();
+        $ip = $this->auth->getClientIp();
+        $rateKey = 'auth_register:' . strtolower($email) . ':' . $ip;
+        $rate = $rateLimiter->check($rateKey, 3, 3600);
+        if (!$rate['allowed']) {
+            $this->error('Too many attempts. Please try again later.', 429);
             return;
         }
 
         $result = $this->auth->register($email, $password, $name);
 
         if ($result['success']) {
+            $rateLimiter->clear($rateKey);
             if (strpos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false) {
                 $this->success([], $result['message']);
             } else {
@@ -106,6 +150,7 @@ class AuthController extends Controller
                 header('Location: /login');
             }
         } else {
+            $rateLimiter->hit($rateKey, 3, 3600);
             if (strpos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false) {
                 $this->error($result['message'], 400);
             } else {

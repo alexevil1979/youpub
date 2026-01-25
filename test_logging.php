@@ -8,14 +8,25 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 use Core\Database;
 
-$config = require __DIR__ . '/config/env.php';
+$configPath = __DIR__ . '/config/env.php';
+if (!file_exists($configPath)) {
+    echo "SKIP: config/env.php not found\n";
+    exit(0);
+}
+$config = require $configPath;
 
 // Установка часового пояса
 $timezone = $config['TIMEZONE'] ?? 'Europe/Samara';
 date_default_timezone_set($timezone);
 
 // Инициализация БД
-Database::init($config);
+try {
+    Database::init($config);
+    Database::getInstance();
+} catch (\Throwable $e) {
+    echo "SKIP: Database connection failed: " . $e->getMessage() . "\n";
+    exit(0);
+}
 
 echo "=== Тест логирования SmartQueueService ===\n\n";
 

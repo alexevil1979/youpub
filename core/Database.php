@@ -63,7 +63,11 @@ class Database
                     $minutes = (abs($offset) % 3600) / 60;
                     $sign = $offset >= 0 ? '+' : '-';
                     $offsetStr = sprintf('%s%02d:%02d', $sign, $hours, $minutes);
-                    self::$instance->exec("SET time_zone = '{$offsetStr}'");
+                    if (preg_match('/^[+-]\d{2}:\d{2}$/', $offsetStr) === 1) {
+                        self::$instance->exec("SET time_zone = '{$offsetStr}'");
+                    } else {
+                        self::$instance->exec("SET time_zone = '+00:00'");
+                    }
                 } catch (\Exception $e) {
                     error_log("Failed to set MySQL timezone: " . $e->getMessage());
                     // Используем UTC по умолчанию

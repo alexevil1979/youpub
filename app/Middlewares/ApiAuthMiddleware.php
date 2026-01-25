@@ -22,8 +22,18 @@ class ApiAuthMiddleware
         $token = $_SERVER['HTTP_AUTHORIZATION'] ?? null;
         if ($token && strpos($token, 'Bearer ') === 0) {
             $token = substr($token, 7);
-            // TODO: Реализовать проверку JWT токена
-            // Пока используем сессии
+            $payload = $auth->validateJwt($token);
+            if ($payload && !empty($payload['sub'])) {
+                $user = $auth->getUserById((int)$payload['sub']);
+                if ($user) {
+                    $auth->startSession();
+                    $_SESSION['user_id'] = $user['id'];
+                    $_SESSION['user_email'] = $user['email'];
+                    $_SESSION['user_role'] = $user['role'];
+                    $_SESSION['user_name'] = $user['name'];
+                    return true;
+                }
+            }
         }
         
         http_response_code(401);

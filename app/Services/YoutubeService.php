@@ -208,11 +208,15 @@ class YoutubeService extends Service
         string $tags
     ): array {
         // Создаем метаданные видео
+        $categoryId = (string)($this->config['YOUTUBE_CATEGORY_ID'] ?? '22');
+        if (!preg_match('/^\d+$/', $categoryId)) {
+            $categoryId = '22';
+        }
         $snippet = [
             'title' => $title,
             'description' => $description,
             'tags' => !empty($tags) ? explode(',', $tags) : [],
-            'categoryId' => '22', // People & Blogs
+            'categoryId' => $categoryId,
         ];
 
         $status = [

@@ -20,7 +20,7 @@ class AdminMiddleware
         }
         
         $user = $auth->user();
-        if ($user['role'] !== 'admin') {
+        if (!$user || $user['role'] !== 'admin') {
             http_response_code(403);
             echo 'Forbidden';
             return false;

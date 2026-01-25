@@ -67,7 +67,7 @@
 - [ ] `views/content_groups/create.php` - форма создания группы
 - [ ] `views/content_groups/show.php` - просмотр группы с файлами
 - [ ] `views/content_groups/templates/index.php` - список шаблонов
-- [ ] `views/content_groups/templates/create.php` - форма создания шаблона
+- [ ] `views/content_groups/templates/create_v2.php` - форма создания Shorts шаблона
 - [ ] `views/content_groups/schedules/create.php` - форма создания умного расписания
 
 ### 2. Интеграция с существующим UI

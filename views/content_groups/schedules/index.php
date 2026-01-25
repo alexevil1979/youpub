@@ -29,6 +29,21 @@ if (!isset($smartSchedules)) {
 if (!isset($groups)) {
     $groups = [];
 }
+$formatInterval = static function (int $seconds): string {
+    $seconds = max(0, $seconds);
+    $days = intdiv($seconds, 86400);
+    $hours = intdiv($seconds % 86400, 3600);
+    $minutes = intdiv($seconds % 3600, 60);
+    $parts = [];
+    if ($days > 0) {
+        $parts[] = $days . 'д';
+    }
+    if ($hours > 0 || $days > 0) {
+        $parts[] = $hours . 'ч';
+    }
+    $parts[] = $minutes . 'м';
+    return implode(' ', $parts);
+};
 ?>
 
 <?php if (empty($smartSchedules)): ?>
@@ -51,6 +66,8 @@ if (!isset($groups)) {
                 <?php foreach ($smartSchedules as $schedule): 
                     $groupId = isset($schedule['content_group_id']) ? (int)$schedule['content_group_id'] : 0;
                     $group = isset($groups[$groupId]) ? $groups[$groupId] : null;
+                    $publishAtRaw = $schedule['publish_at'] ?? null;
+                    $publishAtTs = $publishAtRaw ? strtotime($publishAtRaw) : null;
                     $scheduleTypeNames = [
                         'fixed' => 'Фиксированное',
                         'interval' => 'Интервальное',
@@ -61,6 +78,27 @@ if (!isset($groups)) {
                     $scheduleType = isset($schedule['schedule_type']) && isset($scheduleTypeNames[$schedule['schedule_type']]) 
                         ? $scheduleTypeNames[$schedule['schedule_type']] 
                         : ($schedule['schedule_type'] ?? 'Неизвестно');
+
+                    // Для интервальных расписаний вычисляем следующее время публикации
+                    $nextPublishAt = null;
+                    $overdueReason = null;
+
+                    if (isset($schedule['schedule_type']) && $schedule['schedule_type'] === 'interval' && !empty($schedule['interval_minutes'])) {
+                        $baseTime = $publishAtTs ?? time();
+                        $interval = (int)$schedule['interval_minutes'] * 60;
+                        $now = time();
+
+                        // Вычисляем следующее время публикации
+                        if ($baseTime <= $now) {
+                            $elapsed = $now - $baseTime;
+                            $intervalsPassed = floor($elapsed / $interval);
+                            $nextPublishAt = $baseTime + (($intervalsPassed + 1) * $interval);
+                        } else {
+                            $nextPublishAt = $baseTime;
+                        }
+                    } elseif ($publishAtTs) {
+                        $nextPublishAt = $publishAtTs;
+                    }
                 ?>
                     <tr style="border-bottom: 1px solid #dee2e6;" data-publish-at="<?= $nextPublishAt ? date('Y-m-d H:i:s', $nextPublishAt) : '' ?>" data-status="<?= $schedule['status'] ?? '' ?>">
                         <td style="padding: 0.75rem;">
@@ -80,29 +118,7 @@ if (!isset($groups)) {
                             <?php endif; ?>
                         </td>
                         <td style="padding: 0.75rem;">
-                            <?php 
-                            // Для интервальных расписаний вычисляем следующее время публикации
-                            $nextPublishAt = null;
-                            $overdueReason = null;
-                            
-                            if (isset($schedule['schedule_type']) && $schedule['schedule_type'] === 'interval' && !empty($schedule['interval_minutes'])) {
-                                $baseTime = strtotime($schedule['publish_at'] ?? 'now');
-                                $interval = (int)$schedule['interval_minutes'] * 60;
-                                $now = time();
-                                
-                                // Вычисляем следующее время публикации
-                                if ($baseTime <= $now) {
-                                    // Если базовое время прошло, вычисляем следующее
-                                    $elapsed = $now - $baseTime;
-                                    $intervalsPassed = floor($elapsed / $interval);
-                                    $nextPublishAt = $baseTime + (($intervalsPassed + 1) * $interval);
-                                } else {
-                                    $nextPublishAt = $baseTime;
-                                }
-                            } elseif (isset($schedule['publish_at']) && $schedule['publish_at']) {
-                                $nextPublishAt = strtotime($schedule['publish_at']);
-                            }
-                            
+                            <?php
                             // Определяем причину просрочки, если время прошло
                             if ($nextPublishAt !== null):
                                 $now = time();
@@ -178,8 +194,12 @@ if (!isset($groups)) {
                             ?>
                                     <div>
                                         <span style="color: #e74c3c; font-weight: 500;">Просрочено</span>
+                                        <br><small style="color: #e74c3c; font-size: 0.75rem;">На: <?= htmlspecialchars($formatInterval($now - $nextPublishAt)) ?></small>
                                         <?php if ($overdueReason): ?>
                                             <br><small style="color: #e74c3c; font-size: 0.75rem;"><?= htmlspecialchars($overdueReason) ?></small>
+                                        <?php endif; ?>
+                                        <?php if ($publishAtTs): ?>
+                                            <br><small style="color: #95a5a6; font-size: 0.75rem;">План: <?= date('d.m.Y H:i', $publishAtTs) ?></small>
                                         <?php endif; ?>
                                     </div>
                                 <?php else: ?>
@@ -187,6 +207,19 @@ if (!isset($groups)) {
                                         <div style="color: #3498db; font-weight: 500;">
                                             <?= date('d.m.Y H:i', $nextPublishAt) ?>
                                         </div>
+                                        <div style="color: #95a5a6; font-size: 0.75rem;">
+                                            Через: <?= htmlspecialchars($formatInterval($nextPublishAt - $now)) ?>
+                                        </div>
+                                        <?php if ($publishAtTs && (!isset($schedule['schedule_type']) || $schedule['schedule_type'] !== 'interval')): ?>
+                                            <div style="color: #95a5a6; font-size: 0.75rem;">
+                                                План: <?= date('d.m.Y H:i', $publishAtTs) ?>
+                                            </div>
+                                        <?php endif; ?>
+                                        <?php if (isset($schedule['schedule_type']) && $schedule['schedule_type'] === 'interval' && $publishAtTs): ?>
+                                            <div style="color: #95a5a6; font-size: 0.75rem;">
+                                                База: <?= date('d.m.Y H:i', $publishAtTs) ?>
+                                            </div>
+                                        <?php endif; ?>
                                         <?php if (isset($schedule['status']) && $schedule['status'] === 'pending'): ?>
                                             <div class="countdown-timer" 
                                                  data-publish-at="<?= date('Y-m-d H:i:s', $nextPublishAt) ?>" 

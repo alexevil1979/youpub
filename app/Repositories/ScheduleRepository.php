@@ -26,7 +26,11 @@ class ScheduleRepository extends Repository
             if (!empty($orderBy)) {
                 $order = [];
                 foreach ($orderBy as $field => $direction) {
-                    $order[] = "{$field} " . strtoupper($direction);
+                    if (!$this->isValidIdentifier($field)) {
+                        continue;
+                    }
+                    $dir = strtoupper((string)$direction);
+                    $order[] = "{$field} " . ($dir === 'DESC' ? 'DESC' : 'ASC');
                 }
                 $sql .= " ORDER BY " . implode(", ", $order);
             } else {
@@ -69,6 +73,20 @@ class ScheduleRepository extends Repository
         return $stmt->fetchAll();
     }
 
+    public function countByUserId(int $userId): int
+    {
+        $stmt = $this->db->prepare("SELECT COUNT(*) FROM {$this->table} WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        return (int)$stmt->fetchColumn();
+    }
+
+    public function countByUserIdAndStatus(int $userId, string $status): int
+    {
+        $stmt = $this->db->prepare("SELECT COUNT(*) FROM {$this->table} WHERE user_id = ? AND status = ?");
+        $stmt->execute([$userId, $status]);
+        return (int)$stmt->fetchColumn();
+    }
+
     /**
      * Найти предстоящие расписания
      */
@@ -86,13 +104,17 @@ class ScheduleRepository extends Repository
     /**
      * Найти расписания, готовые к публикации
      */
-    public function findDueForPublishing(): array
+    public function findDueForPublishing(int $limit = 50, bool $excludeGroups = false): array
     {
+        $limit = max(1, $limit);
+        $groupFilter = $excludeGroups ? "AND content_group_id IS NULL" : "";
         $sql = "
             SELECT * FROM {$this->table}
             WHERE status = 'pending'
             AND publish_at <= NOW()
+            {$groupFilter}
             ORDER BY publish_at ASC
+            LIMIT {$limit}
         ";
 
         $stmt = $this->db->prepare($sql);
@@ -104,8 +126,9 @@ class ScheduleRepository extends Repository
      * Найти активные расписания с группами
      * Включает расписания со статусом 'pending' и 'published' (если есть неопубликованные видео)
      */
-    public function findActiveGroupSchedules(): array
+    public function findActiveGroupSchedules(int $limit = 50): array
     {
+        $limit = max(1, $limit);
         $sql = "
             SELECT s.*, cg.name as group_name, cg.status as group_status
             FROM {$this->table} s
@@ -128,6 +151,7 @@ class ScheduleRepository extends Repository
                 ))
             )
             ORDER BY s.publish_at ASC
+            LIMIT {$limit}
         ";
 
         $stmt = $this->db->prepare($sql);

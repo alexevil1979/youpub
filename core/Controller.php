@@ -70,10 +70,13 @@ abstract class Controller
      */
     protected function validateCsrf(): bool
     {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
         $token = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $_POST['csrf_token'] ?? null;
         $sessionToken = $_SESSION['csrf_token'] ?? null;
 
-        if (!$token || !$sessionToken || $token !== $sessionToken) {
+        if (!$token || !$sessionToken || !hash_equals($sessionToken, $token)) {
             return false;
         }
 
@@ -85,7 +88,26 @@ abstract class Controller
      */
     protected function requireAuth(): void
     {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
         if (!isset($_SESSION['user_id'])) {
+            $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+            if (strpos($authHeader, 'Bearer ') === 0) {
+                $token = substr($authHeader, 7);
+                $auth = new \Core\Auth();
+                $payload = $auth->validateJwt($token);
+                if ($payload && !empty($payload['sub'])) {
+                    $user = $auth->getUserById((int)$payload['sub']);
+                    if ($user) {
+                        $_SESSION['user_id'] = $user['id'];
+                        $_SESSION['user_email'] = $user['email'];
+                        $_SESSION['user_role'] = $user['role'];
+                        $_SESSION['user_name'] = $user['name'];
+                        return;
+                    }
+                }
+            }
             $this->error('Unauthorized', 401);
             exit;
         }
@@ -97,7 +119,9 @@ abstract class Controller
     protected function requireAdmin(): void
     {
         $this->requireAuth();
-        if ($_SESSION['user_role'] !== 'admin') {
+        $auth = new \Core\Auth();
+        $user = $auth->user();
+        if (!$user || $user['role'] !== 'admin') {
             $this->error('Forbidden', 403);
             exit;
         }

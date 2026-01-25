@@ -8,7 +8,7 @@ $resources = [
     '/assets/js/main.js',
     '/assets/js/icons.js',
     '/assets/js/search.js',
-    '/content-groups/templates/create'
+    '/content-groups/templates/create-shorts'
 ];
 
 echo "=== ТЕСТИРОВАНИЕ ДОСТУПНОСТИ РЕСУРСОВ ===\n\n";

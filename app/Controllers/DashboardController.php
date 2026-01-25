@@ -33,10 +33,10 @@ class DashboardController extends Controller
         $userId = $_SESSION['user_id'];
         
         $stats = [
-            'videos_total' => count($this->videoRepo->findByUserId($userId)),
-            'schedules_pending' => count($this->scheduleRepo->findByUserIdAndStatus($userId, 'pending')),
-            'publications_success' => count($this->publicationRepo->findByUserIdAndStatus($userId, 'success')),
-            'publications_failed' => count($this->publicationRepo->findByUserIdAndStatus($userId, 'failed')),
+            'videos_total' => $this->videoRepo->countByUserId($userId),
+            'schedules_pending' => $this->scheduleRepo->countByUserIdAndStatus($userId, 'pending'),
+            'publications_success' => $this->publicationRepo->countByUserIdAndStatus($userId, 'success'),
+            'publications_failed' => $this->publicationRepo->countByUserIdAndStatus($userId, 'failed'),
         ];
 
         $recentVideos = $this->videoRepo->findByUserId($userId, ['created_at' => 'DESC'], 5);
@@ -193,14 +193,14 @@ class DashboardController extends Controller
             }
 
             $userId = $_SESSION['user_id'];
-            $code = $_GET['code'] ?? null;
-            $state = $_GET['state'] ?? null;
-            $error = $_GET['error'] ?? null;
+            $code = filter_input(INPUT_GET, 'code', FILTER_UNSAFE_RAW) ?: null;
+            $state = filter_input(INPUT_GET, 'state', FILTER_UNSAFE_RAW) ?: null;
+            $error = filter_input(INPUT_GET, 'error', FILTER_UNSAFE_RAW) ?: null;
 
             error_log('YouTube Callback: User ID = ' . $userId . ', Code = ' . ($code ? 'present' : 'missing') . ', State = ' . ($state ? 'present' : 'missing'));
 
             // Проверка state токена
-            if (!isset($_SESSION['youtube_oauth_state']) || $state !== $_SESSION['youtube_oauth_state']) {
+            if (!isset($_SESSION['youtube_oauth_state']) || !$state || !hash_equals($_SESSION['youtube_oauth_state'], $state)) {
                 error_log('YouTube Callback: Invalid state token. Expected: ' . ($_SESSION['youtube_oauth_state'] ?? 'none') . ', Got: ' . ($state ?? 'none'));
                 $_SESSION['error'] = 'Неверный state токен. Попробуйте снова.';
                 header('Location: /integrations');
@@ -211,7 +211,7 @@ class DashboardController extends Controller
 
             if ($error) {
                 error_log('YouTube Callback: OAuth error: ' . $error);
-                $_SESSION['error'] = 'Ошибка авторизации: ' . htmlspecialchars($error);
+                $_SESSION['error'] = 'Ошибка авторизации. Попробуйте снова.';
                 header('Location: /integrations');
                 exit;
             }
@@ -260,7 +260,7 @@ class DashboardController extends Controller
 
             if ($curlError) {
                 error_log('YouTube Callback: cURL error: ' . $curlError);
-                $_SESSION['error'] = 'Ошибка соединения с Google: ' . $curlError;
+                $_SESSION['error'] = 'Ошибка соединения с Google.';
                 header('Location: /integrations');
                 exit;
             }
@@ -293,7 +293,10 @@ class DashboardController extends Controller
 
             // Сохранение интеграции (поддержка мультиаккаунтов)
             $integrationRepo = new YoutubeIntegrationRepository();
-            $accountName = $this->getParam('account_name', '');
+            $accountName = trim((string)$this->getParam('account_name', ''));
+            if ($accountName !== '') {
+                $accountName = mb_substr($accountName, 0, 100);
+            }
             
             // Проверяем, есть ли уже такой канал
             $channelId = $channelInfo['channel_id'] ?? null;
@@ -349,7 +352,7 @@ class DashboardController extends Controller
                 }
             } catch (\Exception $e) {
                 error_log('YouTube Callback: Database error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
-                $_SESSION['error'] = 'Ошибка сохранения интеграции: ' . $e->getMessage();
+                $_SESSION['error'] = 'Ошибка сохранения интеграции.';
                 header('Location: /integrations');
                 exit;
             }
@@ -451,27 +454,7 @@ class DashboardController extends Controller
      */
     public function youtubeSetDefault(): void
     {
-        $userId = $_SESSION['user_id'];
-        $accountId = (int)($this->getParam('account_id', 0) ?: $_POST['account_id'] ?? 0);
-        
-        if (!$accountId) {
-            $this->error('Account ID is required', 400);
-            return;
-        }
-
-        $integrationRepo = new YoutubeIntegrationRepository();
-        $account = $integrationRepo->findByIdAndUserId($accountId, $userId);
-        
-        if (!$account) {
-            $this->error('Account not found', 404);
-            return;
-        }
-
-        if ($integrationRepo->setDefault($accountId, $userId)) {
-            $this->success([], 'Аккаунт установлен по умолчанию');
-        } else {
-            $this->error('Failed to set default account', 400);
-        }
+        $this->setDefaultAccount('youtube');
     }
 
     /**
@@ -479,29 +462,12 @@ class DashboardController extends Controller
      */
     public function youtubeDisconnectAccount(): void
     {
-        $userId = $_SESSION['user_id'];
-        $accountId = (int)($this->getParam('account_id', 0) ?: $_POST['account_id'] ?? 0);
-        
-        if (!$accountId) {
-            $this->error('Account ID is required', 400);
-            return;
-        }
-
-        $integrationRepo = new YoutubeIntegrationRepository();
-        $account = $integrationRepo->findByIdAndUserId($accountId, $userId);
-        
-        if (!$account) {
-            $this->error('Account not found', 404);
-            return;
-        }
-
-        $integrationRepo->update($accountId, [
+        $this->disconnectAccount('youtube', [
             'status' => 'disconnected',
             'access_token' => null,
             'refresh_token' => null,
             'token_expires_at' => null,
         ]);
-        $this->success([], 'Аккаунт отключен');
     }
 
     /**
@@ -509,24 +475,7 @@ class DashboardController extends Controller
      */
     public function youtubeDelete(): void
     {
-        $userId = $_SESSION['user_id'];
-        $accountId = (int)($this->getParam('account_id', 0) ?: $_POST['account_id'] ?? 0);
-        
-        if (!$accountId) {
-            $this->error('Account ID is required', 400);
-            return;
-        }
-
-        $integrationRepo = new YoutubeIntegrationRepository();
-        $account = $integrationRepo->findByIdAndUserId($accountId, $userId);
-        
-        if (!$account) {
-            $this->error('Account not found', 404);
-            return;
-        }
-
-        $integrationRepo->delete($accountId);
-        $this->success([], 'Аккаунт удален');
+        $this->deleteAccount('youtube');
     }
 
     /**
@@ -535,12 +484,21 @@ class DashboardController extends Controller
     public function telegramConnect(): void
     {
         $userId = $_SESSION['user_id'];
-        $botToken = $this->getParam('bot_token', '');
-        $channelId = $this->getParam('channel_id', '');
-        $accountName = $this->getParam('account_name', '');
+        $botToken = trim((string)$this->getParam('bot_token', ''));
+        $channelId = trim((string)$this->getParam('channel_id', ''));
+        $accountName = trim((string)$this->getParam('account_name', ''));
+        if ($accountName !== '') {
+            $accountName = mb_substr($accountName, 0, 100);
+        }
 
         if (empty($botToken) || empty($channelId)) {
             $_SESSION['error'] = 'Bot token and channel ID are required';
+            header('Location: /integrations');
+            exit;
+        }
+
+        if (mb_strlen($botToken) > 200 || mb_strlen($channelId) > 200) {
+            $_SESSION['error'] = 'Bot token or channel ID is too long';
             header('Location: /integrations');
             exit;
         }
@@ -587,20 +545,7 @@ class DashboardController extends Controller
      */
     public function telegramSetDefault(): void
     {
-        $userId = $_SESSION['user_id'];
-        $accountId = (int)($this->getParam('account_id', 0) ?: $_POST['account_id'] ?? 0);
-        
-        if (!$accountId) {
-            $this->error('Account ID is required', 400);
-            return;
-        }
-
-        $integrationRepo = new \App\Repositories\TelegramIntegrationRepository();
-        if ($integrationRepo->setDefault($accountId, $userId)) {
-            $this->success([], 'Аккаунт установлен по умолчанию');
-        } else {
-            $this->error('Failed to set default account', 400);
-        }
+        $this->setDefaultAccount('telegram');
     }
 
     /**
@@ -608,24 +553,7 @@ class DashboardController extends Controller
      */
     public function telegramDelete(): void
     {
-        $userId = $_SESSION['user_id'];
-        $accountId = (int)($this->getParam('account_id', 0) ?: $_POST['account_id'] ?? 0);
-        
-        if (!$accountId) {
-            $this->error('Account ID is required', 400);
-            return;
-        }
-
-        $integrationRepo = new \App\Repositories\TelegramIntegrationRepository();
-        $account = $integrationRepo->findByIdAndUserId($accountId, $userId);
-        
-        if (!$account) {
-            $this->error('Account not found', 404);
-            return;
-        }
-
-        $integrationRepo->delete($accountId);
-        $this->success([], 'Аккаунт удален');
+        $this->deleteAccount('telegram');
     }
 
     /**
@@ -633,20 +561,7 @@ class DashboardController extends Controller
      */
     public function tiktokSetDefault(): void
     {
-        $userId = $_SESSION['user_id'];
-        $accountId = (int)($this->getParam('account_id', 0) ?: $_POST['account_id'] ?? 0);
-        
-        if (!$accountId) {
-            $this->error('Account ID is required', 400);
-            return;
-        }
-
-        $integrationRepo = new \App\Repositories\TiktokIntegrationRepository();
-        if ($integrationRepo->setDefault($accountId, $userId)) {
-            $this->success([], 'Аккаунт установлен по умолчанию');
-        } else {
-            $this->error('Failed to set default account', 400);
-        }
+        $this->setDefaultAccount('tiktok');
     }
 
     /**
@@ -654,24 +569,7 @@ class DashboardController extends Controller
      */
     public function tiktokDelete(): void
     {
-        $userId = $_SESSION['user_id'];
-        $accountId = (int)($this->getParam('account_id', 0) ?: $_POST['account_id'] ?? 0);
-        
-        if (!$accountId) {
-            $this->error('Account ID is required', 400);
-            return;
-        }
-
-        $integrationRepo = new \App\Repositories\TiktokIntegrationRepository();
-        $account = $integrationRepo->findByIdAndUserId($accountId, $userId);
-        
-        if (!$account) {
-            $this->error('Account not found', 404);
-            return;
-        }
-
-        $integrationRepo->delete($accountId);
-        $this->success([], 'Аккаунт удален');
+        $this->deleteAccount('tiktok');
     }
 
     /**
@@ -679,20 +577,7 @@ class DashboardController extends Controller
      */
     public function instagramSetDefault(): void
     {
-        $userId = $_SESSION['user_id'];
-        $accountId = (int)($this->getParam('account_id', 0) ?: $_POST['account_id'] ?? 0);
-        
-        if (!$accountId) {
-            $this->error('Account ID is required', 400);
-            return;
-        }
-
-        $integrationRepo = new \App\Repositories\InstagramIntegrationRepository();
-        if ($integrationRepo->setDefault($accountId, $userId)) {
-            $this->success([], 'Аккаунт установлен по умолчанию');
-        } else {
-            $this->error('Failed to set default account', 400);
-        }
+        $this->setDefaultAccount('instagram');
     }
 
     /**
@@ -700,24 +585,7 @@ class DashboardController extends Controller
      */
     public function instagramDelete(): void
     {
-        $userId = $_SESSION['user_id'];
-        $accountId = (int)($this->getParam('account_id', 0) ?: $_POST['account_id'] ?? 0);
-        
-        if (!$accountId) {
-            $this->error('Account ID is required', 400);
-            return;
-        }
-
-        $integrationRepo = new \App\Repositories\InstagramIntegrationRepository();
-        $account = $integrationRepo->findByIdAndUserId($accountId, $userId);
-        
-        if (!$account) {
-            $this->error('Account not found', 404);
-            return;
-        }
-
-        $integrationRepo->delete($accountId);
-        $this->success([], 'Аккаунт удален');
+        $this->deleteAccount('instagram');
     }
 
     /**
@@ -725,20 +593,7 @@ class DashboardController extends Controller
      */
     public function pinterestSetDefault(): void
     {
-        $userId = $_SESSION['user_id'];
-        $accountId = (int)($this->getParam('account_id', 0) ?: $_POST['account_id'] ?? 0);
-        
-        if (!$accountId) {
-            $this->error('Account ID is required', 400);
-            return;
-        }
-
-        $integrationRepo = new \App\Repositories\PinterestIntegrationRepository();
-        if ($integrationRepo->setDefault($accountId, $userId)) {
-            $this->success([], 'Аккаунт установлен по умолчанию');
-        } else {
-            $this->error('Failed to set default account', 400);
-        }
+        $this->setDefaultAccount('pinterest');
     }
 
     /**
@@ -746,24 +601,7 @@ class DashboardController extends Controller
      */
     public function pinterestDelete(): void
     {
-        $userId = $_SESSION['user_id'];
-        $accountId = (int)($this->getParam('account_id', 0) ?: $_POST['account_id'] ?? 0);
-        
-        if (!$accountId) {
-            $this->error('Account ID is required', 400);
-            return;
-        }
-
-        $integrationRepo = new \App\Repositories\PinterestIntegrationRepository();
-        $account = $integrationRepo->findByIdAndUserId($accountId, $userId);
-        
-        if (!$account) {
-            $this->error('Account not found', 404);
-            return;
-        }
-
-        $integrationRepo->delete($accountId);
-        $this->success([], 'Аккаунт удален');
+        $this->deleteAccount('pinterest');
     }
 
     /**
@@ -771,7 +609,8 @@ class DashboardController extends Controller
      */
     public function tiktokConnect(): void
     {
-        // TODO: Реализовать OAuth flow для TikTok
+        $_SESSION['error'] = 'Интеграция TikTok пока недоступна.';
+        http_response_code(501);
         header('Location: /integrations');
         exit;
     }
@@ -781,7 +620,8 @@ class DashboardController extends Controller
      */
     public function tiktokCallback(): void
     {
-        // TODO: Обработка OAuth callback
+        $_SESSION['error'] = 'Интеграция TikTok пока недоступна.';
+        http_response_code(501);
         header('Location: /integrations');
         exit;
     }
@@ -791,7 +631,8 @@ class DashboardController extends Controller
      */
     public function instagramConnect(): void
     {
-        // TODO: Реализовать OAuth flow для Instagram
+        $_SESSION['error'] = 'Интеграция Instagram пока недоступна.';
+        http_response_code(501);
         header('Location: /integrations');
         exit;
     }
@@ -801,7 +642,8 @@ class DashboardController extends Controller
      */
     public function instagramCallback(): void
     {
-        // TODO: Обработка OAuth callback
+        $_SESSION['error'] = 'Интеграция Instagram пока недоступна.';
+        http_response_code(501);
         header('Location: /integrations');
         exit;
     }
@@ -811,7 +653,8 @@ class DashboardController extends Controller
      */
     public function pinterestConnect(): void
     {
-        // TODO: Реализовать OAuth flow для Pinterest
+        $_SESSION['error'] = 'Интеграция Pinterest пока недоступна.';
+        http_response_code(501);
         header('Location: /integrations');
         exit;
     }
@@ -821,7 +664,8 @@ class DashboardController extends Controller
      */
     public function pinterestCallback(): void
     {
-        // TODO: Обработка OAuth callback
+        $_SESSION['error'] = 'Интеграция Pinterest пока недоступна.';
+        http_response_code(501);
         header('Location: /integrations');
         exit;
     }
@@ -843,5 +687,108 @@ class DashboardController extends Controller
         $publications = $this->publicationRepo->findByUserId($userId, ['published_at' => 'DESC']);
         
         include __DIR__ . '/../../views/dashboard/publications.php';
+    }
+
+    private function getAccountId(): int
+    {
+        $accountId = (int)($this->getParam('account_id', 0) ?: ($_POST['account_id'] ?? 0));
+        return $accountId > 0 ? $accountId : 0;
+    }
+
+    private function getIntegrationRepository(string $platform)
+    {
+        $map = [
+            'youtube' => \App\Repositories\YoutubeIntegrationRepository::class,
+            'telegram' => \App\Repositories\TelegramIntegrationRepository::class,
+            'tiktok' => \App\Repositories\TiktokIntegrationRepository::class,
+            'instagram' => \App\Repositories\InstagramIntegrationRepository::class,
+            'pinterest' => \App\Repositories\PinterestIntegrationRepository::class,
+        ];
+
+        if (!isset($map[$platform])) {
+            return null;
+        }
+
+        $class = $map[$platform];
+        return new $class();
+    }
+
+    private function setDefaultAccount(string $platform): void
+    {
+        $userId = $_SESSION['user_id'];
+        $accountId = $this->getAccountId();
+        if (!$accountId) {
+            $this->error('Account ID is required', 400);
+            return;
+        }
+
+        $repo = $this->getIntegrationRepository($platform);
+        if (!$repo || !method_exists($repo, 'findByIdAndUserId') || !method_exists($repo, 'setDefault')) {
+            $this->error('Integration not supported', 400);
+            return;
+        }
+
+        $account = $repo->findByIdAndUserId($accountId, $userId);
+        if (!$account) {
+            $this->error('Account not found', 404);
+            return;
+        }
+
+        if ($repo->setDefault($accountId, $userId)) {
+            $this->success([], 'Аккаунт установлен по умолчанию');
+            return;
+        }
+
+        $this->error('Failed to set default account', 400);
+    }
+
+    private function deleteAccount(string $platform): void
+    {
+        $userId = $_SESSION['user_id'];
+        $accountId = $this->getAccountId();
+        if (!$accountId) {
+            $this->error('Account ID is required', 400);
+            return;
+        }
+
+        $repo = $this->getIntegrationRepository($platform);
+        if (!$repo || !method_exists($repo, 'findByIdAndUserId')) {
+            $this->error('Integration not supported', 400);
+            return;
+        }
+
+        $account = $repo->findByIdAndUserId($accountId, $userId);
+        if (!$account) {
+            $this->error('Account not found', 404);
+            return;
+        }
+
+        $repo->delete($accountId);
+        $this->success([], 'Аккаунт удален');
+    }
+
+    private function disconnectAccount(string $platform, array $updateData): void
+    {
+        $userId = $_SESSION['user_id'];
+        $accountId = $this->getAccountId();
+        if (!$accountId) {
+            $this->error('Account ID is required', 400);
+            return;
+        }
+
+        $repo = $this->getIntegrationRepository($platform);
+        if (!$repo || !method_exists($repo, 'findByIdAndUserId')) {
+            $this->error('Integration not supported', 400);
+            return;
+        }
+
+        $account = $repo->findByIdAndUserId($accountId, $userId);
+        if (!$account) {
+            $this->error('Account not found', 404);
+            return;
+        }
+
+        $repo->update($accountId, $updateData);
+        $this->success([], 'Аккаунт отключен');
     }
 }

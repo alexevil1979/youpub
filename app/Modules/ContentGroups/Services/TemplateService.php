@@ -128,8 +128,10 @@ class TemplateService extends Service
 
         // 1. ГЕНЕРАЦИЯ НАЗВАНИЯ (A/B тестирование)
         $titleVariants = !empty($template['title_variants']) ? json_decode($template['title_variants'], true) : [];
+        $hasTitleVariants = !empty($titleVariants);
+        $hasTitleTemplate = !empty($template['title_template']);
 
-        if (!empty($titleVariants) && ($template['enable_ab_testing'] ?? true)) {
+        if ($hasTitleVariants && ($template['enable_ab_testing'] ?? true)) {
             // A/B тестирование: случайный выбор с учётом уникальности начал
             $usedTitles = $context['used_titles'] ?? []; // Массив уже использованных начал
             $availableVariants = $this->filterUniqueStartTitles($titleVariants, $usedTitles);
@@ -140,7 +142,7 @@ class TemplateService extends Service
                 // Если все начала использованы, берём первый вариант
                 $result['title'] = $titleVariants[0];
             }
-        } elseif (!empty($titleVariants)) {
+        } elseif ($hasTitleVariants) {
             // Без A/B тестирования: первый вариант
             $result['title'] = $titleVariants[0];
         } else {
@@ -154,6 +156,16 @@ class TemplateService extends Service
 
             $vars['random_emoji'] = $emojiList[array_rand($emojiList)];
             $result['title'] = $this->processTemplate($template['title_template'] ?? '', $vars, $video['title'] ?? '');
+        }
+
+        if (!$hasTitleVariants && !$hasTitleTemplate) {
+            $fallbackName = trim((string)($template['name'] ?? ''));
+            if ($fallbackName !== '') {
+                $fallbackName = preg_replace('/^Auto:\s*/i', '', $fallbackName);
+                if ($fallbackName !== '') {
+                    $result['title'] = $fallbackName;
+                }
+            }
         }
 
         // 2. ГЕНЕРАЦИЯ ОПИСАНИЯ (по типам триггеров)

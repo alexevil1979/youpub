@@ -34,12 +34,12 @@ class AdminDashboardController extends Controller
     public function index(): void
     {
         $stats = [
-            'users_total' => count($this->userRepo->findAll()),
-            'videos_total' => count($this->videoRepo->findAll()),
-            'schedules_pending' => count($this->scheduleRepo->findAll(['status' => 'pending'])),
-            'schedules_processing' => count($this->scheduleRepo->findAll(['status' => 'processing'])),
-            'publications_success' => count($this->publicationRepo->findAll(['status' => 'success'])),
-            'publications_failed' => count($this->publicationRepo->findAll(['status' => 'failed'])),
+            'users_total' => $this->userRepo->countAll(),
+            'videos_total' => $this->videoRepo->countAll(),
+            'schedules_pending' => $this->scheduleRepo->countAll(['status' => 'pending']),
+            'schedules_processing' => $this->scheduleRepo->countAll(['status' => 'processing']),
+            'publications_success' => $this->publicationRepo->countAll(['status' => 'success']),
+            'publications_failed' => $this->publicationRepo->countAll(['status' => 'failed']),
         ];
 
         $recentPublications = $this->publicationRepo->findAll([], ['published_at' => 'DESC'], 10);
@@ -60,7 +60,13 @@ class AdminDashboardController extends Controller
      */
     public function updateSettings(): void
     {
-        // TODO: Реализовать сохранение настроек
+        if (!$this->validateCsrf()) {
+            $_SESSION['error'] = 'Сессия устарела. Обновите страницу и попробуйте снова.';
+            header('Location: /admin/settings');
+            exit;
+        }
+
+        $_SESSION['error'] = 'Обновление настроек временно недоступно.';
         header('Location: /admin/settings');
         exit;
     }

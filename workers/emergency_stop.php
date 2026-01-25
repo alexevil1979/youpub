@@ -64,12 +64,18 @@ echo "   Возвращено файлов: {$resetFiles}\n\n";
 
 // 4. Показываем статистику
 echo "4. Текущая статистика:\n";
-$stats = [
-    'pending' => $db->query("SELECT COUNT(*) FROM schedules WHERE status = 'pending' AND content_group_id IS NOT NULL")->fetchColumn(),
-    'processing' => $db->query("SELECT COUNT(*) FROM schedules WHERE status = 'processing' AND content_group_id IS NOT NULL")->fetchColumn(),
-    'paused' => $db->query("SELECT COUNT(*) FROM schedules WHERE status = 'paused' AND content_group_id IS NOT NULL")->fetchColumn(),
-    'queued_files' => $db->query("SELECT COUNT(*) FROM content_group_files WHERE status = 'queued'")->fetchColumn(),
+$statQueries = [
+    'pending' => "SELECT COUNT(*) FROM schedules WHERE status = 'pending' AND content_group_id IS NOT NULL",
+    'processing' => "SELECT COUNT(*) FROM schedules WHERE status = 'processing' AND content_group_id IS NOT NULL",
+    'paused' => "SELECT COUNT(*) FROM schedules WHERE status = 'paused' AND content_group_id IS NOT NULL",
+    'queued_files' => "SELECT COUNT(*) FROM content_group_files WHERE status = 'queued'",
 ];
+$stats = [];
+foreach ($statQueries as $key => $sql) {
+    $stmt = $db->prepare($sql);
+    $stmt->execute();
+    $stats[$key] = (int)$stmt->fetchColumn();
+}
 
 echo "   Pending расписаний: {$stats['pending']}\n";
 echo "   Processing расписаний: {$stats['processing']}\n";

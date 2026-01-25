@@ -107,12 +107,16 @@ class TemplateController extends Controller
     }
 
     /**
-     * Показать форму создания шаблона (теперь показывает Shorts форму)
+     * Отключенный старый формат: редирект на Shorts форму
      */
     public function showCreate(): void
     {
-        $csrfToken = (new \Core\Auth())->generateCsrfToken();
-        include __DIR__ . '/../../../../views/content_groups/templates/create_v2.php';
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $_SESSION['error'] = 'Создание шаблонов старого формата отключено. Используйте Shorts форму.';
+        header('Location: /content-groups/templates/create-shorts');
+        exit;
     }
 
     /**
@@ -130,11 +134,27 @@ class TemplateController extends Controller
     public function create(): void
     {
         try {
+            $uri = $_SERVER['REQUEST_URI'] ?? '';
+            if (strpos($uri, '/content-groups/templates/create-shorts') === false) {
+                if (session_status() === PHP_SESSION_NONE) {
+                    session_start();
+                }
+                $_SESSION['error'] = 'Создание шаблонов старого формата отключено. Используйте Shorts форму.';
+                header('Location: /content-groups/templates/create-shorts');
+                exit;
+            }
+
+            if (!$this->validateCsrf()) {
+                $_SESSION['error'] = 'Invalid CSRF token';
+                header('Location: /content-groups/templates/create-shorts');
+                exit;
+            }
+
             $userId = $_SESSION['user_id'] ?? null;
 
             if (!$userId) {
                 $_SESSION['error'] = 'Необходима авторизация';
-                header('Location: /content-groups/templates/create');
+                header('Location: /content-groups/templates/create-shorts');
                 exit;
             }
 
@@ -147,7 +167,7 @@ class TemplateController extends Controller
 
                 if (empty($videoIdea)) {
                     $_SESSION['error'] = 'Необходимо указать базовую идею видео для автогенерации';
-                    header('Location: /content-groups/templates/create');
+                    header('Location: /content-groups/templates/create-shorts');
                     exit;
                 }
 
@@ -268,12 +288,12 @@ class TemplateController extends Controller
                 header('Location: /content-groups/templates');
             } else {
                 $_SESSION['error'] = $result['message'] ?? 'Ошибка при создании шаблона';
-                header('Location: /content-groups/templates/create');
+                header('Location: /content-groups/templates/create-shorts');
             }
         } catch (\Exception $e) {
             error_log('Error creating template: ' . $e->getMessage());
-            $_SESSION['error'] = 'Произошла ошибка при сохранении шаблона: ' . $e->getMessage();
-            header('Location: /content-groups/templates/create');
+            $_SESSION['error'] = 'Произошла ошибка при сохранении шаблона.';
+            header('Location: /content-groups/templates/create-shorts');
         }
         exit;
     }
@@ -338,6 +358,12 @@ class TemplateController extends Controller
     public function update(int $id): void
     {
         try {
+            if (!$this->validateCsrf()) {
+                $_SESSION['error'] = 'Invalid CSRF token';
+                header('Location: /content-groups/templates/' . $id . '/edit');
+                exit;
+            }
+
             $userId = $_SESSION['user_id'] ?? null;
             
             if (!$userId) {
@@ -445,7 +471,7 @@ class TemplateController extends Controller
             header('Location: /content-groups/templates');
         } catch (\Exception $e) {
             error_log('Error updating template: ' . $e->getMessage());
-            $_SESSION['error'] = 'Произошла ошибка при обновлении шаблона: ' . $e->getMessage();
+            $_SESSION['error'] = 'Произошла ошибка при обновлении шаблона.';
             header('Location: /content-groups/templates/' . $id . '/edit');
         }
         exit;
@@ -457,6 +483,12 @@ class TemplateController extends Controller
     public function suggestContent(): void
     {
         try {
+            if (!$this->validateCsrf()) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Invalid CSRF token']);
+                exit;
+            }
+
             error_log('TemplateController::suggestContent: Starting content suggestion');
 
             // Инициализируем сессию, если не инициализирована
@@ -603,7 +635,7 @@ class TemplateController extends Controller
             error_log('TemplateController::suggestContent: Exception caught: ' . $e->getMessage());
             error_log('TemplateController::suggestContent: Stack trace: ' . $e->getTraceAsString());
             header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'Ошибка генерации контента: ' . $e->getMessage()]);
+            echo json_encode(['success' => false, 'message' => 'Ошибка генерации контента.']);
             exit;
         }
     }
@@ -621,6 +653,11 @@ class TemplateController extends Controller
      */
     public function delete(int $id): void
     {
+        if (!$this->validateCsrf()) {
+            $this->error('Invalid CSRF token', 403);
+            return;
+        }
+
         $userId = $_SESSION['user_id'];
         $templateRepo = new \App\Modules\ContentGroups\Repositories\PublicationTemplateRepository();
         $template = $templateRepo->findById($id);

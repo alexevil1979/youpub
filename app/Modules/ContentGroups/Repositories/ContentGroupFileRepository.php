@@ -169,6 +169,38 @@ class ContentGroupFileRepository extends Repository
     }
 
     /**
+     * Очистить статус опубликованности для одного файла
+     */
+    public function clearPublicationStatus(int $id): bool
+    {
+        return $this->update($id, [
+            'status' => 'new',
+            'published_at' => null,
+            'publication_id' => null,
+        ]);
+    }
+
+    /**
+     * Очистить статус опубликованности для списка файлов группы
+     */
+    public function clearPublicationStatusByIds(int $groupId, array $fileIds): int
+    {
+        $ids = array_values(array_unique(array_filter($fileIds, static fn($id) => (int)$id > 0)));
+        if (empty($ids)) {
+            return 0;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $sql = "UPDATE {$this->table} 
+                SET status = 'new', published_at = NULL, publication_id = NULL
+                WHERE group_id = ? AND id IN ({$placeholders})";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(array_merge([$groupId], $ids));
+        return $stmt->rowCount();
+    }
+
+    /**
      * Найти группы для видео
      */
     public function findGroupsByVideoId(int $videoId): array

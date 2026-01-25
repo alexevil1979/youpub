@@ -147,6 +147,12 @@ class AutoShortsController extends Controller
     public function generate(): void
     {
         try {
+            if (!$this->validateCsrf()) {
+                $_SESSION['error'] = 'Invalid CSRF token';
+                header('Location: /content-groups/auto-shorts');
+                exit;
+            }
+
             $userId = $_SESSION['user_id'] ?? null;
 
             if (!$userId) {
@@ -180,7 +186,7 @@ class AutoShortsController extends Controller
 
         } catch (\Exception $e) {
             error_log('AutoShorts generation error: ' . $e->getMessage());
-            $_SESSION['error'] = 'Произошла ошибка при генерации контента: ' . $e->getMessage();
+            $_SESSION['error'] = 'Произошла ошибка при генерации контента.';
             header('Location: /content-groups/auto-shorts');
             exit;
         }
@@ -445,6 +451,12 @@ class AutoShortsController extends Controller
     public function save(): void
     {
         try {
+            if (!$this->validateCsrf()) {
+                $_SESSION['error'] = 'Invalid CSRF token';
+                header('Location: /content-groups/auto-shorts');
+                exit;
+            }
+
             $userId = $_SESSION['user_id'] ?? null;
             $action = $this->getParam('action', '');
 
@@ -518,7 +530,7 @@ class AutoShortsController extends Controller
 
         } catch (\Exception $e) {
             error_log('AutoShorts save error: ' . $e->getMessage());
-            $_SESSION['error'] = 'Произошла ошибка при сохранении: ' . $e->getMessage();
+            $_SESSION['error'] = 'Произошла ошибка при сохранении.';
             header('Location: /content-groups/auto-shorts/result');
             exit;
         }

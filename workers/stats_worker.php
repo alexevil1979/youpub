@@ -11,8 +11,19 @@ use Core\Database;
 use App\Repositories\PublicationRepository;
 use App\Repositories\StatisticsRepository;
 
-// Загрузка конфигурации
-$config = require __DIR__ . '/../config/env.php';
+set_time_limit(300);
+ini_set('memory_limit', '512M');
+
+$configPath = __DIR__ . '/../config/env.php';
+if (!file_exists($configPath)) {
+    error_log("Stats worker: config not found at {$configPath}");
+    exit(1);
+}
+$config = require $configPath;
+if (empty($config['DB_HOST']) || empty($config['DB_NAME']) || empty($config['DB_USER'])) {
+    error_log('Stats worker: invalid DB config');
+    exit(1);
+}
 
 // Установка часового пояса
 $timezone = $config['TIMEZONE'] ?? 'Europe/Samara';
@@ -24,13 +35,31 @@ Database::init($config);
 // Логирование
 $logFile = $config['WORKER_LOG_DIR'] . '/stats_' . date('Y-m-d') . '.log';
 if (!is_dir($config['WORKER_LOG_DIR'])) {
-    mkdir($config['WORKER_LOG_DIR'], 0755, true);
+    if (!@mkdir($config['WORKER_LOG_DIR'], 0755, true) && !is_dir($config['WORKER_LOG_DIR'])) {
+        error_log('Stats worker: failed to create log directory');
+        exit(1);
+    }
 }
 
 function logMessage(string $message, string $logFile): void
 {
     $timestamp = date('Y-m-d H:i:s');
-    file_put_contents($logFile, "[{$timestamp}] {$message}\n", FILE_APPEND);
+    file_put_contents($logFile, "[{$timestamp}] {$message}\n", FILE_APPEND | LOCK_EX);
+}
+
+// Блокировка, чтобы не запускать параллельно
+$lockFile = sys_get_temp_dir() . '/youpub_stats_worker.lock';
+$lockHandle = fopen($lockFile, 'c');
+if (!$lockHandle || !flock($lockHandle, LOCK_EX | LOCK_NB)) {
+    exit(0);
+}
+ftruncate($lockHandle, 0);
+fwrite($lockHandle, (string)getmypid());
+
+$shutdown = false;
+if (function_exists('pcntl_signal')) {
+    pcntl_signal(SIGTERM, function() use (&$shutdown) { $shutdown = true; });
+    pcntl_signal(SIGINT, function() use (&$shutdown) { $shutdown = true; });
 }
 
 logMessage('Stats worker started', $logFile);
@@ -53,28 +82,19 @@ try {
     logMessage('Found ' . count($publications) . ' publications to update', $logFile);
 
     foreach ($publications as $publication) {
+        if ($shutdown) {
+            logMessage('Shutdown signal received, stopping loop', $logFile);
+            break;
+        }
+        if (function_exists('pcntl_signal_dispatch')) {
+            pcntl_signal_dispatch();
+        }
+
         try {
             $stats = null;
+            $platform = $publication['platform'] ?? '';
 
-            if ($publication['platform'] === 'youtube') {
-                // TODO: Получить статистику через YouTube Data API
-                // $stats = $youtubeService->getVideoStats($publication['platform_id']);
-                $stats = [
-                    'views' => 0,
-                    'likes' => 0,
-                    'comments' => 0,
-                    'shares' => 0,
-                ];
-            } elseif ($publication['platform'] === 'telegram') {
-                // TODO: Получить статистику через Telegram Bot API
-                // $stats = $telegramService->getMessageStats($publication['platform_id']);
-                $stats = [
-                    'views' => 0,
-                    'likes' => 0,
-                    'comments' => 0,
-                    'shares' => 0,
-                ];
-            }
+            logMessage("Stats collection not implemented for platform: {$platform}, publication ID {$publication['id']}", $logFile);
 
             if ($stats) {
                 // Проверить, есть ли уже статистика за сегодня
@@ -113,4 +133,10 @@ try {
 } catch (\Exception $e) {
     logMessage('Fatal error: ' . $e->getMessage(), $logFile);
     exit(1);
+} finally {
+    Database::close();
+    if (isset($lockHandle) && is_resource($lockHandle)) {
+        flock($lockHandle, LOCK_UN);
+        fclose($lockHandle);
+    }
 }

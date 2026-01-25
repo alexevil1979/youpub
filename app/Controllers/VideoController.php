@@ -38,14 +38,8 @@ class VideoController extends Controller
         
         // Получаем публикации для всех видео
         $publicationRepo = new \App\Repositories\PublicationRepository();
-        $videoPublications = [];
-        foreach ($videos as $video) {
-            $publications = $publicationRepo->findSuccessfulByVideoId($video['id']);
-            if (!empty($publications)) {
-                // Берем первую (последнюю по дате) успешную публикацию
-                $videoPublications[$video['id']] = $publications[0];
-            }
-        }
+        $videoIds = array_map(static fn($video) => (int)($video['id'] ?? 0), $videos);
+        $videoPublications = $publicationRepo->findLatestSuccessfulByVideoIds($videoIds);
         
         include __DIR__ . '/../../views/videos/index.php';
         } catch (\Throwable $e) {
@@ -69,7 +63,16 @@ class VideoController extends Controller
      */
     public function upload(): void
     {
-        $userId = $_SESSION['user_id'];
+        if (!$this->validateCsrf()) {
+            $this->error('Invalid CSRF token', 403);
+            return;
+        }
+
+        $userId = $_SESSION['user_id'] ?? null;
+        if (!$userId) {
+            $this->error('Unauthorized', 401);
+            return;
+        }
 
         // Если пришла множественная загрузка, перенаправляем в uploadMultiple
         if (isset($_FILES['videos'])) {
@@ -82,9 +85,9 @@ class VideoController extends Controller
             return;
         }
 
-        $title = $this->getParam('title', '');
-        $description = $this->getParam('description', '');
-        $tags = $this->getParam('tags', '');
+        $title = trim((string)$this->getParam('title', ''));
+        $description = trim((string)$this->getParam('description', ''));
+        $tags = trim((string)$this->getParam('tags', ''));
 
         $result = $this->videoService->uploadVideo(
             $userId,
@@ -111,6 +114,11 @@ class VideoController extends Controller
     public function uploadMultiple(): void
     {
         try {
+            if (!$this->validateCsrf()) {
+                $this->error('Invalid CSRF token', 403);
+                return;
+            }
+
             $userId = $_SESSION['user_id'] ?? null;
             
             if (!$userId) {
@@ -209,9 +217,9 @@ class VideoController extends Controller
             $groupId = $this->getParam('group_id', null);
             $groupId = $groupId ? (int)$groupId : null;
             
-            $titleTemplate = $this->getParam('title_template', '');
-            $description = $this->getParam('description', '');
-            $tags = $this->getParam('tags', '');
+            $titleTemplate = trim((string)$this->getParam('title_template', ''));
+            $description = trim((string)$this->getParam('description', ''));
+            $tags = trim((string)$this->getParam('tags', ''));
 
             error_log("Calling uploadMultipleVideos with " . count($files) . " files");
 
@@ -325,6 +333,11 @@ class VideoController extends Controller
      */
     public function publishNow(int $id): void
     {
+        if (!$this->validateCsrf()) {
+            $this->error('Invalid CSRF token', 403);
+            return;
+        }
+
         $userId = $_SESSION['user_id'];
         $result = $this->videoService->publishNow($id, $userId);
 
@@ -363,6 +376,11 @@ class VideoController extends Controller
      */
     public function update(int $id): void
     {
+        if (!$this->validateCsrf()) {
+            $this->error('Invalid CSRF token', 403);
+            return;
+        }
+
         $userId = $_SESSION['user_id'];
         $video = $this->videoService->getVideo($id, $userId);
 
@@ -371,9 +389,9 @@ class VideoController extends Controller
             return;
         }
 
-        $title = $this->getParam('title', '');
-        $description = $this->getParam('description', '');
-        $tags = $this->getParam('tags', '');
+        $title = trim((string)$this->getParam('title', ''));
+        $description = trim((string)$this->getParam('description', ''));
+        $tags = trim((string)$this->getParam('tags', ''));
 
         $result = $this->videoService->updateVideo($id, $userId, [
             'title' => $title,
@@ -393,6 +411,11 @@ class VideoController extends Controller
      */
     public function delete(int $id): void
     {
+        if (!$this->validateCsrf()) {
+            $this->error('Invalid CSRF token', 403);
+            return;
+        }
+
         $userId = $_SESSION['user_id'];
         $result = $this->videoService->deleteVideo($id, $userId);
 
@@ -408,6 +431,11 @@ class VideoController extends Controller
      */
     public function toggleStatus(int $id): void
     {
+        if (!$this->validateCsrf()) {
+            $this->error('Invalid CSRF token', 403);
+            return;
+        }
+
         $userId = $_SESSION['user_id'];
         $result = $this->videoService->toggleVideoStatus($id, $userId);
 

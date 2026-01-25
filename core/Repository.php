@@ -15,6 +15,9 @@ abstract class Repository
     public function __construct(string $table)
     {
         $this->db = Database::getInstance();
+        if (!$this->isValidIdentifier($table)) {
+            throw new \InvalidArgumentException('Invalid table name');
+        }
         $this->table = $table;
     }
 
@@ -40,6 +43,9 @@ abstract class Repository
         if (!empty($conditions)) {
             $where = [];
             foreach ($conditions as $key => $value) {
+                if (!$this->isValidIdentifier($key)) {
+                    throw new \InvalidArgumentException('Invalid column name');
+                }
                 $where[] = "{$key} = ?";
                 $params[] = $value;
             }
@@ -49,7 +55,14 @@ abstract class Repository
         if (!empty($orderBy)) {
             $order = [];
             foreach ($orderBy as $field => $direction) {
-                $order[] = "{$field} " . strtoupper($direction);
+                if (!$this->isValidIdentifier($field)) {
+                    throw new \InvalidArgumentException('Invalid order field');
+                }
+                $dir = strtoupper((string)$direction);
+                if (!in_array($dir, ['ASC', 'DESC'], true)) {
+                    $dir = 'ASC';
+                }
+                $order[] = "{$field} {$dir}";
             }
             $sql .= " ORDER BY " . implode(", ", $order);
         }
@@ -66,6 +79,28 @@ abstract class Repository
         return $stmt->fetchAll();
     }
 
+    public function countAll(array $conditions = []): int
+    {
+        $sql = "SELECT COUNT(*) FROM {$this->table}";
+        $params = [];
+
+        if (!empty($conditions)) {
+            $where = [];
+            foreach ($conditions as $key => $value) {
+                if (!$this->isValidIdentifier($key)) {
+                    throw new \InvalidArgumentException('Invalid column name');
+                }
+                $where[] = "{$key} = ?";
+                $params[] = $value;
+            }
+            $sql .= " WHERE " . implode(" AND ", $where);
+        }
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return (int)$stmt->fetchColumn();
+    }
+
     /**
      * Создать запись
      */
@@ -75,6 +110,9 @@ abstract class Repository
         // Это позволяет базе данных использовать значения по умолчанию
         $filteredData = [];
         foreach ($data as $key => $value) {
+            if (!$this->isValidIdentifier($key)) {
+                throw new \InvalidArgumentException('Invalid column name');
+            }
             // Включаем поле, даже если значение NULL (для явного указания NULL)
             // Но можно исключить, если нужно использовать DEFAULT
             $filteredData[$key] = $value;
@@ -100,6 +138,9 @@ abstract class Repository
         $params = [];
         
         foreach ($data as $key => $value) {
+            if (!$this->isValidIdentifier($key)) {
+                throw new \InvalidArgumentException('Invalid column name');
+            }
             $fields[] = "{$key} = ?";
             $params[] = $value;
         }
@@ -126,5 +167,10 @@ abstract class Repository
     public function getDb(): PDO
     {
         return $this->db;
+    }
+
+    protected function isValidIdentifier(string $name): bool
+    {
+        return preg_match('/^[a-zA-Z0-9_]+$/', $name) === 1;
     }
 }

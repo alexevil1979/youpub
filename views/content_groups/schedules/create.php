@@ -1,6 +1,7 @@
 <?php
 $title = 'Создать умное расписание';
 ob_start();
+$selectedGroupId = isset($_GET['group_id']) ? (int)$_GET['group_id'] : 0;
 ?>
 
 <h1>Создать умное расписание</h1>
@@ -27,7 +28,7 @@ ob_start();
         <select id="content_group_id" name="content_group_id" required>
             <option value="">Выберите группу</option>
             <?php foreach ($groups as $group): ?>
-                <option value="<?= $group['id'] ?>" <?= (isset($_GET['group_id']) && $_GET['group_id'] == $group['id']) ? 'selected' : '' ?>>
+                <option value="<?= $group['id'] ?>" <?= ($selectedGroupId === (int)$group['id']) ? 'selected' : '' ?>>
                     <?= htmlspecialchars($group['name']) ?>
                 </option>
             <?php endforeach; ?>

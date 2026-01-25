@@ -29,25 +29,36 @@ class VideoService extends Service
      */
     public function uploadVideo(int $userId, array $file, string $title, string $description, string $tags): array
     {
-        // Проверка лимитов
         $user = $this->userRepo->findById($userId);
+        if (!$user) {
+            return ['success' => false, 'message' => 'User not found'];
+        }
+
         $userVideos = $this->videoRepo->findByUserId($userId);
-        
         if (count($userVideos) >= $user['upload_limit']) {
             return ['success' => false, 'message' => 'Upload limit reached'];
         }
 
-        // Проверка размера файла
-        if ($file['size'] > $this->config['UPLOAD_MAX_SIZE']) {
+        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            return ['success' => false, 'message' => $this->getUploadErrorMessage((int)$file['error'])];
+        }
+
+        if (empty($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
+            return ['success' => false, 'message' => 'Invalid upload'];
+        }
+
+        $maxSize = (int)($this->config['UPLOAD_MAX_SIZE'] ?? 0);
+        if ($maxSize > 0 && $file['size'] > $maxSize) {
             return ['success' => false, 'message' => 'File size exceeds maximum allowed size'];
         }
 
-        // Проверка типа файла
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = finfo_file($finfo, $file['tmp_name']);
-        finfo_close($finfo);
+        $mimeType = $this->detectMimeType($file['tmp_name']);
+        if (!$mimeType) {
+            return ['success' => false, 'message' => 'Unable to detect file type'];
+        }
 
-        if (!in_array($mimeType, $this->config['ALLOWED_VIDEO_TYPES'])) {
+        $extension = $this->mapMimeToExtension($mimeType);
+        if (!$extension) {
             return ['success' => false, 'message' => 'Invalid file type'];
         }
 
@@ -57,43 +68,28 @@ class VideoService extends Service
         }
         $uploadDir = $uploadDirResult['path'];
 
-        // Генерация уникального имени файла
-        $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
-        $fileName = uniqid('video_', true) . '.' . $extension;
+        $fileName = bin2hex(random_bytes(16)) . '.' . $extension;
         $filePath = $uploadDir . '/' . $fileName;
 
-        error_log('Video Upload: File path = ' . $filePath);
-        error_log('Video Upload: Temp file = ' . $file['tmp_name']);
-        error_log('Video Upload: Temp file exists = ' . (file_exists($file['tmp_name']) ? 'yes' : 'no'));
-
-        // Перемещение файла
-        $moved = @move_uploaded_file($file['tmp_name'], $filePath);
-        if (!$moved) {
+        if (!@move_uploaded_file($file['tmp_name'], $filePath)) {
             $error = error_get_last();
-            error_log('Video Upload: Failed to move file');
-            error_log('Video Upload: Error: ' . ($error['message'] ?? 'Unknown error'));
-            error_log('Video Upload: PHP upload_max_filesize = ' . ini_get('upload_max_filesize'));
-            error_log('Video Upload: PHP post_max_size = ' . ini_get('post_max_size'));
-            error_log('Video Upload: File size = ' . $file['size']);
+            error_log('Video Upload: Failed to move file: ' . ($error['message'] ?? 'Unknown error'));
             return ['success' => false, 'message' => 'Failed to save file. Check server logs for details.'];
         }
 
-        error_log('Video Upload: File saved successfully to ' . $filePath);
-
-        // Сохранение в БД
+        $originalName = $this->sanitizeFileName((string)($file['name'] ?? 'video.' . $extension));
         $videoId = $this->videoRepo->create([
             'user_id' => $userId,
             'file_path' => $filePath,
-            'file_name' => $file['name'],
+            'file_name' => $originalName,
             'file_size' => $file['size'],
             'mime_type' => $mimeType,
-            'title' => $title ?: $file['name'],
+            'title' => $title !== '' ? $title : $originalName,
             'description' => $description,
             'tags' => $tags,
             'status' => 'uploaded',
         ]);
 
-        // Генерация превью в фоне (асинхронно)
         $this->generateThumbnailAsync($videoId, $filePath);
 
         return [
@@ -280,14 +276,29 @@ class VideoService extends Service
         }
 
         $updateData = [];
-        if (isset($data['title'])) {
-            $updateData['title'] = $data['title'];
+        if (array_key_exists('title', $data)) {
+            $title = trim((string)$data['title']);
+            if ($title === '') {
+                return ['success' => false, 'message' => 'Title is required'];
+            }
+            if (mb_strlen($title) > 120) {
+                return ['success' => false, 'message' => 'Title must be 120 characters or less'];
+            }
+            $updateData['title'] = $title;
         }
-        if (isset($data['description'])) {
-            $updateData['description'] = $data['description'];
+        if (array_key_exists('description', $data)) {
+            $description = trim((string)$data['description']);
+            if (mb_strlen($description) > 5000) {
+                return ['success' => false, 'message' => 'Description is too long'];
+            }
+            $updateData['description'] = $description;
         }
-        if (isset($data['tags'])) {
-            $updateData['tags'] = $data['tags'];
+        if (array_key_exists('tags', $data)) {
+            $tags = trim((string)$data['tags']);
+            if (mb_strlen($tags) > 500) {
+                return ['success' => false, 'message' => 'Tags is too long'];
+            }
+            $updateData['tags'] = $tags;
         }
 
         if (empty($updateData)) {
@@ -329,24 +340,22 @@ class VideoService extends Service
      */
     private function generateThumbnailAsync(int $videoId, string $videoPath): void
     {
-        // Запускаем генерацию превью в фоне
-        $cmd = "php -r \"require_once __DIR__ . '/../../vendor/autoload.php'; " .
-               "use App\Services\ThumbnailService; " .
-               "\$service = new ThumbnailService(); " .
-               "\$thumbnail = \$service->generateThumbnail('$videoPath', '$videoId'); " .
-               "if (\$thumbnail) { " .
-               "    \$config = require __DIR__ . '/../../config/env.php'; " .
-               "    \$db = new PDO('mysql:host='.\$config['DB_HOST'].';dbname='.\$config['DB_NAME'], \$config['DB_USER'], \$config['DB_PASS']); " .
-               "    \$stmt = \$db->prepare('UPDATE videos SET thumbnail_path = ? WHERE id = ?'); " .
-               "    \$stmt->execute([\$thumbnail, $videoId]); " .
-               "    echo 'Thumbnail generated: ' . \$thumbnail . PHP_EOL; " .
-               "} else { " .
-               "    echo 'Failed to generate thumbnail' . PHP_EOL; " .
-               "}\" > /dev/null 2>&1 &";
+        $scriptPath = realpath(__DIR__ . '/../../workers/thumbnail_worker.php');
+        if ($scriptPath === false) {
+            error_log('Thumbnail worker script not found');
+            return;
+        }
 
-        // Для Windows используем другой подход
+        $phpPath = PHP_BINARY;
+        $videoPathArg = escapeshellarg($videoPath);
+        $cmd = escapeshellarg($phpPath) . ' ' . escapeshellarg($scriptPath) .
+            ' --video-id=' . (int)$videoId .
+            ' --video-path=' . $videoPathArg;
+
         if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-            $cmd = "start /B php -r \"...\" > NUL 2>&1";
+            $cmd = 'start /B ' . $cmd . ' > NUL 2>&1';
+        } else {
+            $cmd .= ' > /dev/null 2>&1 &';
         }
 
         exec($cmd);
@@ -419,7 +428,7 @@ class VideoService extends Service
                 }
                 
                 // Проверка существования временного файла
-                if (empty($file['tmp_name']) || !file_exists($file['tmp_name'])) {
+                if (empty($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
                     error_log("Temporary file not found for {$fileResult['fileName']}");
                     $fileResult['message'] = 'Временный файл не найден';
                     $results[] = $fileResult;
@@ -438,34 +447,23 @@ class VideoService extends Service
                 }
                 
                 // Проверка типа файла
-                if (!function_exists('finfo_open')) {
-                    error_log("finfo_open not available, using file extension check");
-                    $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-                    $allowedExtensions = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv'];
-                    if (!in_array($extension, $allowedExtensions)) {
-                        $fileResult['message'] = 'Неподдерживаемый тип файла: ' . $extension;
-                        $results[] = $fileResult;
-                        continue;
-                    }
-                    $mimeType = 'video/' . $extension;
-                } else {
-                    $finfo = finfo_open(FILEINFO_MIME_TYPE);
-                    $mimeType = finfo_file($finfo, $file['tmp_name']);
-                    finfo_close($finfo);
-                    
-                    $allowedTypes = $this->config['ALLOWED_VIDEO_TYPES'] ?? ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska'];
-                    if (!in_array($mimeType, $allowedTypes)) {
-                        error_log("Invalid file type for {$fileResult['fileName']}: {$mimeType}");
-                        $fileResult['message'] = 'Неподдерживаемый тип файла: ' . $mimeType;
-                        $results[] = $fileResult;
-                        continue;
-                    }
+                $mimeType = $this->detectMimeType($file['tmp_name']);
+                if (!$mimeType) {
+                    $fileResult['message'] = 'Не удалось определить тип файла';
+                    $results[] = $fileResult;
+                    continue;
+                }
+                $extension = $this->mapMimeToExtension($mimeType);
+                if (!$extension) {
+                    error_log("Invalid file type for {$fileResult['fileName']}: {$mimeType}");
+                    $fileResult['message'] = 'Неподдерживаемый тип файла: ' . $mimeType;
+                    $results[] = $fileResult;
+                    continue;
                 }
             
-            // Генерация имени файла
-            $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
-            $fileName = uniqid('video_', true) . '.' . $extension;
-            $filePath = $uploadDir . '/' . $fileName;
+                // Генерация имени файла
+                $fileName = bin2hex(random_bytes(16)) . '.' . $extension;
+                $filePath = $uploadDir . '/' . $fileName;
             
                 // Перемещение файла
                 $moved = @move_uploaded_file($file['tmp_name'], $filePath);
@@ -476,18 +474,18 @@ class VideoService extends Service
                     continue;
                 }
             
-            // Генерация названия
-            $title = $file['name'];
-            if ($titleTemplate) {
-                $title = str_replace(['{index}', '{filename}'], [$index + 1, $file['name']], $titleTemplate);
-            }
+                $originalName = $this->sanitizeFileName((string)($file['name'] ?? ('video.' . $extension)));
+                $title = $originalName;
+                if ($titleTemplate) {
+                    $title = str_replace(['{index}', '{filename}'], [$index + 1, $originalName], $titleTemplate);
+                }
             
             // Сохранение в БД
             try {
                 $videoId = $this->videoRepo->create([
                     'user_id' => $userId,
                     'file_path' => $filePath,
-                    'file_name' => $file['name'],
+                    'file_name' => $originalName,
                     'file_size' => $file['size'],
                     'mime_type' => $mimeType,
                     'title' => $title,
@@ -502,7 +500,7 @@ class VideoService extends Service
                 $uploadedVideoIds[] = $videoId;
             } catch (\Exception $e) {
                 error_log('Error creating video record: ' . $e->getMessage());
-                $fileResult['message'] = 'Failed to save video record: ' . $e->getMessage();
+                $fileResult['message'] = 'Failed to save video record';
                 // Удаляем файл, если не удалось сохранить запись
                 if (file_exists($filePath)) {
                     @unlink($filePath);
@@ -545,7 +543,7 @@ class VideoService extends Service
             error_log('Exception in uploadMultipleVideos: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
             return [
                 'success' => false,
-                'message' => 'Произошла ошибка при загрузке: ' . $e->getMessage()
+                'message' => 'Произошла ошибка при загрузке.'
             ];
         }
     }
@@ -620,6 +618,57 @@ class VideoService extends Service
         }
 
         return ['success' => true, 'path' => $uploadDir];
+    }
+
+    private function detectMimeType(string $tmpPath): ?string
+    {
+        if (!function_exists('finfo_open')) {
+            return null;
+        }
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        if (!$finfo) {
+            return null;
+        }
+        $mimeType = finfo_file($finfo, $tmpPath);
+        finfo_close($finfo);
+        return $mimeType ?: null;
+    }
+
+    private function mapMimeToExtension(string $mimeType): ?string
+    {
+        $allowedTypes = $this->config['ALLOWED_VIDEO_TYPES'] ?? [
+            'video/mp4',
+            'video/webm',
+            'video/ogg',
+            'video/quicktime',
+            'video/x-msvideo',
+            'video/x-matroska'
+        ];
+
+        if (!in_array($mimeType, $allowedTypes, true)) {
+            return null;
+        }
+
+        $map = [
+            'video/mp4' => 'mp4',
+            'video/webm' => 'webm',
+            'video/ogg' => 'ogg',
+            'video/quicktime' => 'mov',
+            'video/x-msvideo' => 'avi',
+            'video/x-matroska' => 'mkv',
+        ];
+
+        return $map[$mimeType] ?? null;
+    }
+
+    private function sanitizeFileName(string $name): string
+    {
+        $name = preg_replace('/[^\w\.\- ]+/u', '', $name);
+        $name = trim($name);
+        if ($name === '') {
+            return 'video';
+        }
+        return $name;
     }
 
     /**

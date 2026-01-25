@@ -8,8 +8,19 @@ require_once __DIR__ . '/vendor/autoload.php';
 use Core\Database;
 use App\Services\ThumbnailService;
 
-$config = require __DIR__ . '/config/env.php';
-Database::init($config);
+$configPath = __DIR__ . '/config/env.php';
+if (!file_exists($configPath)) {
+    echo "SKIP: config/env.php not found\n";
+    exit(0);
+}
+$config = require $configPath;
+try {
+    Database::init($config);
+    Database::getInstance();
+} catch (\Throwable $e) {
+    echo "SKIP: Database connection failed: " . $e->getMessage() . "\n";
+    exit(0);
+}
 
 echo "=== Тест генерации превью ===\n\n";
 

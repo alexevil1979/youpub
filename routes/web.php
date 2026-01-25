@@ -134,6 +134,8 @@ $router->delete('/content-groups/{groupId}/videos/{videoId}', [GroupController::
 $router->post('/content-groups/{id}/shuffle', [GroupController::class, 'shuffle'], [AuthMiddleware::class]);
 $router->post('/content-groups/{id}/toggle-status', [GroupController::class, 'toggleStatus'], [AuthMiddleware::class]);
 $router->post('/content-groups/{id}/files/{fileId}/toggle-status', [GroupController::class, 'toggleFileStatus'], [AuthMiddleware::class]);
+$router->post('/content-groups/{id}/files/{fileId}/clear-publication', [GroupController::class, 'clearFilePublication'], [AuthMiddleware::class]);
+$router->post('/content-groups/{id}/files/clear-publication', [GroupController::class, 'clearFilesPublication'], [AuthMiddleware::class]);
 $router->post('/content-groups/{id}/duplicate', [GroupController::class, 'duplicate'], [AuthMiddleware::class]);
 $router->delete('/content-groups/{id}', [GroupController::class, 'delete'], [AuthMiddleware::class]);
 

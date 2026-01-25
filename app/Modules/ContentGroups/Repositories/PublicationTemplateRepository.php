@@ -23,7 +23,9 @@ class PublicationTemplateRepository extends Repository
             error_log("PublicationTemplateRepository::findByUserId: userId={$userId}, activeOnly=" . ($activeOnly ? 'true' : 'false'));
             
             // Проверяем существование таблицы
-            $tableExists = $this->db->query("SHOW TABLES LIKE '{$this->table}'")->rowCount() > 0;
+            $stmt = $this->db->prepare("SHOW TABLES LIKE ?");
+            $stmt->execute([$this->table]);
+            $tableExists = (bool)$stmt->fetch();
             if (!$tableExists) {
                 error_log("PublicationTemplateRepository::findByUserId: Table {$this->table} does not exist");
                 return [];

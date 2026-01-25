@@ -5,39 +5,26 @@
 
 require_once __DIR__ . '/vendor/autoload.php';
 
-use App\Services\ThumbnailService;
+echo "=== Упрощенный тест ThumbnailService ===\n\n";
 
-// Создаем экземпляр без наследования от Service (чтобы избежать БД)
-class TestThumbnailService extends ThumbnailService {
-    public function __construct() {
-        // Пропускаем родительский конструктор
-    }
+$ffmpegPaths = ['ffmpeg', '/usr/bin/ffmpeg', '/usr/local/bin/ffmpeg', 'C:\\ffmpeg\\bin\\ffmpeg.exe'];
+$ffmpegAvailable = false;
+$ffmpegPath = null;
 
-    public function testFfmpeg() {
-        return $this->isFfmpegAvailable();
-    }
-
-    public function testFfmpegPath() {
-        return $this->getFfmpegPath();
-    }
-
-    public function testFallbackThumbnail($videoId) {
-        // Создаем тестовое превью
-        $testPath = __DIR__ . '/storage/uploads/thumbnails/test_' . $videoId . '.png';
-        return $this->generateFallbackThumbnail('/fake/path.mp4', $videoId);
+foreach ($ffmpegPaths as $path) {
+    $command = escapeshellarg($path) . ' -version 2>&1';
+    exec($command, $output, $returnCode);
+    if ($returnCode === 0 && !empty($output) && strpos($output[0], 'ffmpeg') !== false) {
+        $ffmpegAvailable = true;
+        $ffmpegPath = $path;
+        break;
     }
 }
 
-echo "=== Упрощенный тест ThumbnailService ===\n\n";
-
-$service = new TestThumbnailService();
-
 echo "1. Проверка пути FFmpeg:\n";
-$ffmpegPath = $service->testFfmpegPath();
-echo "   Путь: {$ffmpegPath}\n";
+echo "   Путь: " . ($ffmpegPath ?: 'не найден') . "\n";
 
 echo "\n2. Проверка доступности FFmpeg:\n";
-$ffmpegAvailable = $service->testFfmpeg();
 echo "   Доступен: " . ($ffmpegAvailable ? "✅ ДА" : "❌ НЕТ") . "\n";
 
 if (!$ffmpegAvailable) {
@@ -45,17 +32,33 @@ if (!$ffmpegAvailable) {
 }
 
 echo "\n3. Тест fallback превью:\n";
-$fallbackPath = $service->testFallbackThumbnail('test123');
-if ($fallbackPath) {
-    echo "   Fallback превью создано: ✅ {$fallbackPath}\n";
-    $fullPath = __DIR__ . '/storage/uploads/' . $fallbackPath;
-    if (file_exists($fullPath)) {
-        echo "   Файл существует: ✅ ДА (" . filesize($fullPath) . " байт)\n";
-    } else {
-        echo "   Файл НЕ существует: ❌ НЕТ\n";
-    }
+if (!extension_loaded('gd')) {
+    echo "   SKIP: Расширение GD не установлено\n";
 } else {
-    echo "   Ошибка создания fallback превью: ❌\n";
+    $thumbnailsDir = __DIR__ . '/storage/uploads/thumbnails/';
+    if (!is_dir($thumbnailsDir)) {
+        mkdir($thumbnailsDir, 0755, true);
+    }
+    $testFilename = 'test_fallback_' . time() . '.png';
+    $testPath = $thumbnailsDir . $testFilename;
+
+    $image = imagecreatetruecolor(320, 180);
+    if (!$image) {
+        echo "   ❌ Ошибка создания изображения\n";
+    } else {
+        $bg = imagecolorallocate($image, 45, 45, 45);
+        imagefilledrectangle($image, 0, 0, 319, 179, $bg);
+        $textColor = imagecolorallocate($image, 200, 200, 200);
+        imagestring($image, 5, 100, 140, "VIDEO TEST", $textColor);
+        if (imagepng($image, $testPath)) {
+            imagedestroy($image);
+            echo "   Fallback превью создано: ✅ {$testFilename}\n";
+            echo "   Файл существует: ✅ ДА (" . filesize($testPath) . " байт)\n";
+        } else {
+            imagedestroy($image);
+            echo "   ❌ Ошибка сохранения изображения\n";
+        }
+    }
 }
 
 echo "\n4. Проверка директории превью:\n";

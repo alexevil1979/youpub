@@ -28,7 +28,7 @@ ob_start();
         </select>
         <small>Шаблон позволяет автоматически генерировать заголовки, описания и теги для публикаций. Можно выбрать позже при редактировании группы.</small>
         <div style="margin-top: 0.5rem;">
-            <a href="/content-groups/templates/create" target="_blank" class="btn btn-sm btn-secondary">Создать новый шаблон</a>
+            <a href="/content-groups/templates/create-shorts" target="_blank" class="btn btn-sm btn-secondary">Создать новый шаблон</a>
             <?php if (!empty($templates)): ?>
                 <a href="/content-groups/templates" target="_blank" class="btn btn-sm btn-info">Управление шаблонами</a>
             <?php endif; ?>

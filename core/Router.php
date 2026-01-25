@@ -76,6 +76,13 @@ class Router
                     }
                 }
 
+                if ($this->isStateChangingMethod($method) && !$this->isApiRequest($path)) {
+                    if (!$this->validateCsrfToken()) {
+                        $this->sendCsrfError();
+                        return;
+                    }
+                }
+
                 // Выполнить handler
                 $this->callHandler($route['handler'], $params);
                 return;
@@ -244,5 +251,41 @@ class Router
 
         http_response_code(500);
         echo json_encode(['error' => 'Invalid handler', 'handler_type' => gettype($handler)]);
+    }
+
+    private function isStateChangingMethod(string $method): bool
+    {
+        return in_array($method, ['POST', 'PUT', 'DELETE', 'PATCH'], true);
+    }
+
+    private function isApiRequest(string $path): bool
+    {
+        return strpos($path, '/api') === 0;
+    }
+
+    private function validateCsrfToken(): bool
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $token = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $_POST['csrf_token'] ?? null;
+        $sessionToken = $_SESSION['csrf_token'] ?? null;
+        if (!$token || !$sessionToken) {
+            return false;
+        }
+        return hash_equals($sessionToken, $token);
+    }
+
+    private function sendCsrfError(): void
+    {
+        $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+        http_response_code(403);
+        if ($isAjax || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false)) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['error' => 'Invalid CSRF token'], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+        $_SESSION['error'] = 'Сессия устарела. Обновите страницу и попробуйте снова.';
+        header('Location: ' . ($_SERVER['HTTP_REFERER'] ?? '/dashboard'));
     }
 }

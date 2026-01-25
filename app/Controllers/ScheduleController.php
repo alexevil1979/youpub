@@ -61,6 +61,11 @@ class ScheduleController extends Controller
      */
     public function create(): void
     {
+        if (!$this->validateCsrf()) {
+            $this->error('Invalid CSRF token', 403);
+            return;
+        }
+
         $userId = $_SESSION['user_id'];
         $data = $this->getRequestData();
         
@@ -167,6 +172,11 @@ class ScheduleController extends Controller
     public function update($id): void
     {
         try {
+            if (!$this->validateCsrf()) {
+                $this->error('Invalid CSRF token', 403);
+                return;
+            }
+
             $id = (int)$id;
             if ($id <= 0) {
                 $this->error('Invalid schedule ID', 400);
@@ -214,6 +224,11 @@ class ScheduleController extends Controller
      */
     public function delete(int $id): void
     {
+        if (!$this->validateCsrf()) {
+            $this->error('Invalid CSRF token', 403);
+            return;
+        }
+
         $userId = $_SESSION['user_id'];
         $result = $this->scheduleService->deleteSchedule($id, $userId);
 
@@ -229,6 +244,11 @@ class ScheduleController extends Controller
      */
     public function pause(int $id): void
     {
+        if (!$this->validateCsrf()) {
+            $this->error('Invalid CSRF token', 403);
+            return;
+        }
+
         $userId = $_SESSION['user_id'];
         $result = $this->scheduleService->pauseSchedule($id, $userId);
 
@@ -244,6 +264,11 @@ class ScheduleController extends Controller
      */
     public function resume(int $id): void
     {
+        if (!$this->validateCsrf()) {
+            $this->error('Invalid CSRF token', 403);
+            return;
+        }
+
         $userId = $_SESSION['user_id'];
         $result = $this->scheduleService->resumeSchedule($id, $userId);
 
@@ -259,6 +284,11 @@ class ScheduleController extends Controller
      */
     public function duplicate(int $id): void
     {
+        if (!$this->validateCsrf()) {
+            $this->error('Invalid CSRF token', 403);
+            return;
+        }
+
         $userId = $_SESSION['user_id'];
         $result = $this->scheduleService->duplicateSchedule($id, $userId);
 
@@ -274,6 +304,11 @@ class ScheduleController extends Controller
      */
     public function bulkPause(): void
     {
+        if (!$this->validateCsrf()) {
+            $this->error('Invalid CSRF token', 403);
+            return;
+        }
+
         $userId = $_SESSION['user_id'];
         $data = $this->getRequestData();
         $ids = $data['ids'] ?? [];
@@ -292,6 +327,11 @@ class ScheduleController extends Controller
      */
     public function bulkResume(): void
     {
+        if (!$this->validateCsrf()) {
+            $this->error('Invalid CSRF token', 403);
+            return;
+        }
+
         $userId = $_SESSION['user_id'];
         $data = $this->getRequestData();
         $ids = $data['ids'] ?? [];
@@ -310,6 +350,11 @@ class ScheduleController extends Controller
      */
     public function bulkDelete(): void
     {
+        if (!$this->validateCsrf()) {
+            $this->error('Invalid CSRF token', 403);
+            return;
+        }
+
         $userId = $_SESSION['user_id'];
         $data = $this->getRequestData();
         $ids = $data['ids'] ?? [];

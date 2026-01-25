@@ -29,19 +29,36 @@ class StatsApiController extends Controller
     {
         $userId = $_SESSION['user_id'];
         $period = $this->getParam('period', 'week'); // day, week, month
+        $limit = (int)$this->getParam('limit', 200);
+        $limit = max(1, min($limit, 1000));
+        $offset = (int)$this->getParam('offset', 0);
+        $offset = max(0, $offset);
 
-        $publications = $this->publicationRepo->findByUserId($userId);
+        $period = in_array($period, ['day', 'week', 'month'], true) ? $period : 'week';
+        $since = new \DateTime('now');
+        if ($period === 'day') {
+            $since->modify('-1 day');
+        } elseif ($period === 'month') {
+            $since->modify('-1 month');
+        } else {
+            $since->modify('-1 week');
+        }
+
+        $publications = $this->publicationRepo->findByUserIdSince($userId, $since->format('Y-m-d H:i:s'), ['published_at' => 'DESC']);
+        if ($offset > 0 || $limit < count($publications)) {
+            $publications = array_slice($publications, $offset, $limit);
+        }
         $stats = [];
 
+        $publicationIds = array_map(static fn($publication) => (int)($publication['id'] ?? 0), $publications);
+        $latestStats = $this->statsRepo->findLatestByPublicationIds($publicationIds);
+
         foreach ($publications as $publication) {
-            $publicationStats = $this->statsRepo->findByPublicationId($publication['id'], ['collected_at' => 'DESC']);
-            if (!empty($publicationStats)) {
-                $stats[] = [
-                    'publication' => $publication,
-                    'latest_stats' => $publicationStats[0],
-                    'history' => $publicationStats,
-                ];
-            }
+            $pubId = (int)($publication['id'] ?? 0);
+            $stats[] = [
+                'publication' => $publication,
+                'latest_stats' => $latestStats[$pubId] ?? null,
+            ];
         }
 
         $this->success($stats);

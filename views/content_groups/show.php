@@ -334,6 +334,17 @@ ob_start();
                                 ?>
                                     <a href="<?= htmlspecialchars($pubUrl) ?>" target="_blank" class="btn btn-xs btn-success" title="Перейти к публикации на <?= ucfirst($pub['platform']) ?>"><?= \App\Helpers\IconHelper::render('publish', 14, 'icon-inline') ?></a>
                                 <?php endif; endif; ?>
+                                <?php
+                                $hasPublication = isset($filePublications[$file['video_id']]) || !empty($file['published_at']) || $file['status'] === 'published';
+                                if ($hasPublication):
+                                ?>
+                                    <button type="button"
+                                            class="btn btn-xs btn-warning"
+                                            onclick="clearFilePublication(<?= $group['id'] ?>, <?= $file['id'] ?>)"
+                                            title="Сбросить публикацию и статус для повторной публикации">
+                                        Сброс
+                                    </button>
+                                <?php endif; ?>
                                 <button type="button" class="btn btn-xs <?= ($file['status'] === 'new' || $file['status'] === 'queued') ? 'btn-warning' : 'btn-success' ?>" 
                                         onclick="toggleFileStatus(<?= $group['id'] ?>, <?= $file['id'] ?>, '<?= $file['status'] ?>')"
                                         title="<?= ($file['status'] === 'new' || $file['status'] === 'queued') ? 'Приостановить' : 'Возобновить' ?>">
@@ -439,6 +450,40 @@ function toggleFileStatus(groupId, fileId, currentStatus) {
         } else {
             const errorMsg = data.message || 'Не удалось изменить статус';
             console.error('Toggle file status error:', data);
+            showToast('Ошибка: ' + errorMsg, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Произошла ошибка: ' + error.message, 'error');
+    });
+}
+
+function clearFilePublication(groupId, fileId) {
+    if (!confirm('Сбросить публикацию и статус для повторной публикации?')) {
+        return;
+    }
+
+    fetch('/content-groups/' + groupId + '/files/' + fileId + '/clear-publication', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.message || 'Ошибка сервера (HTTP ' + response.status + ')');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showToast('Публикация сброшена', 'success');
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            const errorMsg = data.message || 'Не удалось сбросить публикацию';
             showToast('Ошибка: ' + errorMsg, 'error');
         }
     })

@@ -21,7 +21,6 @@ ob_start();
 
 <a href="/content-groups/auto-shorts" class="btn btn-primary">🚀 Автогенерация Shorts</a>
 <a href="/content-groups/templates/create-shorts" class="btn btn-primary">🎯 Создать Shorts шаблон</a>
-<a href="/content-groups/templates/create" class="btn btn-secondary">📝 Простой шаблон</a>
 
 <?php 
 // Убеждаемся, что переменная определена
@@ -36,7 +35,6 @@ if (!isset($templates)) {
         <h3>Нет созданных шаблонов</h3>
         <p>Создайте первый шаблон для автоматического оформления публикаций</p>
         <a href="/content-groups/templates/create-shorts" class="btn btn-primary">🎯 Создать шаблон для Shorts</a>
-        <a href="/content-groups/templates/create" class="btn btn-secondary">📝 Простой шаблон</a>
     </div>
 <?php else: ?>
     <div style="margin-top: 2rem;">

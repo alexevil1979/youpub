@@ -50,30 +50,22 @@ class TiktokService extends Service
         $this->scheduleRepo->update($scheduleId, ['status' => 'processing']);
 
         try {
-            // TODO: Реализовать загрузку видео через TikTok Content API
-            // Использовать TikTok for Developers API
-            
-            $videoId = 'MOCK_TIKTOK_VIDEO_ID';
-            $videoUrl = 'https://www.tiktok.com/@username/video/' . $videoId;
+            $message = 'TikTok publishing is not implemented';
+            $this->scheduleRepo->update($scheduleId, [
+                'status' => 'failed',
+                'error_message' => $message
+            ]);
 
-            $publicationId = $this->publicationRepo->create([
+            $this->publicationRepo->create([
                 'schedule_id' => $scheduleId,
                 'user_id' => $schedule['user_id'],
                 'video_id' => $schedule['video_id'],
                 'platform' => 'tiktok',
-                'platform_id' => $videoId,
-                'platform_url' => $videoUrl,
-                'status' => 'success',
-                'published_at' => date('Y-m-d H:i:s'),
+                'status' => 'failed',
+                'error_message' => $message,
             ]);
 
-            $this->scheduleRepo->update($scheduleId, ['status' => 'published']);
-
-            return [
-                'success' => true,
-                'message' => 'Video published successfully',
-                'data' => ['publication_id' => $publicationId, 'video_url' => $videoUrl]
-            ];
+            return ['success' => false, 'message' => $message];
 
         } catch (\Exception $e) {
             $this->scheduleRepo->update($scheduleId, [

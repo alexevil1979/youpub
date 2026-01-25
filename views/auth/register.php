@@ -21,7 +21,8 @@ ob_start();
 
             <div class="form-group">
                 <label for="password">Пароль</label>
-                <input type="password" id="password" name="password" required minlength="6">
+                <input type="password" id="password" name="password" required minlength="12" pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{12,}">
+                <small>Минимум 12 символов, обязательно: строчные, заглавные, цифры</small>
             </div>
 
             <button type="submit" class="btn btn-primary">Зарегистрироваться</button>

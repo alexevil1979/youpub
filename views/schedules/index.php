@@ -10,6 +10,30 @@ $filterDateTo = $_GET['date_to'] ?? '';
 $filterType = $_GET['type'] ?? 'all'; // all, single, group
 $sortBy = $_GET['sort'] ?? 'publish_at_desc';
 
+$allowedStatuses = ['all', 'pending', 'published', 'failed', 'processing', 'paused'];
+$allowedPlatforms = ['all', 'youtube', 'telegram', 'tiktok', 'instagram', 'pinterest', 'both'];
+$allowedTypes = ['all', 'single', 'group'];
+$allowedSorts = ['publish_at_desc', 'publish_at_asc', 'created_at_desc', 'created_at_asc', 'status_asc', 'status_desc'];
+
+if (!in_array($filterStatus, $allowedStatuses, true)) {
+    $filterStatus = 'all';
+}
+if (!in_array($filterPlatform, $allowedPlatforms, true)) {
+    $filterPlatform = 'all';
+}
+if (!in_array($filterType, $allowedTypes, true)) {
+    $filterType = 'all';
+}
+if (!in_array($sortBy, $allowedSorts, true)) {
+    $sortBy = 'publish_at_desc';
+}
+if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $filterDateFrom)) {
+    $filterDateFrom = '';
+}
+if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $filterDateTo)) {
+    $filterDateTo = '';
+}
+
 // Подсчет статистики
 $stats = [
     'total' => count($schedules),
@@ -53,11 +77,17 @@ if ($filterType === 'group') {
 }
 if ($filterDateFrom) {
     $filteredSchedules = array_filter($filteredSchedules, function($s) use ($filterDateFrom) {
+        if (empty($s['publish_at'])) {
+            return false;
+        }
         return strtotime($s['publish_at']) >= strtotime($filterDateFrom);
     });
 }
 if ($filterDateTo) {
     $filteredSchedules = array_filter($filteredSchedules, function($s) use ($filterDateTo) {
+        if (empty($s['publish_at'])) {
+            return false;
+        }
         return strtotime($s['publish_at']) <= strtotime($filterDateTo . ' 23:59:59');
     });
 }

@@ -5,7 +5,7 @@
 
 echo "=== ТЕСТИРОВАНИЕ ЗАГРУЗКИ СТРАНИЦЫ ===\n\n";
 
-$url = 'https://you.1tlt.ru/content-groups/templates/create';
+$url = 'https://you.1tlt.ru/content-groups/templates/create-shorts';
 
 echo "🌐 Проверяем: $url\n";
 

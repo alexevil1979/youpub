@@ -12,11 +12,20 @@ use Core\Database;
 use App\Repositories\ScheduleRepository;
 use App\Modules\ContentGroups\Services\SmartQueueService;
 use App\Modules\ContentGroups\Services\ScheduleEngineService;
-use App\Services\YoutubeService;
-use App\Services\TelegramService;
 
-// Загрузка конфигурации
-$config = require __DIR__ . '/../config/env.php';
+set_time_limit(300);
+ini_set('memory_limit', '512M');
+
+$configPath = __DIR__ . '/../config/env.php';
+if (!file_exists($configPath)) {
+    error_log("Smart publish worker: config not found at {$configPath}");
+    exit(1);
+}
+$config = require $configPath;
+if (empty($config['DB_HOST']) || empty($config['DB_NAME']) || empty($config['DB_USER'])) {
+    error_log('Smart publish worker: invalid DB config');
+    exit(1);
+}
 
 // Установка часового пояса
 $timezone = $config['TIMEZONE'] ?? 'Europe/Samara';
@@ -28,13 +37,31 @@ Database::init($config);
 // Логирование
 $logFile = $config['WORKER_LOG_DIR'] . '/smart_publish_' . date('Y-m-d') . '.log';
 if (!is_dir($config['WORKER_LOG_DIR'])) {
-    mkdir($config['WORKER_LOG_DIR'], 0755, true);
+    if (!@mkdir($config['WORKER_LOG_DIR'], 0755, true) && !is_dir($config['WORKER_LOG_DIR'])) {
+        error_log('Smart publish worker: failed to create log directory');
+        exit(1);
+    }
 }
 
 function logMessage(string $message, string $logFile): void
 {
     $timestamp = date('Y-m-d H:i:s');
-    file_put_contents($logFile, "[{$timestamp}] {$message}\n", FILE_APPEND);
+    file_put_contents($logFile, "[{$timestamp}] {$message}\n", FILE_APPEND | LOCK_EX);
+}
+
+// Блокировка, чтобы не запускать параллельно
+$lockFile = sys_get_temp_dir() . '/youpub_smart_publish_worker.lock';
+$lockHandle = fopen($lockFile, 'c');
+if (!$lockHandle || !flock($lockHandle, LOCK_EX | LOCK_NB)) {
+    exit(0);
+}
+ftruncate($lockHandle, 0);
+fwrite($lockHandle, (string)getmypid());
+
+$shutdown = false;
+if (function_exists('pcntl_signal')) {
+    pcntl_signal(SIGTERM, function() use (&$shutdown) { $shutdown = true; });
+    pcntl_signal(SIGINT, function() use (&$shutdown) { $shutdown = true; });
 }
 
 logMessage('Smart publish worker started', $logFile);
@@ -51,11 +78,19 @@ try {
     }
 
     // Найти расписания с группами, готовые к публикации
-    $schedules = $scheduleRepo->findActiveGroupSchedules();
+    $schedules = $scheduleRepo->findActiveGroupSchedules(50);
 
     logMessage('Found ' . count($schedules) . ' group schedules to process', $logFile);
 
     foreach ($schedules as $schedule) {
+        if ($shutdown) {
+            logMessage('Shutdown signal received, stopping loop', $logFile);
+            break;
+        }
+        if (function_exists('pcntl_signal_dispatch')) {
+            pcntl_signal_dispatch();
+        }
+
         try {
             // Пропускаем приостановленные расписания
             if (($schedule['status'] ?? '') === 'paused') {
@@ -132,6 +167,7 @@ try {
 
             // Обрабатываем расписание с группой
             try {
+                $scheduleRepo->update($schedule['id'], ['status' => 'processing']);
                 $result = $smartQueue->processGroupSchedule($schedule);
                 
                 logMessage("Schedule ID {$schedule['id']} processGroupSchedule result: success=" . ($result['success'] ? 'true' : 'false') . ", message=" . ($result['message'] ?? 'no message'), $logFile);
@@ -182,81 +218,21 @@ try {
                 }
             } else {
                 logMessage("Schedule ID {$schedule['id']} failed: " . ($result['message'] ?? 'Unknown error'), $logFile);
-                
-                // Не меняем статус основного расписания при ошибке, чтобы оно могло повторить попытку
-                // Только логируем ошибку
+                $scheduleRepo->update($schedule['id'], [
+                    'status' => 'pending',
+                    'error_message' => $result['message'] ?? 'Unknown error'
+                ]);
             }
 
         } catch (\Exception $e) {
             logMessage("Error processing schedule ID {$schedule['id']}: " . $e->getMessage(), $logFile);
-            // Не меняем статус при исключении, чтобы не блокировать повторные попытки
-        }
-    }
-
-    // Обрабатываем обычные расписания (без групп) - обратная совместимость
-    $regularSchedules = $scheduleRepo->findDueForPublishing();
-    $regularSchedules = array_filter($regularSchedules, function($s) {
-        return empty($s['content_group_id']);
-    });
-
-    if (!empty($regularSchedules)) {
-        logMessage('Processing ' . count($regularSchedules) . ' regular schedules', $logFile);
-        
-        $youtubeService = new YoutubeService();
-        $telegramService = new TelegramService();
-
-        foreach ($regularSchedules as $schedule) {
             try {
-                // Вычисляем время до публикации для логирования
-                $timeUntilPublish = '';
-                if (!empty($schedule['publish_at'])) {
-                    $publishAt = strtotime($schedule['publish_at']);
-                    $now = time();
-                    $diff = $publishAt - $now;
-                    
-                    if ($diff > 0) {
-                        $days = floor($diff / 86400);
-                        $hours = floor(($diff % 86400) / 3600);
-                        $minutes = floor(($diff % 3600) / 60);
-                        $seconds = $diff % 60;
-                        
-                        $timeUntilPublish = ' (осталось: ';
-                        if ($days > 0) {
-                            $timeUntilPublish .= "{$days}д ";
-                        }
-                        if ($hours > 0) {
-                            $timeUntilPublish .= "{$hours}ч ";
-                        }
-                        if ($minutes > 0) {
-                            $timeUntilPublish .= "{$minutes}м ";
-                        }
-                        $timeUntilPublish .= "{$seconds}с)";
-                    } elseif ($diff <= 0) {
-                        $timeUntilPublish = ' (время наступило, готово к публикации)';
-                    }
-                }
-                
-                logMessage("Processing regular schedule ID: {$schedule['id']}, Platform: {$schedule['platform']}, Publish_at: " . ($schedule['publish_at'] ?? 'NULL') . $timeUntilPublish, $logFile);
-
-                $result = null;
-                if ($schedule['platform'] === 'youtube') {
-                    $result = $youtubeService->publishVideo($schedule['id']);
-                } elseif ($schedule['platform'] === 'telegram') {
-                    $result = $telegramService->publishVideo($schedule['id']);
-                }
-
-                if ($result && $result['success']) {
-                    logMessage("Regular schedule ID {$schedule['id']} published successfully", $logFile);
-                    $scheduleRepo->update($schedule['id'], ['status' => 'published']);
-                } else {
-                    logMessage("Regular schedule ID {$schedule['id']} failed", $logFile);
-                    $scheduleRepo->update($schedule['id'], [
-                        'status' => 'failed',
-                        'error_message' => $result['message'] ?? 'Unknown error'
-                    ]);
-                }
-            } catch (\Exception $e) {
-                logMessage("Error processing regular schedule ID {$schedule['id']}: " . $e->getMessage(), $logFile);
+                $scheduleRepo->update($schedule['id'], [
+                    'status' => 'pending',
+                    'error_message' => $e->getMessage()
+                ]);
+            } catch (\Exception $updateError) {
+                logMessage("Failed to update schedule status: " . $updateError->getMessage(), $logFile);
             }
         }
     }
@@ -266,4 +242,10 @@ try {
 } catch (\Exception $e) {
     logMessage('Fatal error: ' . $e->getMessage(), $logFile);
     exit(1);
+} finally {
+    Database::close();
+    if (isset($lockHandle) && is_resource($lockHandle)) {
+        flock($lockHandle, LOCK_UN);
+        fclose($lockHandle);
+    }
 }

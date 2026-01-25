@@ -60,6 +60,12 @@ class GroupController extends Controller
      */
     public function create(): void
     {
+        if (!$this->validateCsrf()) {
+            $_SESSION['error'] = 'Invalid CSRF token';
+            header('Location: /content-groups/create');
+            exit;
+        }
+
         $userId = $_SESSION['user_id'];
         $data = [
             'name' => $this->getParam('name', ''),
@@ -107,14 +113,8 @@ class GroupController extends Controller
         
         // Получаем публикации для всех видео в группе
         $publicationRepo = new \App\Repositories\PublicationRepository();
-        $filePublications = [];
-        foreach ($files as $file) {
-            $publications = $publicationRepo->findSuccessfulByVideoId($file['video_id']);
-            if (!empty($publications)) {
-                // Берем первую (последнюю по дате) успешную публикацию
-                $filePublications[$file['video_id']] = $publications[0];
-            }
-        }
+        $videoIds = array_unique(array_map(static fn($file) => (int)($file['video_id'] ?? 0), $files));
+        $filePublications = $publicationRepo->findLatestSuccessfulByVideoIds($videoIds);
         
         // Получаем следующую дату публикации для каждого файла (только если группа активна)
         $nextPublishDates = [];
@@ -262,6 +262,11 @@ class GroupController extends Controller
      */
     public function addVideo(int $id): void
     {
+        if (!$this->validateCsrf()) {
+            $this->error('Invalid CSRF token', 403);
+            return;
+        }
+
         $userId = $_SESSION['user_id'];
         
         // Поддержка как POST form-data, так и JSON
@@ -286,6 +291,11 @@ class GroupController extends Controller
      */
     public function addVideos(int $id): void
     {
+        if (!$this->validateCsrf()) {
+            $this->error('Invalid CSRF token', 403);
+            return;
+        }
+
         $userId = $_SESSION['user_id'];
         $videoIds = $this->getParam('video_ids', []);
 
@@ -309,6 +319,11 @@ class GroupController extends Controller
      */
     public function removeVideo(int $groupId, int $videoId): void
     {
+        if (!$this->validateCsrf()) {
+            $this->error('Invalid CSRF token', 403);
+            return;
+        }
+
         $userId = $_SESSION['user_id'];
         
         // Проверяем права доступа
@@ -336,6 +351,11 @@ class GroupController extends Controller
      */
     public function shuffle(int $id): void
     {
+        if (!$this->validateCsrf()) {
+            $this->error('Invalid CSRF token', 403);
+            return;
+        }
+
         $userId = $_SESSION['user_id'];
         $result = $this->groupService->shuffleGroup($id, $userId);
 
@@ -375,6 +395,12 @@ class GroupController extends Controller
      */
     public function update(int $id): void
     {
+        if (!$this->validateCsrf()) {
+            $_SESSION['error'] = 'Invalid CSRF token';
+            header('Location: /content-groups/' . $id . '/edit');
+            exit;
+        }
+
         $userId = $_SESSION['user_id'];
         $group = $this->groupService->getGroupWithStats($id, $userId);
 
@@ -408,6 +434,11 @@ class GroupController extends Controller
      */
     public function toggleStatus(int $id): void
     {
+        if (!$this->validateCsrf()) {
+            $this->error('Invalid CSRF token', 403);
+            return;
+        }
+
         $userId = $_SESSION['user_id'];
         $group = $this->groupService->getGroupWithStats($id, $userId);
 
@@ -431,6 +462,11 @@ class GroupController extends Controller
      */
     public function duplicate(int $id): void
     {
+        if (!$this->validateCsrf()) {
+            $this->error('Invalid CSRF token', 403);
+            return;
+        }
+
         $userId = $_SESSION['user_id'];
         $result = $this->groupService->duplicateGroup($id, $userId);
 
@@ -446,6 +482,11 @@ class GroupController extends Controller
      */
     public function delete(int $id): void
     {
+        if (!$this->validateCsrf()) {
+            $this->error('Invalid CSRF token', 403);
+            return;
+        }
+
         $userId = $_SESSION['user_id'];
         $group = $this->groupService->getGroupWithStats($id, $userId);
 
@@ -466,6 +507,11 @@ class GroupController extends Controller
     public function toggleFileStatus(int $id, int $fileId): void
     {
         try {
+            if (!$this->validateCsrf()) {
+                $this->error('Invalid CSRF token', 403);
+                return;
+            }
+
             $userId = $_SESSION['user_id'] ?? null;
             
             if (!$userId) {
@@ -497,7 +543,72 @@ class GroupController extends Controller
             }
         } catch (\Exception $e) {
             error_log("GroupController::toggleFileStatus: Exception - " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
-            $this->error('Произошла ошибка при изменении статуса: ' . $e->getMessage(), 500);
+            $this->error('Произошла ошибка при изменении статуса', 500);
+        }
+    }
+
+    /**
+     * Очистить статус опубликованности для одного файла
+     */
+    public function clearFilePublication(int $id, int $fileId): void
+    {
+        try {
+            if (!$this->validateCsrf()) {
+                $this->error('Invalid CSRF token', 403);
+                return;
+            }
+
+            $userId = $_SESSION['user_id'] ?? null;
+            if (!$userId) {
+                $this->error('Необходима авторизация', 401);
+                return;
+            }
+
+            $result = $this->groupService->clearFilePublication($id, $fileId, $userId);
+            if ($result['success']) {
+                $this->success($result['data'] ?? [], $result['message'] ?? 'Статус опубликованности очищен');
+            } else {
+                $this->error($result['message'] ?? 'Не удалось очистить статус', 400);
+            }
+        } catch (\Exception $e) {
+            error_log("GroupController::clearFilePublication: " . $e->getMessage());
+            $this->error('Произошла ошибка при очистке статуса', 500);
+        }
+    }
+
+    /**
+     * Очистить статус опубликованности для нескольких файлов
+     */
+    public function clearFilesPublication(int $id): void
+    {
+        try {
+            if (!$this->validateCsrf()) {
+                $this->error('Invalid CSRF token', 403);
+                return;
+            }
+
+            $userId = $_SESSION['user_id'] ?? null;
+            if (!$userId) {
+                $this->error('Необходима авторизация', 401);
+                return;
+            }
+
+            $data = $this->getRequestData();
+            $fileIds = $data['file_ids'] ?? [];
+            if (!is_array($fileIds)) {
+                $this->error('Некорректный список файлов', 400);
+                return;
+            }
+
+            $result = $this->groupService->clearFilesPublication($id, $fileIds, $userId);
+            if ($result['success']) {
+                $this->success($result['data'] ?? [], $result['message'] ?? 'Статус опубликованности очищен');
+            } else {
+                $this->error($result['message'] ?? 'Не удалось очистить статус', 400);
+            }
+        } catch (\Exception $e) {
+            error_log("GroupController::clearFilesPublication: " . $e->getMessage());
+            $this->error('Произошла ошибка при очистке статуса', 500);
         }
     }
 }

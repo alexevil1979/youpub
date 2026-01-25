@@ -28,6 +28,9 @@ if (is_writable($thumbnailsDir)) {
 
 echo "\n2. Создание тестового fallback превью:\n";
 
+if (!extension_loaded('gd')) {
+    echo "   SKIP: Расширение GD не установлено\n";
+} else {
 // Создаем простое превью с текстом "VIDEO TEST"
 $testFilename = 'test_fallback_' . time() . '.png';
 $testPath = $thumbnailsDir . $testFilename;
@@ -68,6 +71,7 @@ if (imagepng($image, $testPath)) {
 } else {
     imagedestroy($image);
     echo "   ❌ Ошибка сохранения изображения\n";
+}
 }
 
 echo "\n3. Проверка FFmpeg:\n";

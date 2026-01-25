@@ -28,62 +28,77 @@ class ScheduleService extends Service
     {
         $errors = [];
 
-        // Валидация
-        if (empty($data['video_id'])) {
+        $videoId = isset($data['video_id']) ? (int)$data['video_id'] : 0;
+        if ($videoId <= 0) {
             $errors['video_id'] = 'Video ID is required';
         } else {
-            $video = $this->videoRepo->findById($data['video_id']);
+            $video = $this->videoRepo->findById($videoId);
             if (!$video || $video['user_id'] !== $userId) {
                 $errors['video_id'] = 'Video not found';
             }
         }
 
-        if (empty($data['platform'])) {
-            $errors['platform'] = 'Platform is required';
-        } elseif (!in_array($data['platform'], ['youtube', 'telegram', 'tiktok', 'instagram', 'pinterest', 'both'])) {
+        $platform = $data['platform'] ?? '';
+        $allowedPlatforms = ['youtube', 'telegram', 'tiktok', 'instagram', 'pinterest', 'both'];
+        if ($platform === '' || !in_array($platform, $allowedPlatforms, true)) {
             $errors['platform'] = 'Invalid platform';
         }
 
-        // Проверка для нескольких точек времени
+        $timezone = $this->normalizeTimezone($data['timezone'] ?? 'UTC');
+        if ($timezone === null) {
+            $errors['timezone'] = 'Invalid timezone';
+        }
+
         $dailyTimePoints = null;
-        $dailyPointsStartDate = null;
-        $dailyPointsEndDate = null;
-        
+        $dailyPointsStartDate = $data['daily_points_start_date'] ?? null;
+        $dailyPointsEndDate = $data['daily_points_end_date'] ?? null;
+
         if (!empty($data['daily_time_points']) && is_array($data['daily_time_points'])) {
-            // Фильтруем пустые значения
-            $timePoints = array_filter($data['daily_time_points'], function($time) {
-                return !empty(trim($time));
-            });
-            
+            $timePoints = array_values(array_filter($data['daily_time_points'], function ($time) {
+                return !empty(trim((string)$time));
+            }));
+
             if (empty($timePoints)) {
                 $errors['daily_time_points'] = 'At least one time point is required';
             } else {
-                // Валидация формата времени
                 foreach ($timePoints as $time) {
-                    if (!preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $time)) {
+                    if (!preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', (string)$time)) {
                         $errors['daily_time_points'] = 'Invalid time format. Use HH:MM';
                         break;
                     }
                 }
                 if (empty($errors['daily_time_points'])) {
-                    $dailyTimePoints = json_encode(array_values($timePoints));
-                    $dailyPointsStartDate = $data['daily_points_start_date'] ?? null;
-                    $dailyPointsEndDate = $data['daily_points_end_date'] ?? null;
-                    
+                    $dailyTimePoints = json_encode($timePoints, JSON_UNESCAPED_UNICODE);
                     if (empty($dailyPointsStartDate)) {
                         $errors['daily_points_start_date'] = 'Start date is required for multiple time points';
                     }
                 }
             }
-        } else {
-            // Обычная проверка одной даты
-            if (empty($data['publish_at'])) {
+        }
+
+        $publishAtValue = $data['publish_at'] ?? null;
+        $publishAt = null;
+        if ($dailyTimePoints === null) {
+            if (empty($publishAtValue)) {
                 $errors['publish_at'] = 'Publish date is required';
             } else {
-                $publishAt = strtotime($data['publish_at']);
-                if ($publishAt === false || $publishAt < time()) {
+                $publishAt = $this->parseDateTime($publishAtValue, $timezone ?? 'UTC');
+                if ($publishAt === null) {
                     $errors['publish_at'] = 'Invalid publish date';
+                } elseif ($publishAt->getTimestamp() < time()) {
+                    $errors['publish_at'] = 'Publish date must be in the future';
                 }
+            }
+        }
+
+        $repeatUntilValue = $data['repeat_until'] ?? null;
+        $repeatUntil = null;
+        if (!empty($repeatUntilValue)) {
+            $repeatUntil = $this->parseDateTime($repeatUntilValue, $timezone ?? 'UTC');
+            if ($repeatUntil === null) {
+                $errors['repeat_until'] = 'Invalid repeat until date';
+            } elseif ($publishAt && $repeatUntil < $publishAt) {
+                $errors['repeat_until'] = 'Repeat until must be after publish date';
             }
         }
 
@@ -91,69 +106,107 @@ class ScheduleService extends Service
             return ['success' => false, 'message' => 'Validation failed', 'errors' => $errors];
         }
 
-        // Если указаны несколько точек времени, создаем несколько расписаний
-        if ($dailyTimePoints && $dailyPointsStartDate) {
-            $timePointsArray = json_decode($dailyTimePoints, true);
-            $startDate = strtotime($dailyPointsStartDate);
-            $endDate = $dailyPointsEndDate ? strtotime($dailyPointsEndDate . ' 23:59:59') : null;
-            
-            if ($startDate === false) {
-                return ['success' => false, 'message' => 'Invalid start date', 'errors' => ['daily_points_start_date' => 'Invalid date format']];
-            }
-            
-            $createdSchedules = [];
-            $currentDate = $startDate;
-            
-            // Создаем расписания для каждого дня в диапазоне
-            while ($endDate === null || $currentDate <= $endDate) {
-                $dateStr = date('Y-m-d', $currentDate);
-                
-                // Создаем расписание для каждой точки времени
-                foreach ($timePointsArray as $timePoint) {
-                    $publishDateTime = $dateStr . ' ' . $timePoint . ':00';
-                    
-                    $scheduleId = $this->scheduleRepo->create([
-                        'user_id' => $userId,
-                        'video_id' => $data['video_id'],
-                        'platform' => $data['platform'],
-                        'publish_at' => $publishDateTime,
-                        'timezone' => $data['timezone'] ?? 'UTC',
-                        'repeat_type' => 'once',
-                        'repeat_until' => null,
-                        'status' => 'pending',
-                        'daily_time_points' => $dailyTimePoints,
-                    ]);
-                    
-                    $createdSchedules[] = $scheduleId;
+        $db = \Core\Database::getInstance();
+        $db->beginTransaction();
+        try {
+            if ($dailyTimePoints !== null && $dailyPointsStartDate) {
+                $timePointsArray = json_decode($dailyTimePoints, true);
+                $startDate = $this->parseDateTime($dailyPointsStartDate, $timezone ?? 'UTC');
+                if ($startDate === null) {
+                    $db->rollBack();
+                    return [
+                        'success' => false,
+                        'message' => 'Invalid start date',
+                        'errors' => ['daily_points_start_date' => 'Invalid date format']
+                    ];
                 }
-                
-                // Переходим к следующему дню
-                $currentDate = strtotime('+1 day', $currentDate);
+                if ($startDate->getTimestamp() < strtotime('today')) {
+                    $db->rollBack();
+                    return [
+                        'success' => false,
+                        'message' => 'Start date must be today or later',
+                        'errors' => ['daily_points_start_date' => 'Start date must be today or later']
+                    ];
+                }
+
+                $endDate = null;
+                if (!empty($dailyPointsEndDate)) {
+                    $endDate = $this->parseDateTime($dailyPointsEndDate . ' 23:59:59', $timezone ?? 'UTC');
+                    if ($endDate === null) {
+                        $db->rollBack();
+                        return [
+                            'success' => false,
+                            'message' => 'Invalid end date',
+                            'errors' => ['daily_points_end_date' => 'Invalid date format']
+                        ];
+                    }
+                }
+
+                $createdSchedules = [];
+                $currentDate = clone $startDate;
+
+                while ($endDate === null || $currentDate <= $endDate) {
+                    $dateStr = $currentDate->format('Y-m-d');
+                    foreach ($timePointsArray as $timePoint) {
+                        $publishDateTime = $dateStr . ' ' . $timePoint . ':00';
+                        $publishAtDate = $this->parseDateTime($publishDateTime, $timezone ?? 'UTC');
+                        if ($publishAtDate === null || $publishAtDate->getTimestamp() <= time()) {
+                            continue;
+                        }
+                        $scheduleId = $this->scheduleRepo->create([
+                            'user_id' => $userId,
+                            'video_id' => $videoId,
+                            'platform' => $platform,
+                            'publish_at' => $publishDateTime,
+                            'timezone' => $timezone,
+                            'repeat_type' => 'once',
+                            'repeat_until' => null,
+                            'status' => 'pending',
+                            'daily_time_points' => $dailyTimePoints,
+                        ]);
+                        $createdSchedules[] = $scheduleId;
+                    }
+                    $currentDate->modify('+1 day');
+                }
+
+                if (empty($createdSchedules)) {
+                    $db->rollBack();
+                    return [
+                        'success' => false,
+                        'message' => 'Все точки времени находятся в прошлом',
+                        'errors' => ['daily_time_points' => 'All time points are in the past']
+                    ];
+                }
+
+                $db->commit();
+                return [
+                    'success' => true,
+                    'message' => 'Schedules created successfully (' . count($createdSchedules) . ' schedules)',
+                    'data' => ['ids' => $createdSchedules, 'count' => count($createdSchedules)]
+                ];
             }
-            
-            return [
-                'success' => true,
-                'message' => 'Schedules created successfully (' . count($createdSchedules) . ' schedules)',
-                'data' => ['ids' => $createdSchedules, 'count' => count($createdSchedules)]
-            ];
-        } else {
-            // Обычное создание одного расписания
+
             $scheduleId = $this->scheduleRepo->create([
                 'user_id' => $userId,
-                'video_id' => $data['video_id'],
-                'platform' => $data['platform'],
-                'publish_at' => date('Y-m-d H:i:s', strtotime($data['publish_at'])),
-                'timezone' => $data['timezone'] ?? 'UTC',
+                'video_id' => $videoId,
+                'platform' => $platform,
+                'publish_at' => $publishAt ? $publishAt->format('Y-m-d H:i:s') : null,
+                'timezone' => $timezone,
                 'repeat_type' => $data['repeat_type'] ?? 'once',
-                'repeat_until' => !empty($data['repeat_until']) ? date('Y-m-d H:i:s', strtotime($data['repeat_until'])) : null,
+                'repeat_until' => $repeatUntil ? $repeatUntil->format('Y-m-d H:i:s') : null,
                 'status' => 'pending',
             ]);
+            $db->commit();
 
             return [
                 'success' => true,
                 'message' => 'Schedule created successfully',
                 'data' => ['id' => $scheduleId]
             ];
+        } catch (\Throwable $e) {
+            $db->rollBack();
+            error_log('ScheduleService::createSchedule error: ' . $e->getMessage());
+            return ['success' => false, 'message' => 'Failed to create schedule'];
         }
     }
 
@@ -197,24 +250,68 @@ class ScheduleService extends Service
 
         $errors = [];
 
-        // Валидация
-        if (!empty($data['video_id'])) {
-            $video = $this->videoRepo->findById($data['video_id']);
-            if (!$video || $video['user_id'] !== $userId) {
-                $errors['video_id'] = 'Video not found';
+        $updateData = [];
+        if (isset($data['video_id'])) {
+            $videoId = (int)$data['video_id'];
+            if ($videoId <= 0) {
+                $errors['video_id'] = 'Video ID is required';
+            } else {
+                $video = $this->videoRepo->findById($videoId);
+                if (!$video || $video['user_id'] !== $userId) {
+                    $errors['video_id'] = 'Video not found';
+                } else {
+                    $updateData['video_id'] = $videoId;
+                }
             }
         }
 
-        if (!empty($data['platform'])) {
-            if (!in_array($data['platform'], ['youtube', 'telegram', 'tiktok', 'instagram', 'pinterest', 'both'])) {
+        if (isset($data['platform'])) {
+            $platform = $data['platform'];
+            $allowedPlatforms = ['youtube', 'telegram', 'tiktok', 'instagram', 'pinterest', 'both'];
+            if (!in_array($platform, $allowedPlatforms, true)) {
                 $errors['platform'] = 'Invalid platform';
+            } else {
+                $updateData['platform'] = $platform;
             }
         }
 
-        if (!empty($data['publish_at'])) {
-            $publishAt = strtotime($data['publish_at']);
-            if ($publishAt === false) {
+        $timezone = null;
+        if (isset($data['timezone'])) {
+            $timezone = $this->normalizeTimezone($data['timezone']);
+            if ($timezone === null) {
+                $errors['timezone'] = 'Invalid timezone';
+            } else {
+                $updateData['timezone'] = $timezone;
+            }
+        } else {
+            $timezone = $schedule['timezone'] ?? 'UTC';
+        }
+
+        if (isset($data['publish_at'])) {
+            $publishAt = $this->parseDateTime($data['publish_at'], $timezone ?? 'UTC');
+            if ($publishAt === null) {
                 $errors['publish_at'] = 'Invalid publish date';
+            } elseif ($publishAt->getTimestamp() < time()) {
+                $errors['publish_at'] = 'Publish date must be in the future';
+            } else {
+                $updateData['publish_at'] = $publishAt->format('Y-m-d H:i:s');
+            }
+        }
+
+        if (isset($data['repeat_type'])) {
+            $updateData['repeat_type'] = $data['repeat_type'];
+        }
+
+        if (array_key_exists('repeat_until', $data)) {
+            if (!empty($data['repeat_until'])) {
+                $repeatUntil = $this->parseDateTime($data['repeat_until'], $timezone ?? 'UTC');
+                if ($repeatUntil === null) {
+                    $errors['repeat_until'] = 'Invalid repeat until date';
+                } else {
+                    $updateData['repeat_until'] = $repeatUntil->format('Y-m-d H:i:s');
+                }
+            } else {
+                $updateData['repeat_until'] = null;
             }
         }
 
@@ -222,31 +319,8 @@ class ScheduleService extends Service
             return ['success' => false, 'message' => 'Validation failed', 'errors' => $errors];
         }
 
-        // Подготавливаем данные для обновления
-        $updateData = [];
-        
-        if (isset($data['video_id'])) {
-            $updateData['video_id'] = $data['video_id'];
-        }
-        
-        if (isset($data['platform'])) {
-            $updateData['platform'] = $data['platform'];
-        }
-        
-        if (isset($data['publish_at'])) {
-            $updateData['publish_at'] = date('Y-m-d H:i:s', strtotime($data['publish_at']));
-        }
-        
-        if (isset($data['timezone'])) {
-            $updateData['timezone'] = $data['timezone'];
-        }
-        
-        if (isset($data['repeat_type'])) {
-            $updateData['repeat_type'] = $data['repeat_type'];
-        }
-        
-        if (isset($data['repeat_until'])) {
-            $updateData['repeat_until'] = !empty($data['repeat_until']) ? date('Y-m-d H:i:s', strtotime($data['repeat_until'])) : null;
+        if (empty($updateData)) {
+            return ['success' => false, 'message' => 'No data to update'];
         }
 
         $this->scheduleRepo->update($id, $updateData);
@@ -366,8 +440,8 @@ class ScheduleService extends Service
             return ['success' => false, 'message' => 'Schedule not found'];
         }
 
-        // Создаем копию с новой датой (через 1 день)
-        $newPublishAt = date('Y-m-d H:i:s', strtotime($schedule['publish_at'] . ' +1 day'));
+        $basePublishAt = $schedule['publish_at'] ?? date('Y-m-d H:i:s');
+        $newPublishAt = date('Y-m-d H:i:s', strtotime($basePublishAt . ' +1 day'));
         
         $newScheduleData = [
             'user_id' => $userId,
@@ -413,18 +487,30 @@ class ScheduleService extends Service
      */
     public function bulkPause(array $ids, int $userId): array
     {
-        $paused = 0;
+        $results = [];
         foreach ($ids as $id) {
-            $result = $this->pauseSchedule($id, $userId);
-            if ($result['success']) {
-                $paused++;
+            $scheduleId = (int)$id;
+            if ($scheduleId <= 0) {
+                $results[$id] = ['success' => false, 'message' => 'Invalid schedule ID'];
+                continue;
             }
+            $results[$scheduleId] = $this->pauseSchedule($scheduleId, $userId);
         }
 
+        $successCount = count(array_filter($results, fn($r) => $r['success']));
+        $failedCount = count($results) - $successCount;
+
         return [
-            'success' => true,
-            'message' => "Paused {$paused} of " . count($ids) . " schedules",
-            'data' => ['paused' => $paused, 'total' => count($ids)]
+            'success' => $successCount > 0,
+            'message' => "Paused {$successCount} of " . count($results) . " schedules",
+            'data' => [
+                'results' => $results,
+                'summary' => [
+                    'total' => count($results),
+                    'success' => $successCount,
+                    'failed' => $failedCount
+                ]
+            ]
         ];
     }
 
@@ -433,18 +519,30 @@ class ScheduleService extends Service
      */
     public function bulkResume(array $ids, int $userId): array
     {
-        $resumed = 0;
+        $results = [];
         foreach ($ids as $id) {
-            $result = $this->resumeSchedule($id, $userId);
-            if ($result['success']) {
-                $resumed++;
+            $scheduleId = (int)$id;
+            if ($scheduleId <= 0) {
+                $results[$id] = ['success' => false, 'message' => 'Invalid schedule ID'];
+                continue;
             }
+            $results[$scheduleId] = $this->resumeSchedule($scheduleId, $userId);
         }
 
+        $successCount = count(array_filter($results, fn($r) => $r['success']));
+        $failedCount = count($results) - $successCount;
+
         return [
-            'success' => true,
-            'message' => "Resumed {$resumed} of " . count($ids) . " schedules",
-            'data' => ['resumed' => $resumed, 'total' => count($ids)]
+            'success' => $successCount > 0,
+            'message' => "Resumed {$successCount} of " . count($results) . " schedules",
+            'data' => [
+                'results' => $results,
+                'summary' => [
+                    'total' => count($results),
+                    'success' => $successCount,
+                    'failed' => $failedCount
+                ]
+            ]
         ];
     }
 
@@ -453,18 +551,48 @@ class ScheduleService extends Service
      */
     public function bulkDelete(array $ids, int $userId): array
     {
-        $deleted = 0;
+        $results = [];
         foreach ($ids as $id) {
-            $result = $this->deleteSchedule($id, $userId);
-            if ($result['success']) {
-                $deleted++;
+            $scheduleId = (int)$id;
+            if ($scheduleId <= 0) {
+                $results[$id] = ['success' => false, 'message' => 'Invalid schedule ID'];
+                continue;
             }
+            $results[$scheduleId] = $this->deleteSchedule($scheduleId, $userId);
         }
 
+        $successCount = count(array_filter($results, fn($r) => $r['success']));
+        $failedCount = count($results) - $successCount;
+
         return [
-            'success' => true,
-            'message' => "Deleted {$deleted} of " . count($ids) . " schedules",
-            'data' => ['deleted' => $deleted, 'total' => count($ids)]
+            'success' => $successCount > 0,
+            'message' => "Deleted {$successCount} of " . count($results) . " schedules",
+            'data' => [
+                'results' => $results,
+                'summary' => [
+                    'total' => count($results),
+                    'success' => $successCount,
+                    'failed' => $failedCount
+                ]
+            ]
         ];
+    }
+
+    private function normalizeTimezone(string $timezone): ?string
+    {
+        if (!in_array($timezone, \DateTimeZone::listIdentifiers(), true)) {
+            return null;
+        }
+        return $timezone;
+    }
+
+    private function parseDateTime(string $value, string $timezone): ?\DateTime
+    {
+        try {
+            $tz = new \DateTimeZone($timezone);
+            return new \DateTime($value, $tz);
+        } catch (\Exception $e) {
+            return null;
+        }
     }
 }

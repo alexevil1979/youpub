@@ -50,30 +50,22 @@ class InstagramService extends Service
         $this->scheduleRepo->update($scheduleId, ['status' => 'processing']);
 
         try {
-            // TODO: Реализовать загрузку Reels через Instagram Graph API
-            // Использовать Instagram Basic Display API или Instagram Graph API
-            
-            $mediaId = 'MOCK_INSTAGRAM_MEDIA_ID';
-            $mediaUrl = 'https://www.instagram.com/reel/' . $mediaId;
+            $message = 'Instagram publishing is not implemented';
+            $this->scheduleRepo->update($scheduleId, [
+                'status' => 'failed',
+                'error_message' => $message
+            ]);
 
-            $publicationId = $this->publicationRepo->create([
+            $this->publicationRepo->create([
                 'schedule_id' => $scheduleId,
                 'user_id' => $schedule['user_id'],
                 'video_id' => $schedule['video_id'],
                 'platform' => 'instagram',
-                'platform_id' => $mediaId,
-                'platform_url' => $mediaUrl,
-                'status' => 'success',
-                'published_at' => date('Y-m-d H:i:s'),
+                'status' => 'failed',
+                'error_message' => $message,
             ]);
 
-            $this->scheduleRepo->update($scheduleId, ['status' => 'published']);
-
-            return [
-                'success' => true,
-                'message' => 'Reel published successfully',
-                'data' => ['publication_id' => $publicationId, 'media_url' => $mediaUrl]
-            ];
+            return ['success' => false, 'message' => $message];
 
         } catch (\Exception $e) {
             $this->scheduleRepo->update($scheduleId, [

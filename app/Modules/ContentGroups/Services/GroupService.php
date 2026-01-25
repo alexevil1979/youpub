@@ -284,4 +284,77 @@ class GroupService extends Service
             ];
         }
     }
+
+    /**
+     * Очистить статус опубликованности для одного файла
+     */
+    public function clearFilePublication(int $groupId, int $fileId, int $userId): array
+    {
+        try {
+            $group = $this->groupRepo->findById($groupId);
+            if (!$group) {
+                return ['success' => false, 'message' => 'Группа не найдена'];
+            }
+            if ($group['user_id'] !== $userId) {
+                return ['success' => false, 'message' => 'Нет доступа к этой группе'];
+            }
+
+            $file = $this->fileRepo->findById($fileId);
+            if (!$file) {
+                return ['success' => false, 'message' => 'Файл не найден'];
+            }
+            if ((int)$file['group_id'] !== (int)$groupId) {
+                return ['success' => false, 'message' => 'Файл не принадлежит этой группе'];
+            }
+
+            $updated = $this->fileRepo->clearPublicationStatus($fileId);
+            if (!$updated) {
+                return ['success' => false, 'message' => 'Не удалось очистить статус'];
+            }
+
+            return [
+                'success' => true,
+                'message' => 'Статус опубликованности очищен',
+                'data' => ['status' => 'new']
+            ];
+        } catch (\Exception $e) {
+            error_log("GroupService::clearFilePublication: " . $e->getMessage());
+            return ['success' => false, 'message' => 'Произошла ошибка при очистке статуса'];
+        }
+    }
+
+    /**
+     * Очистить статус опубликованности для нескольких файлов
+     */
+    public function clearFilesPublication(int $groupId, array $fileIds, int $userId): array
+    {
+        try {
+            $group = $this->groupRepo->findById($groupId);
+            if (!$group) {
+                return ['success' => false, 'message' => 'Группа не найдена'];
+            }
+            if ($group['user_id'] !== $userId) {
+                return ['success' => false, 'message' => 'Нет доступа к этой группе'];
+            }
+
+            $ids = array_values(array_unique(array_filter($fileIds, static fn($id) => (int)$id > 0)));
+            if (empty($ids)) {
+                return ['success' => false, 'message' => 'Список файлов пуст'];
+            }
+
+            $updatedCount = $this->fileRepo->clearPublicationStatusByIds($groupId, $ids);
+            if ($updatedCount <= 0) {
+                return ['success' => false, 'message' => 'Не удалось очистить статус'];
+            }
+
+            return [
+                'success' => true,
+                'message' => 'Статус опубликованности очищен',
+                'data' => ['updated' => $updatedCount]
+            ];
+        } catch (\Exception $e) {
+            error_log("GroupService::clearFilesPublication: " . $e->getMessage());
+            return ['success' => false, 'message' => 'Произошла ошибка при очистке статуса'];
+        }
+    }
 }

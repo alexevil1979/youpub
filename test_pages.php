@@ -27,6 +27,7 @@ error_log("User ID in session: " . ($_SESSION['user_id'] ?? 'NOT SET'));
 
 // Проверяем автозагрузку
 require_once __DIR__ . '/vendor/autoload.php';
+use Core\Database;
 error_log("Autoload OK");
 
 // Проверяем конфигурацию
@@ -39,7 +40,6 @@ try {
 
 // Проверяем базу данных
 try {
-    use Core\Database;
     Database::init($config);
     error_log("Database initialized OK");
 } catch (\Exception $e) {

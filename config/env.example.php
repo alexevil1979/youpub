@@ -22,6 +22,7 @@ return [
     'SECRET_KEY' => 'CHANGE_THIS_TO_RANDOM_STRING_32_CHARS_MIN',
     'JWT_SECRET' => 'CHANGE_THIS_TO_RANDOM_STRING_32_CHARS_MIN',
     'SESSION_LIFETIME' => 86400, // 24 часа
+    'TRUSTED_PROXIES' => [], // список доверенных прокси IP
     
     // Загрузка файлов
     'UPLOAD_DIR' => __DIR__ . '/../storage/uploads',
@@ -32,6 +33,7 @@ return [
     'YOUTUBE_CLIENT_ID' => '',
     'YOUTUBE_CLIENT_SECRET' => '',
     'YOUTUBE_REDIRECT_URI' => 'https://you.1tlt.ru/integrations/youtube/callback',
+    'YOUTUBE_CATEGORY_ID' => '22',
     
     // Telegram
     'TELEGRAM_API_URL' => 'https://api.telegram.org/bot',

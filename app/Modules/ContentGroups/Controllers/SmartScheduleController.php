@@ -292,6 +292,12 @@ class SmartScheduleController extends Controller
     public function create(): void
     {
         try {
+            if (!$this->validateCsrf()) {
+                $_SESSION['error'] = 'Invalid CSRF token';
+                header('Location: /content-groups/schedules/create');
+                exit;
+            }
+
             $userId = $_SESSION['user_id'] ?? null;
             
             if (!$userId) {
@@ -341,7 +347,8 @@ class SmartScheduleController extends Controller
                 $data['video_id'] = $videoId;
             }
             
-            error_log("SmartScheduleController::create: Data prepared - content_group_id: {$data['content_group_id']}, video_id: {$data['video_id']}, platform: {$data['platform']}, schedule_type: {$data['schedule_type']}");
+            $videoIdLog = $data['video_id'] ?? null;
+            error_log("SmartScheduleController::create: Data prepared - content_group_id: {$data['content_group_id']}, video_id: {$videoIdLog}, platform: {$data['platform']}, schedule_type: {$data['schedule_type']}");
 
         // Валидация
         if (empty($data['content_group_id']) && empty($data['video_id'])) {
@@ -470,7 +477,7 @@ class SmartScheduleController extends Controller
         exit;
         } catch (\Exception $e) {
             error_log("SmartScheduleController::create: Exception - " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
-            $_SESSION['error'] = 'Произошла ошибка при создании расписания: ' . $e->getMessage();
+            $_SESSION['error'] = 'Произошла ошибка при создании расписания.';
             header('Location: /content-groups/schedules/create');
             exit;
         }
@@ -766,6 +773,12 @@ class SmartScheduleController extends Controller
         }
         
         try {
+            if (!$this->validateCsrf()) {
+                $_SESSION['error'] = 'Invalid CSRF token';
+                header('Location: /content-groups/schedules/' . $id . '/edit');
+                exit;
+            }
+
             $scheduleRepo = new \App\Repositories\ScheduleRepository();
             $schedule = $scheduleRepo->findById($id);
             
@@ -814,7 +827,7 @@ class SmartScheduleController extends Controller
             exit;
         } catch (\Exception $e) {
             error_log("SmartScheduleController::update: Error - " . $e->getMessage());
-            $_SESSION['error'] = 'Ошибка при обновлении расписания: ' . $e->getMessage();
+            $_SESSION['error'] = 'Ошибка при обновлении расписания.';
             header('Location: /content-groups/schedules/' . $id . '/edit');
             exit;
         }
@@ -834,6 +847,11 @@ class SmartScheduleController extends Controller
         }
         
         try {
+            if (!$this->validateCsrf()) {
+                $this->error('Invalid CSRF token', 403);
+                return;
+            }
+
             $scheduleRepo = new \App\Repositories\ScheduleRepository();
             $schedule = $scheduleRepo->findById($id);
             
@@ -846,7 +864,7 @@ class SmartScheduleController extends Controller
             $this->success([], 'Расписание приостановлено');
         } catch (\Exception $e) {
             error_log("SmartScheduleController::pause: Exception - " . $e->getMessage());
-            $this->error('Произошла ошибка при приостановке расписания: ' . $e->getMessage(), 500);
+            $this->error('Произошла ошибка при приостановке расписания', 500);
         }
     }
 
@@ -864,6 +882,11 @@ class SmartScheduleController extends Controller
         }
         
         try {
+            if (!$this->validateCsrf()) {
+                $this->error('Invalid CSRF token', 403);
+                return;
+            }
+
             $scheduleRepo = new \App\Repositories\ScheduleRepository();
             $schedule = $scheduleRepo->findById($id);
             
@@ -876,7 +899,7 @@ class SmartScheduleController extends Controller
             $this->success([], 'Расписание возобновлено');
         } catch (\Exception $e) {
             error_log("SmartScheduleController::resume: Exception - " . $e->getMessage());
-            $this->error('Произошла ошибка при возобновлении расписания: ' . $e->getMessage(), 500);
+            $this->error('Произошла ошибка при возобновлении расписания', 500);
         }
     }
 
@@ -890,6 +913,10 @@ class SmartScheduleController extends Controller
             
             if (!$userId) {
                 $this->error('Необходима авторизация', 401);
+                return;
+            }
+            if (!$this->validateCsrf()) {
+                $this->error('Invalid CSRF token', 403);
                 return;
             }
             
@@ -911,7 +938,7 @@ class SmartScheduleController extends Controller
             $this->success([], 'Расписание успешно удалено');
         } catch (\Exception $e) {
             error_log("SmartScheduleController::delete: Exception - " . $e->getMessage());
-            $this->error('Произошла ошибка при удалении расписания: ' . $e->getMessage(), 500);
+            $this->error('Произошла ошибка при удалении расписания', 500);
         }
     }
 }
