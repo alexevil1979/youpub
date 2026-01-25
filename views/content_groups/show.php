@@ -166,7 +166,17 @@ ob_start();
                         </td>
                         <td>
                             <span class="status-badge status-<?= $file['status'] ?>">
-                                <?= ucfirst($file['status']) ?>
+                                <?php
+                                $statusLabels = [
+                                    'new' => 'Новый',
+                                    'queued' => 'В очереди',
+                                    'published' => 'Опубликовано',
+                                    'error' => 'Ошибка',
+                                    'paused' => 'На паузе',
+                                    'skipped' => 'Не публиковать'
+                                ];
+                                echo $statusLabels[$file['status']] ?? ucfirst($file['status']);
+                                ?>
                             </span>
                         </td>
                         <td><?= $file['order_index'] ?></td>
@@ -512,7 +522,7 @@ function markDoNotPublish(groupId, fileId) {
             'Content-Type': 'application/json',
             'X-Requested-With': 'XMLHttpRequest'
         },
-        body: JSON.stringify({status: 'paused'})
+        body: JSON.stringify({status: 'skipped'})
     })
     .then(response => {
         if (!response.ok) {
