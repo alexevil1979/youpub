@@ -57,16 +57,38 @@ class YoutubeService extends Service
 
             // Проверяем, не обрабатывается ли уже это расписание
             if ($lockedSchedule['status'] === 'processing') {
-                // Проверяем, не зависло ли оно (старше 10 минут)
-                $createdAt = strtotime($lockedSchedule['created_at']);
-                $now = time();
-                if (($now - $createdAt) < 600) { // 10 минут
+                // Сначала проверяем, есть ли уже успешная публикация для этого расписания
+                $existingPub = $this->publicationRepo->findByScheduleId($scheduleId);
+                if ($existingPub && $existingPub['status'] === 'success') {
                     $this->db->rollBack();
-                    error_log("YoutubeService::publishVideo: Schedule {$scheduleId} is already processing");
+                    error_log("YoutubeService::publishVideo: Schedule {$scheduleId} already has successful publication (ID: {$existingPub['id']})");
+                    return [
+                        'success' => true,
+                        'message' => 'Video already published',
+                        'data' => [
+                            'publication_id' => $existingPub['id'],
+                            'video_url' => $existingPub['platform_url'] ?? ''
+                        ]
+                    ];
+                }
+                
+                // Проверяем, не зависло ли оно (используем updated_at если есть, иначе created_at)
+                $updatedAt = !empty($lockedSchedule['updated_at']) ? strtotime($lockedSchedule['updated_at']) : strtotime($lockedSchedule['created_at']);
+                $now = time();
+                $timeSinceUpdate = $now - $updatedAt;
+                
+                // Если расписание в processing меньше 2 минут - разрешаем обработку (возможно, повторный вызов после ошибки)
+                if ($timeSinceUpdate < 120) {
+                    error_log("YoutubeService::publishVideo: Schedule {$scheduleId} is in processing but recent ({$timeSinceUpdate}s), allowing retry");
+                    // Продолжаем обработку
+                } elseif ($timeSinceUpdate < 600) { // 10 минут
+                    // Расписание в processing, но не зависло - возможно, другой процесс обрабатывает
+                    $this->db->rollBack();
+                    error_log("YoutubeService::publishVideo: Schedule {$scheduleId} is already processing (updated {$timeSinceUpdate}s ago)");
                     return ['success' => false, 'message' => 'Schedule is already being processed'];
                 } else {
-                    error_log("YoutubeService::publishVideo: Schedule {$scheduleId} was stuck in processing, resetting");
-                    // Расписание зависло, сбрасываем статус
+                    // Расписание зависло (старше 10 минут), сбрасываем статус
+                    error_log("YoutubeService::publishVideo: Schedule {$scheduleId} was stuck in processing ({$timeSinceUpdate}s), resetting");
                     $this->scheduleRepo->update($scheduleId, [
                         'status' => 'pending',
                         'error_message' => 'Previous processing timed out'
