@@ -565,9 +565,15 @@ class SmartQueueService extends Service
         switch ($platform) {
             case 'youtube':
                 $service = new YoutubeService();
-                // Метаданные уже обновлены, просто публикуем
+                // Передаем метаданные напрямую, чтобы не зависеть от обновления БД
+                $metadata = [
+                    'title' => $templated['title'] ?? null,
+                    'description' => $templated['description'] ?? null,
+                    'tags' => $templated['tags'] ?? null,
+                ];
                 error_log("SmartQueueService::publishVideo: Publishing to YouTube with schedule ID: {$scheduleId}");
-                return $service->publishVideo($scheduleId);
+                error_log("SmartQueueService::publishVideo: Passing metadata - title: " . mb_substr($metadata['title'] ?? 'N/A', 0, 100));
+                return $service->publishVideo($scheduleId, $metadata);
             
             case 'telegram':
                 $service = new TelegramService();
