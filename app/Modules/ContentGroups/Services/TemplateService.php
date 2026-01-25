@@ -127,8 +127,9 @@ class TemplateService extends Service
         ];
 
         // НОВЫЙ ПОДХОД: Работа с массивами вариантов для Shorts
-        // Инициализируем генератор случайных чисел для лучшей рандомизации
-        mt_srand();
+        // Инициализируем генератор случайных чисел для лучшей рандомизации при перегенерации
+        // Используем микросекунды для гарантированной уникальности seed
+        mt_srand((int)(microtime(true) * 1000000) % PHP_INT_MAX);
 
         // 1. ГЕНЕРАЦИЯ НАЗВАНИЯ (A/B тестирование)
         $titleVariants = !empty($template['title_variants']) ? json_decode($template['title_variants'], true) : [];
@@ -141,14 +142,18 @@ class TemplateService extends Service
             $availableVariants = $this->filterUniqueStartTitles($titleVariants, $usedTitles);
 
             if (!empty($availableVariants)) {
-                $result['title'] = $availableVariants[array_rand($availableVariants)];
+                // Перемешиваем для гарантированной рандомизации
+                shuffle($availableVariants);
+                $result['title'] = $availableVariants[mt_rand(0, count($availableVariants) - 1)];
             } else {
-                // Если все начала использованы, выбираем случайный из всех вариантов
-                $result['title'] = $titleVariants[array_rand($titleVariants)];
+                // Если все начала использованы, перемешиваем и выбираем случайный из всех вариантов
+                shuffle($titleVariants);
+                $result['title'] = $titleVariants[mt_rand(0, count($titleVariants) - 1)];
             }
         } elseif ($hasTitleVariants) {
-            // Без A/B тестирования: случайный выбор для перегенерации
-            $result['title'] = $titleVariants[array_rand($titleVariants)];
+            // Без A/B тестирования: полная рандомизация для перегенерации
+            shuffle($titleVariants);
+            $result['title'] = $titleVariants[mt_rand(0, count($titleVariants) - 1)];
         } else {
             // Обратная совместимость: старый подход
             $emojiList = !empty($template['emoji_list']) ? json_decode($template['emoji_list'], true) : ['🎬'];
@@ -188,7 +193,9 @@ class TemplateService extends Service
                 $hookVariants = ['Посмотрите это видео!'];
             }
 
-            $selectedVariant = $hookVariants[array_rand($hookVariants)];
+            // Перемешиваем для гарантированной рандомизации при перегенерации
+            shuffle($hookVariants);
+            $selectedVariant = $hookVariants[mt_rand(0, count($hookVariants) - 1)];
 
             // Добавляем emoji из соответствующей группы с полной рандомизацией
             $emojiGroups = !empty($template['emoji_groups']) ? json_decode($template['emoji_groups'], true) : [];
@@ -198,7 +205,7 @@ class TemplateService extends Service
                     // Полная рандомизация emoji
                     shuffle($emojiList);
                     // Выбираем случайное количество emoji (1-2)
-                    $emojiCount = min(rand(1, 2), count($emojiList));
+                    $emojiCount = min(mt_rand(1, 2), count($emojiList));
                     $selectedEmojis = array_slice($emojiList, 0, $emojiCount);
                     if (!empty($selectedEmojis)) {
                         $selectedVariant .= ' ' . implode(' ', $selectedEmojis);
@@ -220,7 +227,7 @@ class TemplateService extends Service
 
             // Полная рандомизация emoji для старого подхода
             shuffle($emojiList);
-            $vars['random_emoji'] = $emojiList[array_rand($emojiList)];
+            $vars['random_emoji'] = $emojiList[mt_rand(0, count($emojiList) - 1)];
             $descriptionTemplate = $template['description_template'] ?? '';
             $result['description'] = $this->processTemplate($descriptionTemplate, $vars, $video['description'] ?? '');
             $descriptionGenerated = !empty($result['description']);
