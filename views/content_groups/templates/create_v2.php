@@ -1,8 +1,15 @@
 <?php
-$isEdit = isset($template) && is_array($template);
-$pageTitle = $isEdit ? 'Редактировать шаблон Shorts' : 'Создать шаблон Shorts (улучшенный)';
-$title = $pageTitle;
-$formAction = $isEdit ? '/content-groups/templates/' . ($template['id'] ?? '') . '/update' : '/content-groups/templates/create-shorts';
+try {
+    $isEdit = isset($template) && is_array($template);
+    $pageTitle = $isEdit ? 'Редактировать шаблон Shorts' : 'Создать шаблон Shorts (улучшенный)';
+    $title = $pageTitle;
+    $formAction = $isEdit ? '/content-groups/templates/' . ($template['id'] ?? '') . '/update' : '/content-groups/templates/create-shorts';
+} catch (\Throwable $e) {
+    error_log("Templates create_v2 view: Error at start: " . $e->getMessage());
+    http_response_code(500);
+    echo "Error loading template creation page. Please check server logs.";
+    exit;
+}
 
 $decodeJson = static function ($value): array {
     if (!is_string($value) || $value === '') {
@@ -1227,6 +1234,27 @@ document.addEventListener('input', function(e) {
 </script>
 
 <?php
-$content = ob_get_clean();
-include __DIR__ . '/../../layout.php';
+try {
+    $content = ob_get_clean();
+    if ($content === false) {
+        error_log("Templates create_v2 view: Failed to get buffer content");
+        $content = '<div class="alert alert-error">Ошибка при загрузке содержимого</div>';
+    }
+    
+    $layoutPath = __DIR__ . '/../../layout.php';
+    if (!file_exists($layoutPath)) {
+        error_log("Templates create_v2 view: Layout file not found: {$layoutPath}");
+        http_response_code(500);
+        echo "Layout file not found. Please check server logs.";
+        exit;
+    }
+    
+    include $layoutPath;
+} catch (\Throwable $e) {
+    error_log("Templates create_v2 view: Fatal error: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+    ob_end_clean();
+    http_response_code(500);
+    echo "Fatal error loading template creation page. Please check server logs.";
+    exit;
+}
 ?>

@@ -146,8 +146,70 @@ class TemplateController extends Controller
      */
     public function showCreateShorts(): void
     {
-        $csrfToken = (new \Core\Auth())->generateCsrfToken();
-        include __DIR__ . '/../../../../views/content_groups/templates/create_v2.php';
+        try {
+            error_log("TemplateController::showCreateShorts: START");
+            
+            // Проверяем сессию
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+            
+            $userId = $_SESSION['user_id'] ?? null;
+            error_log("TemplateController::showCreateShorts: userId = " . ($userId ?? 'NULL'));
+            
+            if (!$userId) {
+                error_log("TemplateController::showCreateShorts: No user ID, redirecting to login");
+                header('Location: /login');
+                exit;
+            }
+            
+            error_log("TemplateController::showCreateShorts: Generating CSRF token");
+            $csrfToken = (new \Core\Auth())->generateCsrfToken();
+            error_log("TemplateController::showCreateShorts: CSRF token generated");
+            
+            $viewPath = __DIR__ . '/../../../../views/content_groups/templates/create_v2.php';
+            error_log("TemplateController::showCreateShorts: View path: {$viewPath}");
+            
+            if (!file_exists($viewPath)) {
+                error_log("TemplateController::showCreateShorts: View file not found: {$viewPath}");
+                throw new \Exception("View file not found: {$viewPath}");
+            }
+            
+            error_log("TemplateController::showCreateShorts: Including view file");
+            include $viewPath;
+            error_log("TemplateController::showCreateShorts: View file included successfully");
+            
+        } catch (\Exception $e) {
+            error_log("TemplateController::showCreateShorts: Exception - " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+            
+            // Очищаем буфер вывода, если он был начат
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+            
+            // Показываем HTML страницу с ошибкой
+            $title = 'Ошибка';
+            ob_start();
+            ?>
+            <div class="alert alert-error">
+                <h2>Ошибка при загрузке формы создания шаблона</h2>
+                <p><?= htmlspecialchars($e->getMessage()) ?></p>
+                <p><a href="/dashboard" class="btn btn-secondary">Вернуться на главную</a></p>
+            </div>
+            <?php
+            $content = ob_get_clean();
+            
+            $layoutPath = __DIR__ . '/../../../../views/layout.php';
+            if (file_exists($layoutPath)) {
+                include $layoutPath;
+            } else {
+                echo $content;
+            }
+        } catch (\Throwable $e) {
+            error_log("TemplateController::showCreateShorts: FATAL - " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+            http_response_code(500);
+            echo "Internal Server Error. Please check server logs.";
+        }
     }
 
     /**
