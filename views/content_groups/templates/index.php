@@ -27,13 +27,115 @@ ob_start();
 if (!isset($templates)) {
     $templates = [];
 }
+
+$searchQuery = trim((string)($_GET['q'] ?? ''));
+$filterStatus = $_GET['status'] ?? 'all';
+$filterDateFrom = $_GET['date_from'] ?? '';
+$filterDateTo = $_GET['date_to'] ?? '';
+$sortBy = $_GET['sort'] ?? 'created_at_desc';
+
+$allowedStatuses = ['all', 'active', 'inactive'];
+$allowedSorts = ['created_at_desc', 'created_at_asc'];
+
+if (!in_array($filterStatus, $allowedStatuses, true)) {
+    $filterStatus = 'all';
+}
+if (!in_array($sortBy, $allowedSorts, true)) {
+    $sortBy = 'created_at_desc';
+}
+if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $filterDateFrom)) {
+    $filterDateFrom = '';
+}
+if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $filterDateTo)) {
+    $filterDateTo = '';
+}
+
+$filteredTemplates = array_filter($templates, function($template) use ($searchQuery, $filterStatus, $filterDateFrom, $filterDateTo) {
+    if ($filterStatus === 'active' && empty($template['is_active'])) {
+        return false;
+    }
+    if ($filterStatus === 'inactive' && !empty($template['is_active'])) {
+        return false;
+    }
+    if ($searchQuery !== '') {
+        $name = (string)($template['name'] ?? '');
+        $desc = (string)($template['description'] ?? '');
+        if (mb_stripos($name, $searchQuery) === false && mb_stripos($desc, $searchQuery) === false) {
+            return false;
+        }
+    }
+    if ($filterDateFrom !== '' || $filterDateTo !== '') {
+        $createdAt = $template['created_at'] ?? null;
+        $createdTs = $createdAt ? strtotime($createdAt) : 0;
+        if ($filterDateFrom !== '' && $createdTs < strtotime($filterDateFrom)) {
+            return false;
+        }
+        if ($filterDateTo !== '' && $createdTs > strtotime($filterDateTo . ' 23:59:59')) {
+            return false;
+        }
+    }
+    return true;
+});
+
+$filteredTemplates = array_values($filteredTemplates);
+usort($filteredTemplates, function($a, $b) use ($sortBy) {
+    $aTime = !empty($a['created_at']) ? strtotime($a['created_at']) : 0;
+    $bTime = !empty($b['created_at']) ? strtotime($b['created_at']) : 0;
+    if ($aTime === $bTime) {
+        return 0;
+    }
+    if ($sortBy === 'created_at_asc') {
+        return $aTime < $bTime ? -1 : 1;
+    }
+    return $aTime > $bTime ? -1 : 1;
+});
 ?>
 
-<?php if (empty($templates)): ?>
+<div class="filters-panel" style="margin-top: 1rem;">
+    <form method="GET" action="/content-groups/templates" class="filters-form" id="filtersForm">
+        <div class="filter-group">
+            <label for="filter_query">Поиск:</label>
+            <input type="text" id="filter_query" name="q" value="<?= htmlspecialchars($searchQuery) ?>" placeholder="Название или описание">
+        </div>
+        <div class="filter-group">
+            <label for="filter_status">Статус:</label>
+            <select id="filter_status" name="status">
+                <option value="all" <?= $filterStatus === 'all' ? 'selected' : '' ?>>Все</option>
+                <option value="active" <?= $filterStatus === 'active' ? 'selected' : '' ?>>Активные</option>
+                <option value="inactive" <?= $filterStatus === 'inactive' ? 'selected' : '' ?>>Неактивные</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="filter_date_from">С:</label>
+            <input type="date" id="filter_date_from" name="date_from" value="<?= htmlspecialchars($filterDateFrom) ?>">
+        </div>
+        <div class="filter-group">
+            <label for="filter_date_to">По:</label>
+            <input type="date" id="filter_date_to" name="date_to" value="<?= htmlspecialchars($filterDateTo) ?>">
+        </div>
+        <div class="filter-group">
+            <label for="filter_sort">Сортировка:</label>
+            <select id="filter_sort" name="sort">
+                <option value="created_at_desc" <?= $sortBy === 'created_at_desc' ? 'selected' : '' ?>>Сначала новые</option>
+                <option value="created_at_asc" <?= $sortBy === 'created_at_asc' ? 'selected' : '' ?>>Сначала старые</option>
+            </select>
+        </div>
+        <div class="filter-group" style="display: flex; gap: 0.5rem; align-items: flex-end;">
+            <button type="submit" class="btn btn-sm btn-primary" title="Применить">
+                <?= \App\Helpers\IconHelper::render('search', 14, 'icon-inline') ?>
+            </button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="clearFilters()" title="Очистить">
+                <?= \App\Helpers\IconHelper::render('delete', 14, 'icon-inline') ?>
+            </button>
+        </div>
+    </form>
+</div>
+
+<?php if (empty($filteredTemplates)): ?>
     <div class="empty-state" style="margin-top: 2rem;">
         <div class="empty-state-icon"><?= \App\Helpers\IconHelper::render('file', 64) ?></div>
-        <h3>Нет созданных шаблонов</h3>
-        <p>Создайте первый шаблон для автоматического оформления публикаций</p>
+        <h3>Нет шаблонов</h3>
+        <p><?= empty($templates) ? 'Создайте первый шаблон для автоматического оформления публикаций' : 'Попробуйте изменить фильтры или поиск' ?></p>
         <a href="/content-groups/templates/create-shorts" class="btn btn-primary">🎯 Создать шаблон для Shorts</a>
     </div>
 <?php else: ?>
@@ -43,15 +145,19 @@ if (!isset($templates)) {
                 <tr>
                     <th>Название</th>
                     <th>Описание</th>
+                    <th>Создан</th>
                     <th>Статус</th>
                     <th style="width: 150px;">Действия</th>
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($templates as $template): ?>
+                <?php foreach ($filteredTemplates as $template): ?>
                     <tr>
                         <td><?= htmlspecialchars($template['name']) ?></td>
                         <td><?= htmlspecialchars($template['description'] ?? '') ?></td>
+                        <td>
+                            <?= !empty($template['created_at']) ? date('d.m.Y H:i', strtotime($template['created_at'])) : '-' ?>
+                        </td>
                         <td>
                             <span class="status-badge status-<?= $template['is_active'] ? 'active' : 'inactive' ?>">
                                 <?= $template['is_active'] ? 'Активен' : 'Неактивен' ?>
@@ -71,6 +177,10 @@ if (!isset($templates)) {
 <?php endif; ?>
 
 <script>
+function clearFilters() {
+    window.location.href = '/content-groups/templates';
+}
+
 function deleteTemplate(id) {
     if (!confirm('Удалить шаблон?')) {
         return;
