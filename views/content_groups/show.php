@@ -351,7 +351,8 @@ ob_start();
                                     <button type="button"
                                             class="btn btn-xs btn-warning"
                                             onclick="clearFilePublication(<?= $group['id'] ?>, <?= $file['id'] ?>)"
-                                            title="Сбросить публикацию и статус для повторной публикации">
+                                            title="Сбросить публикацию и статус для повторной публикации"
+                                            aria-label="Сбросить публикацию">
                                         <?= \App\Helpers\IconHelper::render('copy', 14, 'icon-inline') ?>
                                     </button>
                                 <?php endif; ?>
@@ -359,7 +360,8 @@ ob_start();
                                     <button type="button"
                                             class="btn btn-xs btn-danger"
                                             onclick="markDoNotPublish(<?= $group['id'] ?>, <?= $file['id'] ?>)"
-                                            title="Не публиковать этот файл">
+                                            title="Не публиковать этот файл"
+                                            aria-label="Не публиковать">
                                         <?= \App\Helpers\IconHelper::render('error', 14, 'icon-inline') ?>
                                     </button>
                                 <?php endif; ?>
