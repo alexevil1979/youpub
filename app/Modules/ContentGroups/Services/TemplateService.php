@@ -179,6 +179,9 @@ class TemplateService extends Service
             }
         }
 
+        // Добавляем хештеги в название (будет выполнено после генерации тегов)
+        // Пока сохраняем исходное название для последующей обработки
+
         // 2. ГЕНЕРАЦИЯ ОПИСАНИЯ (по типам триггеров)
         $descriptionVariants = !empty($template['description_variants']) ? json_decode($template['description_variants'], true) : [];
         $hookType = $template['hook_type'] ?? 'emotional';
@@ -299,6 +302,63 @@ class TemplateService extends Service
         // Очищаем и форматируем теги
         $finalTags = array_unique(array_filter($finalTags));
         $result['tags'] = implode(', ', $finalTags);
+
+        // Добавляем хештеги в название и ограничиваем длину до 100 символов
+        if (!empty($finalTags)) {
+            // Извлекаем хештеги из тегов (убираем # если есть, затем добавляем обратно)
+            $hashtags = [];
+            foreach ($finalTags as $tag) {
+                $tag = trim($tag);
+                if (empty($tag)) continue;
+                // Убираем # если есть, затем добавляем обратно для единообразия
+                $tag = ltrim($tag, '#');
+                if (!empty($tag)) {
+                    $hashtags[] = '#' . $tag;
+                }
+            }
+            
+            // Берем первые 3-5 хештегов, чтобы не перегружать название
+            $hashtags = array_slice($hashtags, 0, min(5, count($hashtags)));
+            
+            if (!empty($hashtags)) {
+                $hashtagsString = ' ' . implode(' ', $hashtags);
+                $titleWithHashtags = $result['title'] . $hashtagsString;
+                
+                // Ограничиваем длину до 100 символов
+                if (mb_strlen($titleWithHashtags) > 100) {
+                    // Сначала пробуем убрать часть хештегов
+                    $availableLength = 100 - mb_strlen($result['title']) - 1; // -1 для пробела
+                    if ($availableLength > 0) {
+                        $shortenedHashtags = [];
+                        $currentLength = 0;
+                        foreach ($hashtags as $hashtag) {
+                            $hashtagLength = mb_strlen($hashtag) + 1; // +1 для пробела
+                            if ($currentLength + $hashtagLength <= $availableLength) {
+                                $shortenedHashtags[] = $hashtag;
+                                $currentLength += $hashtagLength;
+                            } else {
+                                break;
+                            }
+                        }
+                        if (!empty($shortenedHashtags)) {
+                            $result['title'] = $result['title'] . ' ' . implode(' ', $shortenedHashtags);
+                        }
+                    }
+                    
+                    // Если все еще длиннее 100 символов, обрезаем название
+                    if (mb_strlen($result['title']) > 100) {
+                        $result['title'] = mb_substr($result['title'], 0, 97) . '...';
+                    }
+                } else {
+                    $result['title'] = $titleWithHashtags;
+                }
+            }
+        }
+        
+        // Финальная проверка длины названия (на случай, если хештеги не были добавлены)
+        if (mb_strlen($result['title']) > 100) {
+            $result['title'] = mb_substr($result['title'], 0, 97) . '...';
+        }
 
         // 4. ВОПРОСЫ ДЛЯ ВОВЛЕЧЁННОСТИ
         $questions = !empty($template['questions']) ? json_decode($template['questions'], true) : [];
