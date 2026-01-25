@@ -378,6 +378,133 @@ class TemplateService extends Service
             error_log("TemplateService::applyTemplate: Final fallback applied - description was empty");
         }
 
+        // Проверяем язык названия и фильтруем русские слова из описания и тегов, если название на английском
+        $titleLanguage = $this->detectLanguage($result['title']);
+        if ($titleLanguage === 'en') {
+            // Фильтруем русские слова из описания
+            $originalDescription = $result['description'];
+            $result['description'] = $this->filterRussianWords($result['description']);
+            if (empty(trim($result['description']))) {
+                // Если после фильтрации описание стало пустым, используем английский fallback
+                $result['description'] = 'Watch this video! 🎬';
+                error_log("TemplateService::applyTemplate: Description became empty after Russian filter, using English fallback");
+            }
+            
+            // Фильтруем русские слова из тегов
+            if (!empty($finalTags)) {
+                $filteredTags = [];
+                foreach ($finalTags as $tag) {
+                    $filteredTag = $this->filterRussianWords($tag);
+                    if (!empty($filteredTag)) {
+                        $filteredTags[] = $filteredTag;
+                    }
+                }
+                $result['tags'] = implode(', ', $filteredTags);
+                
+                // Если после фильтрации тегов название содержит хештеги, нужно пересобрать их
+                // Пересобираем хештеги для названия из отфильтрованных тегов
+                if (!empty($filteredTags)) {
+                    $hashtags = [];
+                    foreach ($filteredTags as $tag) {
+                        $tag = trim($tag);
+                        if (empty($tag)) continue;
+                        $tag = ltrim($tag, '#');
+                        if (!empty($tag)) {
+                            $hashtags[] = '#' . $tag;
+                        }
+                    }
+                    $hashtags = array_slice($hashtags, 0, min(5, count($hashtags)));
+                    
+                    if (!empty($hashtags)) {
+                        // Убираем старые хештеги из названия (если есть)
+                        $titleWithoutHashtags = preg_replace('/\s+#[^\s]+(?:\s+#[^\s]+)*\s*$/', '', $result['title']);
+                        $titleWithoutHashtags = trim($titleWithoutHashtags);
+                        
+                        $hashtagsString = ' ' . implode(' ', $hashtags);
+                        $titleWithHashtags = $titleWithoutHashtags . $hashtagsString;
+                        
+                        // Ограничиваем длину до 100 символов
+                        if (mb_strlen($titleWithHashtags) > 100) {
+                            $availableLength = 100 - mb_strlen($titleWithoutHashtags) - 1;
+                            if ($availableLength > 0) {
+                                $shortenedHashtags = [];
+                                $currentLength = 0;
+                                foreach ($hashtags as $hashtag) {
+                                    $hashtagLength = mb_strlen($hashtag) + 1;
+                                    if ($currentLength + $hashtagLength <= $availableLength) {
+                                        $shortenedHashtags[] = $hashtag;
+                                        $currentLength += $hashtagLength;
+                                    } else {
+                                        break;
+                                    }
+                                }
+                                if (!empty($shortenedHashtags)) {
+                                    $result['title'] = $titleWithoutHashtags . ' ' . implode(' ', $shortenedHashtags);
+                                } else {
+                                    $result['title'] = $titleWithoutHashtags;
+                                }
+                            } else {
+                                $result['title'] = $titleWithoutHashtags;
+                            }
+                            
+                            if (mb_strlen($result['title']) > 100) {
+                                $result['title'] = mb_substr($result['title'], 0, 97) . '...';
+                            }
+                        } else {
+                            $result['title'] = $titleWithHashtags;
+                        }
+                    } else {
+                        // Если после фильтрации не осталось хештегов, убираем их из названия
+                        $result['title'] = preg_replace('/\s+#[^\s]+(?:\s+#[^\s]+)*\s*$/', '', $result['title']);
+                        $result['title'] = trim($result['title']);
+                    }
+                }
+            }
+            
+            error_log("TemplateService::applyTemplate: Filtered Russian words from description and tags (title is English)");
+        }
+
+        return $result;
+    }
+
+    /**
+     * Определить язык текста
+     */
+    private function detectLanguage(string $text): string
+    {
+        $hasLatin = (bool)preg_match('/[a-z]/i', $text);
+        $hasCyrillic = (bool)preg_match('/[а-яё]/iu', $text);
+        if ($hasLatin && !$hasCyrillic) {
+            return 'en';
+        }
+        return 'ru';
+    }
+
+    /**
+     * Фильтровать русские слова из текста
+     */
+    private function filterRussianWords(string $text): string
+    {
+        // Разбиваем текст на слова
+        $words = preg_split('/[\s\p{P}]+/u', $text, -1, PREG_SPLIT_NO_EMPTY);
+        $filteredWords = [];
+        
+        foreach ($words as $word) {
+            // Проверяем, содержит ли слово кириллицу
+            if (!preg_match('/[а-яё]/iu', $word)) {
+                $filteredWords[] = $word;
+            } else {
+                error_log("TemplateService::filterRussianWords: Removed Russian word: '{$word}'");
+            }
+        }
+        
+        // Собираем обратно, сохраняя пробелы и знаки препинания
+        $result = implode(' ', $filteredWords);
+        
+        // Очищаем множественные пробелы
+        $result = preg_replace('/\s+/u', ' ', $result);
+        $result = trim($result);
+        
         return $result;
     }
 
