@@ -32,35 +32,71 @@ class YoutubeService extends Service
      */
     public function publishVideo(int $scheduleId): array
     {
-        $schedule = $this->scheduleRepo->findById($scheduleId);
-        if (!$schedule) {
-            return ['success' => false, 'message' => 'Schedule not found'];
-        }
-
-        // Поддержка мультиаккаунтов: используем integration_id из расписания или аккаунт по умолчанию
-        $integration = null;
-        if (!empty($schedule['integration_id']) && !empty($schedule['integration_type']) && $schedule['integration_type'] === 'youtube') {
-            $integration = $this->integrationRepo->findByIdAndUserId($schedule['integration_id'], $schedule['user_id']);
-        }
+        error_log("YoutubeService::publishVideo: Called for schedule ID: {$scheduleId}");
         
-        if (!$integration) {
-            $integration = $this->integrationRepo->findDefaultByUserId($schedule['user_id']);
-        }
-        
-        if (!$integration || $integration['status'] !== 'connected') {
-            return ['success' => false, 'message' => 'YouTube integration not connected'];
-        }
-
-        // Получаем видео
-        $video = $this->videoRepo->findById($schedule['video_id']);
-        if (!$video || !file_exists($video['file_path'])) {
-            return ['success' => false, 'message' => 'Video file not found'];
-        }
-
-        // СТРОГАЯ проверка на дубликаты перед публикацией с блокировкой
-        // Используем транзакцию для атомарной проверки
+        // КРИТИЧЕСКАЯ проверка: блокируем расписание сразу, чтобы предотвратить параллельные вызовы
         $this->db->beginTransaction();
         try {
+            $schedule = $this->scheduleRepo->findById($scheduleId);
+            if (!$schedule) {
+                $this->db->rollBack();
+                error_log("YoutubeService::publishVideo: Schedule {$scheduleId} not found");
+                return ['success' => false, 'message' => 'Schedule not found'];
+            }
+
+            // Блокируем расписание для обновления
+            $lockStmt = $this->db->prepare("SELECT * FROM schedules WHERE id = ? FOR UPDATE");
+            $lockStmt->execute([$scheduleId]);
+            $lockedSchedule = $lockStmt->fetch();
+            
+            if (!$lockedSchedule) {
+                $this->db->rollBack();
+                error_log("YoutubeService::publishVideo: Schedule {$scheduleId} not found after lock");
+                return ['success' => false, 'message' => 'Schedule not found'];
+            }
+
+            // Проверяем, не обрабатывается ли уже это расписание
+            if ($lockedSchedule['status'] === 'processing') {
+                // Проверяем, не зависло ли оно (старше 10 минут)
+                $createdAt = strtotime($lockedSchedule['created_at']);
+                $now = time();
+                if (($now - $createdAt) < 600) { // 10 минут
+                    $this->db->rollBack();
+                    error_log("YoutubeService::publishVideo: Schedule {$scheduleId} is already processing");
+                    return ['success' => false, 'message' => 'Schedule is already being processed'];
+                } else {
+                    error_log("YoutubeService::publishVideo: Schedule {$scheduleId} was stuck in processing, resetting");
+                    // Расписание зависло, сбрасываем статус
+                    $this->scheduleRepo->update($scheduleId, [
+                        'status' => 'pending',
+                        'error_message' => 'Previous processing timed out'
+                    ]);
+                }
+            }
+
+            // Проверяем, не опубликовано ли уже
+            if ($lockedSchedule['status'] === 'published') {
+                $existingPub = $this->publicationRepo->findByScheduleId($scheduleId);
+                if ($existingPub && $existingPub['status'] === 'success') {
+                    $this->db->rollBack();
+                    error_log("YoutubeService::publishVideo: Schedule {$scheduleId} already published");
+                    return [
+                        'success' => true,
+                        'message' => 'Video already published',
+                        'data' => [
+                            'publication_id' => $existingPub['id'],
+                            'video_url' => $existingPub['platform_url'] ?? ''
+                        ]
+                    ];
+                }
+            }
+
+            // Обновляем статус на processing ВНУТРИ транзакции
+            if ($lockedSchedule['status'] !== 'processing') {
+                $this->scheduleRepo->update($scheduleId, ['status' => 'processing']);
+            }
+            
+            // Продолжаем проверки в той же транзакции
             // 1. Проверяем, есть ли уже успешная публикация для этого расписания
             $existingPublication = $this->publicationRepo->findByScheduleId($scheduleId);
             if ($existingPublication && $existingPublication['status'] === 'success') {
@@ -138,24 +174,48 @@ class YoutubeService extends Service
             }
             
             // Все проверки пройдены, обновляем статус на 'processing' ВНУТРИ транзакции
-            // Это гарантирует, что только один запрос сможет начать загрузку
-            if ($schedule['status'] !== 'processing') {
+            if ($lockedSchedule['status'] !== 'processing') {
                 $this->scheduleRepo->update($scheduleId, ['status' => 'processing']);
             }
             
-            // Коммитим транзакцию ТОЛЬКО после обновления статуса
+            // Коммитим транзакцию ТОЛЬКО после всех проверок и обновления статуса
             $this->db->commit();
+            $schedule = $lockedSchedule; // Используем заблокированную версию
             error_log("YoutubeService::publishVideo: All duplicate checks passed for schedule {$scheduleId}, status set to processing, proceeding with publication");
         } catch (\Exception $e) {
             if ($this->db->inTransaction()) {
                 $this->db->rollBack();
             }
-            error_log("YoutubeService::publishVideo: Error in duplicate check transaction: " . $e->getMessage());
-            // Не продолжаем публикацию при ошибке проверки
-            return [
-                'success' => false,
-                'message' => 'Error checking for duplicates: ' . $e->getMessage()
-            ];
+            error_log("YoutubeService::publishVideo: Error in lock and duplicate check: " . $e->getMessage());
+            return ['success' => false, 'message' => 'Error checking for duplicates: ' . $e->getMessage()];
+        }
+
+        // Поддержка мультиаккаунтов: используем integration_id из расписания или аккаунт по умолчанию
+        $integration = null;
+        if (!empty($schedule['integration_id']) && !empty($schedule['integration_type']) && $schedule['integration_type'] === 'youtube') {
+            $integration = $this->integrationRepo->findByIdAndUserId($schedule['integration_id'], $schedule['user_id']);
+        }
+        
+        if (!$integration) {
+            $integration = $this->integrationRepo->findDefaultByUserId($schedule['user_id']);
+        }
+        
+        if (!$integration || $integration['status'] !== 'connected') {
+            $this->scheduleRepo->update($scheduleId, [
+                'status' => 'failed',
+                'error_message' => 'YouTube integration not connected'
+            ]);
+            return ['success' => false, 'message' => 'YouTube integration not connected'];
+        }
+
+        // Получаем видео
+        $video = $this->videoRepo->findById($schedule['video_id']);
+        if (!$video || !file_exists($video['file_path'])) {
+            $this->scheduleRepo->update($scheduleId, [
+                'status' => 'failed',
+                'error_message' => 'Video file not found'
+            ]);
+            return ['success' => false, 'message' => 'Video file not found'];
         }
 
         // Используем данные из видео (могут быть обновлены шаблоном)
@@ -345,6 +405,20 @@ class YoutubeService extends Service
         string $description,
         string $tags
     ): array {
+        // Проверяем, что файл существует и доступен
+        if (!file_exists($videoPath) || !is_readable($videoPath)) {
+            error_log("YoutubeService::uploadVideoToYouTube: Video file not found or not readable: {$videoPath}");
+            return ['success' => false, 'message' => 'Video file not found or not readable'];
+        }
+
+        $fileSize = filesize($videoPath);
+        if ($fileSize === false || $fileSize === 0) {
+            error_log("YoutubeService::uploadVideoToYouTube: Invalid file size for: {$videoPath}");
+            return ['success' => false, 'message' => 'Invalid video file size'];
+        }
+
+        error_log("YoutubeService::uploadVideoToYouTube: Starting upload. File: {$videoPath}, Size: {$fileSize} bytes");
+
         // Создаем метаданные видео
         $categoryId = (string)($this->config['YOUTUBE_CATEGORY_ID'] ?? '22');
         if (!preg_match('/^\d+$/', $categoryId)) {
@@ -358,7 +432,7 @@ class YoutubeService extends Service
         ];
 
         $status = [
-            'privacyStatus' => 'public', // или 'unlisted', 'private'
+            'privacyStatus' => 'public',
         ];
 
         $videoData = [
@@ -366,83 +440,102 @@ class YoutubeService extends Service
             'status' => $status,
         ];
 
-        // Загружаем видео через resumable upload
-        // Шаг 1: Инициируем загрузку
-        $initUrl = 'https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status';
+        // Используем multipart upload (более надежный метод)
+        // Это предотвращает создание видео без файла
+        return $this->uploadVideoMultipart($accessToken, $videoPath, $title, $description, $tags, $videoData);
+    }
+
+    /**
+     * Загрузка через multipart (основной метод)
+     */
+    private function uploadVideoMultipart(
+        string $accessToken,
+        string $videoPath,
+        string $title,
+        string $description,
+        string $tags,
+        array $videoData
+    ): array {
+        $boundary = uniqid('boundary_');
+        $delimiter = '-------------' . $boundary;
+
+        // Читаем файл
+        $fileHandle = fopen($videoPath, 'rb');
+        if (!$fileHandle) {
+            error_log("YoutubeService::uploadVideoMultipart: Failed to open file: {$videoPath}");
+            return ['success' => false, 'message' => 'Failed to open video file'];
+        }
+
+        $fileSize = filesize($videoPath);
+        $metadataJson = json_encode($videoData);
+
+        // Формируем multipart данные
+        $postData = '';
+        $postData .= '--' . $delimiter . "\r\n";
+        $postData .= 'Content-Disposition: form-data; name="metadata"' . "\r\n";
+        $postData .= 'Content-Type: application/json; charset=UTF-8' . "\r\n\r\n";
+        $postData .= $metadataJson . "\r\n";
+        $postData .= '--' . $delimiter . "\r\n";
+        $postData .= 'Content-Disposition: form-data; name="video"; filename="' . basename($videoPath) . '"' . "\r\n";
+        $postData .= 'Content-Type: video/*' . "\r\n\r\n";
+
+        // Вычисляем размер данных
+        $metadataSize = strlen($postData);
+        $footer = "\r\n--" . $delimiter . "--\r\n";
+        $footerSize = strlen($footer);
+        $totalSize = $metadataSize + $fileSize + $footerSize;
+
+        $url = 'https://www.googleapis.com/upload/youtube/v3/videos?uploadType=multipart&part=snippet,status';
         
-        $ch = curl_init($initUrl);
+        error_log("YoutubeService::uploadVideoMultipart: Uploading to YouTube. Total size: {$totalSize} bytes");
+
+        $ch = curl_init($url);
+        
+        // Используем CURLFile для загрузки файла
+        $cfile = new \CURLFile($videoPath, 'video/*', basename($videoPath));
+        
+        $postFields = [
+            'metadata' => $metadataJson,
+            'video' => $cfile
+        ];
+
         curl_setopt_array($ch, [
             CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => json_encode($videoData),
+            CURLOPT_POSTFIELDS => $postFields,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HTTPHEADER => [
                 'Authorization: Bearer ' . $accessToken,
-                'Content-Type: application/json',
-                'X-Upload-Content-Type: video/*',
-                'X-Upload-Content-Length: ' . filesize($videoPath),
             ],
+            CURLOPT_TIMEOUT => 600, // 10 минут для больших файлов
         ]);
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $location = null;
-
-        if ($httpCode === 200) {
-            // Получаем URL для загрузки из заголовка Location
-            $headers = curl_getinfo($ch, CURLINFO_HEADER_OUT);
-            preg_match('/Location: (.+)/i', $response, $matches);
-        }
-
-        // Пытаемся получить из заголовков ответа
-        $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
-        $headers = substr($response, 0, $headerSize);
-        preg_match('/Location:\s*(.+)/i', $headers, $matches);
-        
-        if (empty($matches[1])) {
-            // Альтернативный способ - используем заголовки из curl_getinfo
-            curl_setopt($ch, CURLOPT_HEADER, true);
-            curl_setopt($ch, CURLOPT_NOBODY, false);
-            $fullResponse = curl_exec($ch);
-            preg_match('/Location:\s*(.+?)(?:\r|\n)/i', $fullResponse, $matches);
-        }
-
+        $curlError = curl_error($ch);
         curl_close($ch);
+        fclose($fileHandle);
 
-        if (empty($matches[1])) {
-            // Используем альтернативный метод - простую загрузку
-            return $this->uploadVideoSimple($accessToken, $videoPath, $title, $description, $tags);
+        if ($curlError) {
+            error_log("YoutubeService::uploadVideoMultipart: cURL error: {$curlError}");
+            return ['success' => false, 'message' => 'cURL error: ' . $curlError];
         }
-
-        $uploadUrl = trim($matches[1]);
-
-        // Шаг 2: Загружаем файл
-        $ch = curl_init($uploadUrl);
-        curl_setopt_array($ch, [
-            CURLOPT_PUT => true,
-            CURLOPT_INFILE => fopen($videoPath, 'rb'),
-            CURLOPT_INFILESIZE => filesize($videoPath),
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER => [
-                'Content-Type: video/*',
-            ],
-        ]);
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
 
         if ($httpCode === 200) {
             $data = json_decode($response, true);
             if (isset($data['id'])) {
+                error_log("YoutubeService::uploadVideoMultipart: Video uploaded successfully. Video ID: {$data['id']}");
                 return [
                     'success' => true,
                     'video_id' => $data['id'],
                 ];
+            } else {
+                error_log("YoutubeService::uploadVideoMultipart: Response missing video ID. Response: " . substr($response, 0, 500));
+                return ['success' => false, 'message' => 'Response missing video ID'];
             }
+        } else {
+            error_log("YoutubeService::uploadVideoMultipart: Upload failed. HTTP Code: {$httpCode}, Response: " . substr($response, 0, 500));
+            return ['success' => false, 'message' => 'Failed to upload video to YouTube. HTTP Code: ' . $httpCode];
         }
-
-        error_log('YouTube upload failed. HTTP Code: ' . $httpCode . ', Response: ' . substr($response, 0, 500));
-        return ['success' => false, 'message' => 'Failed to upload video to YouTube'];
     }
 
     /**
