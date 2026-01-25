@@ -655,6 +655,22 @@ class TemplateController extends Controller
             $allPinnedComments = [];
             $descriptionVariants = [];
             $emojiGroups = [];
+            
+            // Маппинг настроения к ключам описаний для emoji групп
+            $moodToDescriptionKey = [
+                'calm' => 'atmosphere',
+                'emotional' => 'emotional',
+                'romantic' => 'emotional',
+                'mysterious' => 'question'
+            ];
+            
+            // Маппинг content_type к hook_type
+            $contentTypeToHookType = [
+                'vocal' => 'emotional',
+                'music' => 'atmospheric',
+                'aesthetic' => 'visual',
+                'ambience' => 'atmospheric'
+            ];
 
             foreach ($variants as $variant) {
                 $content = $variant['content'];
@@ -688,13 +704,14 @@ class TemplateController extends Controller
                 // Собираем emoji группы
                 if (!empty($content['emoji'])) {
                     $mood = $intent['mood'] ?? 'calm';
-                    if (!isset($emojiGroups[$mood])) {
-                        $emojiGroups[$mood] = [];
+                    $emojiKey = $moodToDescriptionKey[$mood] ?? 'atmosphere';
+                    if (!isset($emojiGroups[$emojiKey])) {
+                        $emojiGroups[$emojiKey] = [];
                     }
                     $emojiList = array_filter(explode(',', $content['emoji']));
                     foreach ($emojiList as $emoji) {
-                        if (!in_array($emoji, $emojiGroups[$mood])) {
-                            $emojiGroups[$mood][] = $emoji;
+                        if (!in_array($emoji, $emojiGroups[$emojiKey])) {
+                            $emojiGroups[$emojiKey][] = $emoji;
                         }
                     }
                 }
@@ -704,6 +721,10 @@ class TemplateController extends Controller
                     $allPinnedComments[] = $content['pinned_comment'];
                 }
             }
+            
+            // Определяем hook_type из первого варианта
+            $firstContentType = $firstVariant['intent']['content_type'] ?? 'vocal';
+            $hookType = $contentTypeToHookType[$firstContentType] ?? 'emotional';
 
             // Форматируем для автозаполнения формы
             $suggestion = [
@@ -719,7 +740,7 @@ class TemplateController extends Controller
                     'emoji_list' => $firstVariant['content']['emoji'] ?? '',
 
                     // Новые поля для Shorts с множественными вариантами
-                    'hook_type' => $firstVariant['intent']['content_type'] ?? 'vocal',
+                    'hook_type' => $hookType, // Используем маппинг content_type -> hook_type
                     'title_variants' => array_slice($allTitles, 0, 20), // Ограничиваем до 20 вариантов
                     'description_variants' => $descriptionVariants,
                     'emoji_groups' => $emojiGroups,
@@ -747,8 +768,35 @@ class TemplateController extends Controller
             error_log('TemplateController::suggestContent: Stack trace: ' . $e->getTraceAsString());
             header('Content-Type: application/json');
             echo json_encode(['success' => false, 'message' => 'Ошибка генерации контента.']);
-            exit;
+        exit;
+    }
+
+    /**
+     * Фильтрация русских слов из текста (для английских результатов)
+     */
+    private function filterRussianWordsFromText(string $text): string
+    {
+        // Разбиваем текст на слова
+        $words = preg_split('/[\s\p{P}]+/u', $text, -1, PREG_SPLIT_NO_EMPTY);
+        $filteredWords = [];
+        
+        foreach ($words as $word) {
+            // Проверяем, содержит ли слово кириллицу
+            if (!preg_match('/[а-яё]/iu', $word)) {
+                $filteredWords[] = $word;
+            } else {
+                error_log("TemplateController::filterRussianWordsFromText: Removed Russian word: '{$word}'");
+            }
         }
+        
+        // Собираем обратно, сохраняя пробелы и знаки препинания
+        $result = implode(' ', $filteredWords);
+        
+        // Очищаем множественные пробелы
+        $result = preg_replace('/\s+/u', ' ', $result);
+        $result = trim($result);
+        
+        return $result;
     }
 
     /**

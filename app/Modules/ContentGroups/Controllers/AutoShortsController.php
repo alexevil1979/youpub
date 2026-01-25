@@ -484,10 +484,16 @@ class AutoShortsController extends Controller
                 // Создаем шаблон на основе сгенерированных данных
                 $templateRepo = new \App\Modules\ContentGroups\Repositories\PublicationTemplateRepository();
 
+                // Определяем язык идеи для описания шаблона
+                $language = $generationData['intent']['language'] ?? 'ru';
+                $templateDescription = $language === 'en'
+                    ? 'Auto-generated template for: ' . $generationData['idea']
+                    : 'Автоматически сгенерированный шаблон для: ' . $generationData['idea'];
+                
                 $templateData = [
                     'user_id' => $userId,
                     'name' => 'Auto: ' . $generationData['idea'],
-                    'description' => 'Автоматически сгенерированный шаблон для: ' . $generationData['idea'],
+                    'description' => $templateDescription,
 
                     // Генерируем простые шаблоны на основе результатов
                     'title_template' => $generationData['content']['title'],

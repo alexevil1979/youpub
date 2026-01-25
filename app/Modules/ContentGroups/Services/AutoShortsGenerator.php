@@ -414,39 +414,74 @@ class AutoShortsGenerator
      */
     private function generateContentAngles(array $intent, string $idea): array
     {
+        $language = $intent['language'] ?? 'ru';
         $angles = [];
 
-        // Разные углы в зависимости от типа контента
-        switch ($intent['content_type']) {
-            case 'vocal':
-                $angles = [
-                    'голос', 'вокал', 'пение', 'тембр', 'интонация',
-                    'эмоция_голоса', 'чистота_звука', 'манера_пения',
-                    'внутренний_мир', 'чувства_певца'
-                ];
-                break;
-            case 'music':
-                $angles = [
-                    'мелодия', 'ритм', 'звук', 'композиция', 'инструменты',
-                    'музыкальное_настроение', 'звуковое_пространство',
-                    'музыкальная_ткань', 'звучание', 'музыкальная_атмосфера'
-                ];
-                break;
-            case 'aesthetic':
-                $angles = [
-                    'визуал', 'цвета', 'свет', 'композиция', 'эстетика',
-                    'визуальная_гармония', 'цветовые_переходы',
-                    'световые_эффекты', 'визуальный_ритм', 'эстетическое_наслаждение'
-                ];
-                break;
-            case 'ambience':
-                $angles = [
-                    'атмосфера', 'настроение', 'погружение', 'окружение',
-                    'эмоциональный_фон', 'пространственное_ощущение',
-                    'атмосферное_погружение', 'эмоциональная_аура',
-                    'окружающая_среда', 'атмосферное_настроение'
-                ];
-                break;
+        // Разные углы в зависимости от типа контента и языка
+        if ($language === 'en') {
+            switch ($intent['content_type']) {
+                case 'vocal':
+                    $angles = [
+                        'voice', 'vocal', 'singing', 'tone', 'intonation',
+                        'voice_emotion', 'sound_purity', 'singing_style',
+                        'inner_world', 'singer_feelings'
+                    ];
+                    break;
+                case 'music':
+                    $angles = [
+                        'melody', 'rhythm', 'sound', 'composition', 'instruments',
+                        'musical_mood', 'sound_space',
+                        'musical_texture', 'sound', 'musical_atmosphere'
+                    ];
+                    break;
+                case 'aesthetic':
+                    $angles = [
+                        'visual', 'colors', 'light', 'composition', 'aesthetic',
+                        'visual_harmony', 'color_transitions',
+                        'light_effects', 'visual_rhythm', 'aesthetic_pleasure'
+                    ];
+                    break;
+                case 'ambience':
+                    $angles = [
+                        'atmosphere', 'mood', 'immersion', 'surroundings',
+                        'emotional_background', 'spatial_feeling',
+                        'atmospheric_immersion', 'emotional_aura',
+                        'environment', 'atmospheric_mood'
+                    ];
+                    break;
+            }
+        } else {
+            switch ($intent['content_type']) {
+                case 'vocal':
+                    $angles = [
+                        'голос', 'вокал', 'пение', 'тембр', 'интонация',
+                        'эмоция_голоса', 'чистота_звука', 'манера_пения',
+                        'внутренний_мир', 'чувства_певца'
+                    ];
+                    break;
+                case 'music':
+                    $angles = [
+                        'мелодия', 'ритм', 'звук', 'композиция', 'инструменты',
+                        'музыкальное_настроение', 'звуковое_пространство',
+                        'музыкальная_ткань', 'звучание', 'музыкальная_атмосфера'
+                    ];
+                    break;
+                case 'aesthetic':
+                    $angles = [
+                        'визуал', 'цвета', 'свет', 'композиция', 'эстетика',
+                        'визуальная_гармония', 'цветовые_переходы',
+                        'световые_эффекты', 'визуальный_ритм', 'эстетическое_наслаждение'
+                    ];
+                    break;
+                case 'ambience':
+                    $angles = [
+                        'атмосфера', 'настроение', 'погружение', 'окружение',
+                        'эмоциональный_фон', 'пространственное_ощущение',
+                        'атмосферное_погружение', 'эмоциональная_аура',
+                        'окружающая_среда', 'атмосферное_настроение'
+                    ];
+                    break;
+            }
         }
 
         // Перемешиваем и выбираем 6-8 углов
@@ -504,15 +539,26 @@ class AutoShortsGenerator
 
             // Проверяем уникальность заголовка
             if (isset($content['title']) && in_array($content['title'], $usedTitles)) {
-                // Регенерируем заголовок
-                $content['title'] = $this->generateTitle(['content_type' => 'vocal', 'mood' => 'calm'], 'альтернативный_угол');
+                // Регенерируем заголовок с учетом языка
+                $language = $content['language'] ?? 'ru';
+                $alternativeAngle = $language === 'en' ? 'alternative_angle' : 'альтернативный_угол';
+                $content['title'] = $this->generateTitle([
+                    'content_type' => 'vocal',
+                    'mood' => 'calm',
+                    'language' => $language
+                ], $alternativeAngle);
                 $isUnique = false;
             }
 
             // Проверяем уникальность описания
             if (isset($content['description']) && in_array($content['description'], $usedDescriptions)) {
-                // Регенерируем описание
-                $content['description'] = $this->generateDescription(['content_type' => 'vocal', 'mood' => 'calm']);
+                // Регенерируем описание с учетом языка
+                $language = $content['language'] ?? 'ru';
+                $content['description'] = $this->generateDescription([
+                    'content_type' => 'vocal',
+                    'mood' => 'calm',
+                    'language' => $language
+                ]);
                 $isUnique = false;
             }
 
@@ -539,11 +585,24 @@ class AutoShortsGenerator
             error_log("AutoShortsGenerator::generateContent: Generating title...");
             $title = $this->generateTitle($intent, $angle);
             error_log("AutoShortsGenerator::generateContent: Title generated: '{$title}'");
+            
+            // Фильтрация русских слов из английских результатов
+            $language = $intent['language'] ?? 'ru';
+            if ($language === 'en') {
+                $title = $this->filterRussianWords($title);
+                error_log("AutoShortsGenerator::generateContent: Title after Russian filter: '{$title}'");
+            }
 
             // Генерация описания
             error_log("AutoShortsGenerator::generateContent: Generating description...");
             $description = $this->generateDescription($intent);
             error_log("AutoShortsGenerator::generateContent: Description generated: '{$description}'");
+            
+            // Фильтрация русских слов из английских результатов
+            if ($language === 'en') {
+                $description = $this->filterRussianWords($description);
+                error_log("AutoShortsGenerator::generateContent: Description after Russian filter: '{$description}'");
+            }
 
             // Генерация emoji
             error_log("AutoShortsGenerator::generateContent: Generating emoji...");
@@ -554,11 +613,30 @@ class AutoShortsGenerator
             error_log("AutoShortsGenerator::generateContent: Generating tags...");
             $tags = $this->generateTags($intent);
             error_log("AutoShortsGenerator::generateContent: Tags generated: " . json_encode($tags));
+            
+            // Фильтрация русских слов из английских тегов
+            if ($language === 'en') {
+                $filteredTags = [];
+                foreach ($tags as $tag) {
+                    $filteredTag = $this->filterRussianWords($tag);
+                    if (!empty($filteredTag)) {
+                        $filteredTags[] = $filteredTag;
+                    }
+                }
+                $tags = $filteredTags;
+                error_log("AutoShortsGenerator::generateContent: Tags after Russian filter: " . json_encode($tags));
+            }
 
             // Генерация закрепленного комментария
             error_log("AutoShortsGenerator::generateContent: Generating pinned comment...");
             $pinnedComment = $this->generatePinnedComment($intent);
             error_log("AutoShortsGenerator::generateContent: Pinned comment generated: '{$pinnedComment}'");
+            
+            // Фильтрация русских слов из английских комментариев
+            if ($language === 'en') {
+                $pinnedComment = $this->filterRussianWords($pinnedComment);
+                error_log("AutoShortsGenerator::generateContent: Pinned comment after Russian filter: '{$pinnedComment}'");
+            }
 
             $result = [
                 'title' => $title,
@@ -661,7 +739,8 @@ class AutoShortsGenerator
 
         } catch (Exception $e) {
             error_log("AutoShortsGenerator::generateDescription: Exception: " . $e->getMessage());
-            return "Автоматически сгенерированное описание"; // fallback
+            $language = $intent['language'] ?? 'ru';
+            return $language === 'en' ? "Auto-generated description" : "Автоматически сгенерированное описание"; // fallback
         }
     }
 
@@ -855,10 +934,41 @@ class AutoShortsGenerator
         return implode('', array_slice($emojis, 0, $count));
     }
 
+    /**
+     * Фильтрация русских слов из текста (для английских результатов)
+     */
+    private function filterRussianWords(string $text): string
+    {
+        // Разбиваем текст на слова
+        $words = preg_split('/[\s\p{P}]+/u', $text, -1, PREG_SPLIT_NO_EMPTY);
+        $filteredWords = [];
+        
+        foreach ($words as $word) {
+            // Проверяем, содержит ли слово кириллицу
+            if (!preg_match('/[а-яё]/iu', $word)) {
+                $filteredWords[] = $word;
+            } else {
+                error_log("AutoShortsGenerator::filterRussianWords: Removed Russian word: '{$word}'");
+            }
+        }
+        
+        // Собираем обратно, сохраняя пробелы и знаки препинания
+        $result = implode(' ', $filteredWords);
+        
+        // Очищаем множественные пробелы
+        $result = preg_replace('/\s+/u', ' ', $result);
+        $result = trim($result);
+        
+        return $result;
+    }
+
     private function regenerateTitle(array $content): string
     {
-        // Простая перегенерация - добавляем вариацию
-        $variations = ['просто', 'очень', 'такой', 'этот', 'настоящий'];
+        // Простая перегенерация - добавляем вариацию с учетом языка
+        $language = $content['language'] ?? 'ru';
+        $variations = $language === 'en'
+            ? ['just', 'very', 'such', 'this', 'real']
+            : ['просто', 'очень', 'такой', 'этот', 'настоящий'];
         $variation = $variations[array_rand($variations)];
 
         return $variation . ' ' . lcfirst($content['title']);
