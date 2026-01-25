@@ -721,34 +721,38 @@ class GroupController extends Controller
         $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
         
         // Защита от повторных запросов: проверяем, не публикуется ли уже этот файл
-        $smartQueue = new \App\Modules\ContentGroups\Services\SmartQueueService();
-        $fileRepo = new \App\Modules\ContentGroups\Repositories\FileRepository();
-        $file = $fileRepo->findById($fileId);
+        try {
+            $fileRepo = new \App\Modules\ContentGroups\Repositories\ContentGroupFileRepository();
+            $file = $fileRepo->findById($fileId);
         
-        if ($file && in_array($file['status'], ['queued', 'published'], true)) {
-            // Проверяем, есть ли активные расписания
-            $scheduleRepo = new \App\Repositories\ScheduleRepository();
-            $db = \Core\Database::getInstance();
-            $stmt = $db->prepare("
-                SELECT id 
-                FROM schedules 
-                WHERE video_id = ? 
-                AND status IN ('processing', 'pending')
-                AND created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
-                LIMIT 1
-            ");
-            $stmt->execute([(int)$file['video_id']]);
-            if ($stmt->fetch()) {
-                $message = 'Этот файл уже публикуется, подождите';
-                if ($isAjax) {
-                    header('Content-Type: application/json');
-                    echo json_encode(['success' => false, 'message' => $message]);
+            if ($file && in_array($file['status'], ['queued', 'published'], true)) {
+                // Проверяем, есть ли активные расписания
+                $scheduleRepo = new \App\Repositories\ScheduleRepository();
+                $db = \Core\Database::getInstance();
+                $stmt = $db->prepare("
+                    SELECT id 
+                    FROM schedules 
+                    WHERE video_id = ? 
+                    AND status IN ('processing', 'pending')
+                    AND created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+                    LIMIT 1
+                ");
+                $stmt->execute([(int)$file['video_id']]);
+                if ($stmt->fetch()) {
+                    $message = 'Этот файл уже публикуется, подождите';
+                    if ($isAjax) {
+                        header('Content-Type: application/json');
+                        echo json_encode(['success' => false, 'message' => $message]);
+                        exit;
+                    }
+                    $_SESSION['error'] = $message;
+                    header('Location: /content-groups/' . $id . '/files/' . $fileId . '/publish-now');
                     exit;
                 }
-                $_SESSION['error'] = $message;
-                header('Location: /content-groups/' . $id . '/files/' . $fileId . '/publish-now');
-                exit;
             }
+        } catch (\Exception $e) {
+            error_log("GroupController::publishNow: Error in duplicate check: " . $e->getMessage());
+            // Продолжаем публикацию, если проверка не удалась
         }
         
         try {
