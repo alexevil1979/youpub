@@ -466,8 +466,13 @@ class SmartQueueService extends Service
             if (!empty($templated['title'])) {
                 $updateData['title'] = $templated['title'];
             }
+            // Обновляем description, если он сгенерирован шаблоном (не пустой)
+            // TemplateService теперь всегда генерирует description (с fallback), поэтому проверяем !empty
             if (!empty($templated['description'])) {
                 $updateData['description'] = $templated['description'];
+                error_log("SmartQueueService::updateVideoMetadata: Description to update (length: " . mb_strlen($templated['description']) . "): " . mb_substr($templated['description'], 0, 100));
+            } else {
+                error_log("SmartQueueService::updateVideoMetadata: Description is empty in templated data");
             }
             if (!empty($templated['tags'])) {
                 $updateData['tags'] = $templated['tags'];
@@ -475,7 +480,9 @@ class SmartQueueService extends Service
 
             if (!empty($updateData)) {
                 $videoRepo->update($schedule['video_id'], $updateData);
-                error_log("SmartQueueService::updateVideoMetadata: Updated video ID {$schedule['video_id']} with template data");
+                error_log("SmartQueueService::updateVideoMetadata: Updated video ID {$schedule['video_id']} with template data. Fields: " . implode(', ', array_keys($updateData)));
+            } else {
+                error_log("SmartQueueService::updateVideoMetadata: No data to update for video ID {$schedule['video_id']}");
             }
         } catch (\Exception $e) {
             error_log("SmartQueueService::updateVideoMetadata: Error - " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());

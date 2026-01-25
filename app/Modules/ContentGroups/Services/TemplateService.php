@@ -171,6 +171,7 @@ class TemplateService extends Service
         // 2. ГЕНЕРАЦИЯ ОПИСАНИЯ (по типам триггеров)
         $descriptionVariants = !empty($template['description_variants']) ? json_decode($template['description_variants'], true) : [];
         $hookType = $template['hook_type'] ?? 'emotional';
+        $descriptionGenerated = false;
 
         if (!empty($descriptionVariants) && isset($descriptionVariants[$hookType])) {
             // Новый подход: варианты по типам триггеров
@@ -194,6 +195,8 @@ class TemplateService extends Service
             }
 
             $result['description'] = $this->processTemplate($selectedVariant, $vars, $video['description'] ?? '');
+            $descriptionGenerated = !empty($result['description']);
+            error_log("TemplateService::applyTemplate: Generated description from variants (hookType: {$hookType}), length: " . mb_strlen($result['description']));
         } else {
             // Обратная совместимость: старый подход
             $emojiList = !empty($template['emoji_list']) ? json_decode($template['emoji_list'], true) : ['🎬'];
@@ -204,7 +207,16 @@ class TemplateService extends Service
             }
 
             $vars['random_emoji'] = $emojiList[array_rand($emojiList)];
-            $result['description'] = $this->processTemplate($template['description_template'] ?? '', $vars, $video['description'] ?? '');
+            $descriptionTemplate = $template['description_template'] ?? '';
+            $result['description'] = $this->processTemplate($descriptionTemplate, $vars, $video['description'] ?? '');
+            $descriptionGenerated = !empty($result['description']);
+            error_log("TemplateService::applyTemplate: Generated description from template, template length: " . mb_strlen($descriptionTemplate) . ", result length: " . mb_strlen($result['description']));
+        }
+
+        // Fallback: если описание не сгенерировано, используем исходное или дефолтное
+        if (empty($result['description'])) {
+            $result['description'] = $video['description'] ?? 'Посмотрите это видео! 🎬';
+            error_log("TemplateService::applyTemplate: Using fallback description, length: " . mb_strlen($result['description']));
         }
 
         // 3. ГЕНЕРАЦИЯ ТЕГОВ (ротация)
