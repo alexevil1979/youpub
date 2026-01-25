@@ -76,21 +76,18 @@ class YoutubeService extends Service
                 ];
             }
             
-            // 2. Блокируем все расписания для этого видео и проверяем дубликаты
+            // 2. Блокируем только активные расписания для этого видео (processing, pending)
             $scheduleStmt = $this->db->prepare("
                 SELECT id, status, created_at 
                 FROM schedules 
                 WHERE video_id = ? 
-                AND created_at >= DATE_SUB(NOW(), INTERVAL 15 MINUTE)
+                AND status IN ('processing', 'pending')
+                AND id != ?
+                AND created_at >= DATE_SUB(NOW(), INTERVAL 2 MINUTE)
                 FOR UPDATE
             ");
-            $scheduleStmt->execute([$schedule['video_id']]);
-            $allSchedules = $scheduleStmt->fetchAll();
-            
-            // Проверяем другие активные расписания
-            $otherActiveSchedules = array_filter($allSchedules, function($s) use ($scheduleId) {
-                return $s['id'] != $scheduleId && in_array($s['status'], ['processing', 'pending', 'published']);
-            });
+            $scheduleStmt->execute([$schedule['video_id'], $scheduleId]);
+            $otherActiveSchedules = $scheduleStmt->fetchAll();
             
             if (!empty($otherActiveSchedules)) {
                 $this->db->rollBack();
@@ -109,14 +106,14 @@ class YoutubeService extends Service
                 ];
             }
             
-            // 3. Проверяем успешные публикации за последние 15 минут
+            // 3. Проверяем успешные публикации только за последние 2 минуты
             $pubStmt = $this->db->prepare("
                 SELECT id, platform_id, created_at 
                 FROM publications 
                 WHERE video_id = ? 
                 AND platform = 'youtube'
                 AND status = 'success'
-                AND created_at >= DATE_SUB(NOW(), INTERVAL 15 MINUTE)
+                AND created_at >= DATE_SUB(NOW(), INTERVAL 2 MINUTE)
                 ORDER BY created_at DESC
                 LIMIT 1
             ");
@@ -124,11 +121,11 @@ class YoutubeService extends Service
             $recentPublication = $pubStmt->fetch();
             if ($recentPublication) {
                 $this->db->rollBack();
-                error_log("YoutubeService::publishVideo: Video {$schedule['video_id']} was recently published to YouTube (publication ID: {$recentPublication['id']}, created: {$recentPublication['created_at']})");
+                error_log("YoutubeService::publishVideo: Video {$schedule['video_id']} was just published to YouTube (publication ID: {$recentPublication['id']}, created: {$recentPublication['created_at']})");
                 // Обновляем статус расписания на published
                 $this->scheduleRepo->update($scheduleId, [
                     'status' => 'published',
-                    'error_message' => 'Duplicate publication prevented - video was recently published'
+                    'error_message' => 'Duplicate publication prevented - video was just published'
                 ]);
                 return [
                     'success' => true,
