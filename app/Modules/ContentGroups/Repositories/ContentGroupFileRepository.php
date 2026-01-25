@@ -34,7 +34,7 @@ class ContentGroupFileRepository extends Repository
             }
             $sql .= " ORDER BY " . implode(", ", $order);
         } else {
-            $sql .= " ORDER BY cgf.order_index ASC, cgf.created_at ASC";
+            $sql .= " ORDER BY cgf.created_at DESC, cgf.id DESC";
         }
 
         $stmt = $this->db->prepare($sql);
@@ -90,7 +90,7 @@ class ContentGroupFileRepository extends Repository
             FROM {$this->table} cgf
             JOIN videos v ON v.id = cgf.video_id
             WHERE cgf.group_id = ? AND cgf.status = ?
-            ORDER BY cgf.order_index ASC
+            ORDER BY cgf.created_at DESC, cgf.id DESC
         ");
         $stmt->execute([$groupId, $status]);
         return $stmt->fetchAll();

@@ -215,7 +215,7 @@ class ScheduleService extends Service
      */
     public function getUserSchedules(int $userId): array
     {
-        return $this->scheduleRepo->findByUserId($userId, ['publish_at' => 'ASC']);
+        return $this->scheduleRepo->findByUserId($userId, ['publish_at' => 'DESC']);
     }
 
     /**

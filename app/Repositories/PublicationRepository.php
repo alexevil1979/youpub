@@ -20,6 +20,9 @@ class PublicationRepository extends Repository
     public function findByUserId(int $userId, array $orderBy = []): array
     {
         $orderBy = $this->sanitizeOrderBy($orderBy, ['published_at', 'created_at', 'id']);
+        if (empty($orderBy)) {
+            $orderBy = ['published_at' => 'DESC'];
+        }
         return $this->findAll(['user_id' => $userId], $orderBy);
     }
 

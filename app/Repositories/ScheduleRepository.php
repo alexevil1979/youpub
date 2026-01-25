@@ -34,7 +34,7 @@ class ScheduleRepository extends Repository
                 }
                 $sql .= " ORDER BY " . implode(", ", $order);
             } else {
-                $sql .= " ORDER BY publish_at ASC";
+                $sql .= " ORDER BY publish_at DESC";
             }
 
             $stmt = $this->db->prepare($sql);
@@ -68,7 +68,7 @@ class ScheduleRepository extends Repository
      */
     public function findByUserIdAndStatus(int $userId, string $status): array
     {
-        $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE user_id = ? AND status = ? ORDER BY publish_at ASC");
+        $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE user_id = ? AND status = ? ORDER BY publish_at DESC");
         $stmt->execute([$userId, $status]);
         return $stmt->fetchAll();
     }

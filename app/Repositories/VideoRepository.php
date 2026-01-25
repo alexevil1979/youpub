@@ -20,6 +20,9 @@ class VideoRepository extends Repository
     public function findByUserId(int $userId, array $orderBy = [], int $limit = null): array
     {
         $orderBy = $this->sanitizeOrderBy($orderBy, ['created_at', 'title', 'id']);
+        if (empty($orderBy)) {
+            $orderBy = ['created_at' => 'DESC'];
+        }
         return $this->findAll(['user_id' => $userId], $orderBy, $limit);
     }
 
