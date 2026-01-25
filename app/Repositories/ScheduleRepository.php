@@ -215,4 +215,37 @@ class ScheduleRepository extends Repository
         $stmt->execute([$groupId]);
         return $stmt->fetchAll();
     }
+
+    /**
+     * Найти последнее расписание для списка групп
+     */
+    public function findLatestByGroupIds(array $groupIds): array
+    {
+        $ids = array_values(array_unique(array_filter($groupIds, static fn($id) => (int)$id > 0)));
+        if (empty($ids)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $sql = "SELECT * FROM {$this->table}
+                WHERE content_group_id IN ({$placeholders})
+                ORDER BY publish_at DESC, created_at DESC, id DESC";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($ids);
+        $rows = $stmt->fetchAll();
+
+        $latest = [];
+        foreach ($rows as $row) {
+            $groupId = (int)($row['content_group_id'] ?? 0);
+            if ($groupId <= 0) {
+                continue;
+            }
+            if (!isset($latest[$groupId])) {
+                $latest[$groupId] = $row;
+            }
+        }
+
+        return $latest;
+    }
 }
