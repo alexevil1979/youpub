@@ -258,7 +258,7 @@ class GroupService extends Service
             }
 
             // Валидация статуса
-            $allowedStatuses = ['new', 'queued', 'published', 'error', 'paused', 'skipped'];
+            $allowedStatuses = ['new', 'queued', 'published', 'error', 'paused'];
             if (!in_array($newStatus, $allowedStatuses)) {
                 error_log("GroupService::toggleFileStatus: Invalid status - {$newStatus}");
                 return ['success' => false, 'message' => 'Недопустимый статус: ' . $newStatus];
