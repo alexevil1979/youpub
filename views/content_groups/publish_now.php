@@ -356,7 +356,6 @@ document.addEventListener('DOMContentLoaded', () => {
         publishBtn.addEventListener('click', publishVideo);
     }
 
-document.addEventListener('DOMContentLoaded', () => {
     const regenerateBtn = document.getElementById('regenerate-preview-btn');
     if (!regenerateBtn) {
         return;
