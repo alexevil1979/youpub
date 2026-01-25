@@ -467,28 +467,36 @@ class TemplateController extends Controller
             $tagVariantsRaw = $this->getParam('tag_variants', []);
             $tagVariants = is_array($tagVariantsRaw) ? array_filter(array_map('trim', $tagVariantsRaw), function($v) { return !empty($v); }) : [];
             
+            // Логируем перед сохранением
+            error_log("TemplateController::update - Final data before save:");
+            error_log("  title_variants: " . (is_array($titleVariants) ? count($titleVariants) . " items" : "not array"));
+            error_log("  description_variants: " . (is_array($descriptionVariants) ? count($descriptionVariants) . " types" : "not array"));
+            error_log("  base_tags: " . ($baseTags ?: "empty"));
+            error_log("  tag_variants: " . (is_array($tagVariants) ? count($tagVariants) . " items" : "not array"));
+            
+            // Обрабатываем данные так же, как в createTemplate - кодируем массивы в JSON
             $data = [
-                'name' => $this->getParam('name', ''),
-                'description' => $this->getParam('description', ''),
+                'name' => trim($this->getParam('name', '')),
+                'description' => !empty($this->getParam('description', '')) ? trim($this->getParam('description', '')) : null,
                 // Старые поля для обратной совместимости
-                'title_template' => $this->getParam('title_template', ''),
-                'description_template' => $this->getParam('description_template', ''),
-                'tags_template' => $this->getParam('tags_template', ''),
-                'emoji_list' => $emojiArray,
-                'variants' => !empty($variants) ? $variants : null,
-                // Новые поля для Shorts
+                'title_template' => !empty($this->getParam('title_template', '')) ? trim($this->getParam('title_template', '')) : null,
+                'description_template' => !empty($this->getParam('description_template', '')) ? trim($this->getParam('description_template', '')) : null,
+                'tags_template' => !empty($this->getParam('tags_template', '')) ? trim($this->getParam('tags_template', '')) : null,
+                'emoji_list' => !empty($emojiArray) && is_array($emojiArray) ? json_encode($emojiArray, JSON_UNESCAPED_UNICODE) : null,
+                'variants' => !empty($variants) && is_array($variants) ? json_encode($variants, JSON_UNESCAPED_UNICODE) : null,
+                // Новые поля для Shorts - кодируем массивы в JSON
                 'hook_type' => $this->getParam('hook_type', 'emotional'),
-                'focus_points' => $this->getParam('focus_points', []),
-                'title_variants' => !empty($titleVariants) ? array_values($titleVariants) : null, // array_values для переиндексации
-                'description_variants' => !empty($descriptionVariants) ? $descriptionVariants : null,
-                'emoji_groups' => !empty($emojiGroups) ? $emojiGroups : null,
-                'base_tags' => $baseTags,
-                'tag_variants' => $tagVariants,
-                'questions' => $questions,
-                'pinned_comments' => $pinnedComments,
-                'cta_types' => $this->getParam('cta_types', []),
-                'enable_ab_testing' => $this->getParam('enable_ab_testing', '1') === '1',
-                'is_active' => $this->getParam('is_active', '1') === '1',
+                'focus_points' => !empty($this->getParam('focus_points', [])) && is_array($this->getParam('focus_points', [])) ? json_encode($this->getParam('focus_points', []), JSON_UNESCAPED_UNICODE) : null,
+                'title_variants' => !empty($titleVariants) && is_array($titleVariants) ? json_encode(array_values($titleVariants), JSON_UNESCAPED_UNICODE) : null,
+                'description_variants' => !empty($descriptionVariants) && is_array($descriptionVariants) ? json_encode($descriptionVariants, JSON_UNESCAPED_UNICODE) : null,
+                'emoji_groups' => !empty($emojiGroups) && is_array($emojiGroups) ? json_encode($emojiGroups, JSON_UNESCAPED_UNICODE) : null,
+                'base_tags' => !empty($baseTags) ? trim($baseTags) : null,
+                'tag_variants' => !empty($tagVariants) && is_array($tagVariants) ? json_encode($tagVariants, JSON_UNESCAPED_UNICODE) : null,
+                'questions' => !empty($questions) && is_array($questions) ? json_encode($questions, JSON_UNESCAPED_UNICODE) : null,
+                'pinned_comments' => !empty($pinnedComments) && is_array($pinnedComments) ? json_encode($pinnedComments, JSON_UNESCAPED_UNICODE) : null,
+                'cta_types' => !empty($this->getParam('cta_types', [])) && is_array($this->getParam('cta_types', [])) ? json_encode($this->getParam('cta_types', []), JSON_UNESCAPED_UNICODE) : null,
+                'enable_ab_testing' => isset($this->getParam('enable_ab_testing', '1')) ? (int)($this->getParam('enable_ab_testing', '1') === '1') : 1,
+                'is_active' => isset($this->getParam('is_active', '1')) ? (int)($this->getParam('is_active', '1') === '1') : 1,
             ];
 
             $templateRepo->update($id, $data);
