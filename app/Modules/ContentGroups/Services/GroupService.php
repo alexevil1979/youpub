@@ -78,14 +78,22 @@ class GroupService extends Service
             if (isset($data['template_id'])) {
                 $updateData['template_id'] = $data['template_id'];
             }
-            if (isset($data['schedule_id']) && $hasScheduleIdColumn) {
-                // schedule_id может быть null (если не выбрано расписание)
-                $scheduleId = $data['schedule_id'];
-                if ($scheduleId === '' || $scheduleId === null) {
-                    $updateData['schedule_id'] = null;
+            // Обрабатываем schedule_id - всегда добавляем в updateData если передан, даже если null
+            if (array_key_exists('schedule_id', $data)) {
+                if ($hasScheduleIdColumn) {
+                    // schedule_id может быть null (если не выбрано расписание)
+                    $scheduleId = $data['schedule_id'];
+                    if ($scheduleId === '' || $scheduleId === null || $scheduleId === 0) {
+                        $updateData['schedule_id'] = null;
+                    } else {
+                        $updateData['schedule_id'] = (int)$scheduleId;
+                    }
+                    error_log("GroupService::updateGroup: schedule_id will be updated to: " . ($updateData['schedule_id'] ?? 'null'));
                 } else {
-                    $updateData['schedule_id'] = (int)$scheduleId;
+                    error_log("GroupService::updateGroup: schedule_id column does not exist, skipping");
                 }
+            } else {
+                error_log("GroupService::updateGroup: schedule_id not in data array");
             }
             if (isset($data['status'])) {
                 $updateData['status'] = $data['status'];

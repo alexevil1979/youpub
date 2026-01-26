@@ -142,7 +142,7 @@ class GroupController extends Controller
             'name' => $this->getParam('name', ''),
             'description' => $this->getParam('description', ''),
             'template_id' => $this->getParam('template_id') ? (int)$this->getParam('template_id') : null,
-            'schedule_id' => $this->getParam('schedule_id') ? (int)$this->getParam('schedule_id') : null,
+            'schedule_id' => $scheduleId,
             'status' => $this->getParam('status', 'active'),
             'settings' => !empty($settings) ? $settings : null,
         ];
@@ -718,14 +718,25 @@ class GroupController extends Controller
             unset($currentSettings['integrations']);
         }
         
+        // Обрабатываем schedule_id - может быть пустой строкой или числом
+        $scheduleIdParam = $this->getParam('schedule_id', '');
+        $scheduleId = null;
+        if (!empty($scheduleIdParam) && $scheduleIdParam !== '') {
+            $scheduleId = (int)$scheduleIdParam;
+        }
+        
+        error_log("GroupController::update: schedule_id from form: '" . $scheduleIdParam . "', processed: " . ($scheduleId ?? 'null'));
+        
         $data = [
             'name' => $this->getParam('name', ''),
             'description' => $this->getParam('description', ''),
             'template_id' => $this->getParam('template_id') ? (int)$this->getParam('template_id') : null,
-            'schedule_id' => $this->getParam('schedule_id') ? (int)$this->getParam('schedule_id') : null,
+            'schedule_id' => $scheduleId,
             'status' => $this->getParam('status', 'active'),
             'settings' => !empty($currentSettings) ? $currentSettings : null,
         ];
+        
+        error_log("GroupController::update: data array - schedule_id: " . ($data['schedule_id'] ?? 'null'));
 
         try {
             $result = $this->groupService->updateGroup($id, $userId, $data);
