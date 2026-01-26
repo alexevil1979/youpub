@@ -320,8 +320,21 @@ class SmartScheduleController extends Controller
             $contentGroupId = $this->getParam('content_group_id') ? (int)$this->getParam('content_group_id') : null;
             $videoId = $this->getParam('video_id') ? (int)$this->getParam('video_id') : null;
             
+            // Генерируем название расписания, если не указано
+            $scheduleName = trim($this->getParam('name', ''));
+            if (empty($scheduleName)) {
+                $scheduleName = $this->generateScheduleName([
+                    'schedule_type' => $this->getParam('schedule_type', 'fixed'),
+                    'platform' => $this->getParam('platform'),
+                    'content_group_id' => $contentGroupId,
+                    'publish_at' => $this->getParam('publish_at'),
+                    'groups' => $groups,
+                ]);
+            }
+            
             $data = [
                 'user_id' => $userId,
+                'name' => $scheduleName,
                 'content_group_id' => $contentGroupId,
                 'platform' => $this->getParam('platform') ?: null,
                 'schedule_type' => $this->getParam('schedule_type', 'fixed'),
@@ -794,7 +807,26 @@ class SmartScheduleController extends Controller
                 $weekdays = implode(',', array_map('intval', $weekdaysArray));
             }
             
+            // Получаем группы для генерации названия
+            $groups = $this->groupService->getUserGroups($userId);
+            if (!isset($groups)) {
+                $groups = [];
+            }
+            
+            // Генерируем название расписания, если не указано
+            $scheduleName = trim($this->getParam('name', ''));
+            if (empty($scheduleName)) {
+                $scheduleName = $this->generateScheduleName([
+                    'schedule_type' => $this->getParam('schedule_type', 'fixed'),
+                    'platform' => $this->getParam('platform'),
+                    'content_group_id' => $this->getParam('content_group_id') ? (int)$this->getParam('content_group_id') : null,
+                    'publish_at' => $this->getParam('publish_at'),
+                    'groups' => $groups,
+                ]);
+            }
+            
             $updateData = [
+                'name' => $scheduleName,
                 'content_group_id' => $this->getParam('content_group_id') ? (int)$this->getParam('content_group_id') : null,
                 'platform' => $this->getParam('platform') ?: null,
                 'schedule_type' => $this->getParam('schedule_type', 'fixed'),
@@ -1007,5 +1039,63 @@ class SmartScheduleController extends Controller
 
         $result = $this->scheduleService->bulkDelete($ids, $userId);
         $this->success($result['data'] ?? [], $result['message']);
+    }
+    
+    /**
+     * Генерировать название расписания автоматически
+     */
+    private function generateScheduleName(array $params): string
+    {
+        $scheduleType = $params['schedule_type'] ?? 'fixed';
+        $platform = $params['platform'] ?? '';
+        $contentGroupId = $params['content_group_id'] ?? null;
+        $publishAt = $params['publish_at'] ?? null;
+        $groups = $params['groups'] ?? [];
+        
+        $parts = [];
+        
+        // Тип расписания
+        $typeNames = [
+            'fixed' => 'Фиксированное',
+            'interval' => 'Интервальное',
+            'batch' => 'Пакетное',
+            'random' => 'Случайное',
+            'wave' => 'Волновое',
+        ];
+        $parts[] = $typeNames[$scheduleType] ?? 'Расписание';
+        
+        // Платформа
+        if (!empty($platform)) {
+            $platformNames = [
+                'youtube' => 'YouTube',
+                'telegram' => 'Telegram',
+                'tiktok' => 'TikTok',
+                'instagram' => 'Instagram',
+                'pinterest' => 'Pinterest',
+            ];
+            $parts[] = $platformNames[$platform] ?? ucfirst($platform);
+        }
+        
+        // Группа
+        if ($contentGroupId) {
+            foreach ($groups as $group) {
+                if ((int)$group['id'] === (int)$contentGroupId) {
+                    $parts[] = $group['name'];
+                    break;
+                }
+            }
+        }
+        
+        // Дата публикации
+        if ($publishAt) {
+            try {
+                $date = new \DateTime($publishAt);
+                $parts[] = $date->format('d.m.Y H:i');
+            } catch (\Exception $e) {
+                // Игнорируем ошибку парсинга даты
+            }
+        }
+        
+        return implode(' • ', $parts);
     }
 }

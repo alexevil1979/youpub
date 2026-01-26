@@ -23,6 +23,12 @@ ob_start();
     <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">
     
     <div class="form-group">
+        <label for="name">Название расписания (опционально)</label>
+        <input type="text" id="name" name="name" value="<?= htmlspecialchars($schedule['name'] ?? '') ?>" placeholder="Будет сгенерировано автоматически" maxlength="255">
+        <small>Если не указано, название будет сгенерировано автоматически на основе типа расписания, платформы и даты</small>
+    </div>
+    
+    <div class="form-group">
         <label for="content_group_id">Группа контента *</label>
         <select id="content_group_id" name="content_group_id">
             <option value="">Выберите группу</option>

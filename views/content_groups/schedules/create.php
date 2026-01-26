@@ -24,6 +24,12 @@ $selectedGroupId = isset($_GET['group_id']) ? (int)$_GET['group_id'] : 0;
     <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">
     
     <div class="form-group">
+        <label for="name">Название расписания (опционально)</label>
+        <input type="text" id="name" name="name" placeholder="Будет сгенерировано автоматически" maxlength="255">
+        <small>Если не указано, название будет сгенерировано автоматически на основе типа расписания, платформы и даты</small>
+    </div>
+    
+    <div class="form-group">
         <label for="content_group_id">Группа контента (опционально)</label>
         <select id="content_group_id" name="content_group_id">
             <option value="">Без привязки к группе</option>
