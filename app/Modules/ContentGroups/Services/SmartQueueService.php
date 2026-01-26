@@ -260,6 +260,8 @@ class SmartQueueService extends Service
         }
 
         // Публикуем
+        // Используем первую интеграцию из списка (или платформу из расписания для обратной совместимости)
+        $integrationToUse = !empty($selectedIntegrations) ? $selectedIntegrations[0] : null;
         $platform = $integrationToUse['platform'] ?? $schedule['platform'] ?? 'youtube';
         error_log("SmartQueueService::processGroupSchedule: ===== CALLING PUBLISH VIDEO =====");
         error_log("SmartQueueService::processGroupSchedule: Platform: {$platform}, Temp schedule ID: {$tempScheduleId}, Video ID: {$groupFile['video_id']}");
