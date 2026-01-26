@@ -362,6 +362,12 @@ class SmartScheduleController extends Controller
             $contentGroupId = $this->getParam('content_group_id') ? (int)$this->getParam('content_group_id') : null;
             $videoId = $this->getParam('video_id') ? (int)$this->getParam('video_id') : null;
             
+            // Получаем группы для генерации названия
+            $groups = $this->groupService->getUserGroups($userId);
+            if (!isset($groups)) {
+                $groups = [];
+            }
+            
             // Проверяем наличие колонки name в таблице schedules
             $hasNameColumn = $this->checkColumnExists('schedules', 'name');
             
@@ -380,12 +386,10 @@ class SmartScheduleController extends Controller
                 }
             }
             
-            // Добавляем name только если колонка существует
-            if ($hasNameColumn && $scheduleName !== null) {
-                $data['name'] = $scheduleName;
-            }
-            
-            $data['platform'] = $this->getParam('platform') ?: null;
+            $data = [
+                'user_id' => $userId,
+                'content_group_id' => $contentGroupId,
+                'platform' => $this->getParam('platform') ?: null,
                 'schedule_type' => $this->getParam('schedule_type', 'fixed'),
                 'publish_at' => $this->getParam('publish_at') ? date('Y-m-d H:i:s', strtotime($this->getParam('publish_at'))) : date('Y-m-d H:i:s'),
                 'interval_minutes' => $this->getParam('interval_minutes') ? (int)$this->getParam('interval_minutes') : null,
@@ -402,6 +406,11 @@ class SmartScheduleController extends Controller
                 'skip_published' => $this->getParam('skip_published', '1') === '1',
                 'status' => 'pending',
             ];
+            
+            // Добавляем name только если колонка существует
+            if ($hasNameColumn && $scheduleName !== null) {
+                $data['name'] = $scheduleName;
+            }
             
             // Добавляем video_id только если он указан (для расписаний групп контента video_id должен быть NULL)
             if ($videoId !== null) {
