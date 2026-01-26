@@ -66,12 +66,15 @@ class GroupService extends Service
         if (isset($data['template_id'])) {
             $updateData['template_id'] = $data['template_id'];
         }
-            if (isset($data['status'])) {
-                $updateData['status'] = $data['status'];
-            }
-            if (isset($data['settings'])) {
-                $updateData['settings'] = is_array($data['settings']) ? json_encode($data['settings']) : $data['settings'];
-            }
+        if (isset($data['schedule_id'])) {
+            $updateData['schedule_id'] = $data['schedule_id'];
+        }
+        if (isset($data['status'])) {
+            $updateData['status'] = $data['status'];
+        }
+        if (isset($data['settings'])) {
+            $updateData['settings'] = is_array($data['settings']) ? json_encode($data['settings']) : $data['settings'];
+        }
 
         if (empty($updateData)) {
             return [
