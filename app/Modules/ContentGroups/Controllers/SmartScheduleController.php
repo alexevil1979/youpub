@@ -386,10 +386,13 @@ class SmartScheduleController extends Controller
                 }
             }
             
+            // Платформа обязательна в БД, используем значение по умолчанию если не указана
+            $platform = $this->getParam('platform') ?: 'youtube';
+            
             $data = [
                 'user_id' => $userId,
                 'content_group_id' => $contentGroupId,
-                'platform' => $this->getParam('platform') ?: null,
+                'platform' => $platform,
                 'schedule_type' => $this->getParam('schedule_type', 'fixed'),
                 'publish_at' => $this->getParam('publish_at') ? date('Y-m-d H:i:s', strtotime($this->getParam('publish_at'))) : date('Y-m-d H:i:s'),
                 'interval_minutes' => $this->getParam('interval_minutes') ? (int)$this->getParam('interval_minutes') : null,
@@ -894,9 +897,12 @@ class SmartScheduleController extends Controller
                 }
             }
             
+            // Платформа обязательна в БД, используем значение по умолчанию если не указана
+            $platform = $this->getParam('platform') ?: 'youtube';
+            
             $updateData = [
                 'content_group_id' => $this->getParam('content_group_id') ? (int)$this->getParam('content_group_id') : null,
-                'platform' => $this->getParam('platform') ?: null,
+                'platform' => $platform,
                 'schedule_type' => $this->getParam('schedule_type', 'fixed'),
                 'publish_at' => $this->getParam('publish_at') ? date('Y-m-d H:i:s', strtotime($this->getParam('publish_at'))) : null,
                 'interval_minutes' => $this->getParam('interval_minutes') ? (int)$this->getParam('interval_minutes') : null,
