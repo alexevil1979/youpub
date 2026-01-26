@@ -738,6 +738,7 @@ function showTelegramForm() {
 .account-info-content {
     flex: 1;
     min-width: 0;
+    overflow: visible;
 }
 
 .account-header-row {
@@ -757,6 +758,8 @@ function showTelegramForm() {
     align-items: center;
     gap: 0.625rem;
     flex-wrap: wrap;
+    flex-shrink: 0;
+    justify-content: flex-end;
 }
 
 .account-title {
