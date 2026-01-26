@@ -449,6 +449,47 @@ class GroupController extends Controller
         // Фильтруем видео - показываем только те, которых еще нет в группе
         $availableVideos = array_filter($videos, static fn($video) => !in_array((int)$video['id'], $groupVideoIds, true));
         
+        // Получаем доступные интеграции для отображения статуса
+        $youtubeAccount = null;
+        $telegramAccount = null;
+        $tiktokAccount = null;
+        $instagramAccount = null;
+        $pinterestAccount = null;
+        try {
+            $youtubeAccount = (new \App\Repositories\YoutubeIntegrationRepository())->findDefaultByUserId($userId);
+        } catch (\Throwable $e) {
+            $youtubeAccount = null;
+        }
+        try {
+            $telegramAccount = (new \App\Repositories\TelegramIntegrationRepository())->findDefaultByUserId($userId);
+        } catch (\Throwable $e) {
+            $telegramAccount = null;
+        }
+        try {
+            $tiktokAccount = (new \App\Repositories\TiktokIntegrationRepository())->findDefaultByUserId($userId);
+        } catch (\Throwable $e) {
+            $tiktokAccount = null;
+        }
+        try {
+            $instagramAccount = (new \App\Repositories\InstagramIntegrationRepository())->findDefaultByUserId($userId);
+        } catch (\Throwable $e) {
+            $instagramAccount = null;
+        }
+        try {
+            $pinterestAccount = (new \App\Repositories\PinterestIntegrationRepository())->findDefaultByUserId($userId);
+        } catch (\Throwable $e) {
+            $pinterestAccount = null;
+        }
+        
+        // Получаем выбранные платформы из settings
+        $selectedPlatforms = [];
+        if (!empty($group['settings'])) {
+            $settings = is_string($group['settings']) ? json_decode($group['settings'], true) : $group['settings'];
+            if (isset($settings['platforms']) && is_array($settings['platforms'])) {
+                $selectedPlatforms = $settings['platforms'];
+            }
+        }
+        
         include __DIR__ . '/../../../../views/content_groups/edit.php';
     }
 
@@ -472,11 +513,37 @@ class GroupController extends Controller
             exit;
         }
 
+        // Получаем выбранные платформы
+        $platforms = $this->getParam('platforms', []);
+        if (!is_array($platforms)) {
+            $platforms = [];
+        }
+        // Фильтруем только допустимые платформы
+        $allowedPlatforms = ['youtube', 'telegram', 'tiktok', 'instagram', 'pinterest'];
+        $platforms = array_filter($platforms, fn($p) => in_array($p, $allowedPlatforms, true));
+        
+        // Получаем текущие settings группы
+        $currentSettings = [];
+        if (!empty($group['settings'])) {
+            $currentSettings = is_string($group['settings']) ? json_decode($group['settings'], true) : $group['settings'];
+            if (!is_array($currentSettings)) {
+                $currentSettings = [];
+            }
+        }
+        
+        // Обновляем платформы в settings
+        if (!empty($platforms)) {
+            $currentSettings['platforms'] = array_values($platforms);
+        } else {
+            unset($currentSettings['platforms']);
+        }
+        
         $data = [
             'name' => $this->getParam('name', ''),
             'description' => $this->getParam('description', ''),
             'template_id' => $this->getParam('template_id') ? (int)$this->getParam('template_id') : null,
             'status' => $this->getParam('status', 'active'),
+            'settings' => !empty($currentSettings) ? $currentSettings : null,
         ];
 
         $result = $this->groupService->updateGroup($id, $userId, $data);
