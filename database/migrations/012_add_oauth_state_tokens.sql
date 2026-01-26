@@ -14,3 +14,6 @@ CREATE TABLE IF NOT EXISTS `oauth_state_tokens` (
   KEY `expires_at` (`expires_at`),
   CONSTRAINT `oauth_state_tokens_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Очистка старых токенов (старше 1 часа)
+DELETE FROM `oauth_state_tokens` WHERE `expires_at` < DATE_SUB(NOW(), INTERVAL 1 HOUR);

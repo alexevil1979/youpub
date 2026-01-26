@@ -229,6 +229,10 @@ class DashboardController extends Controller
                         $deleteStmt = $db->prepare("DELETE FROM oauth_state_tokens WHERE token = ?");
                         $deleteStmt->execute([$state]);
                         error_log('YouTube Callback: State token validated, user_id: ' . $userId);
+                        
+                        // Очищаем старые токены (старше 1 часа) для предотвращения накопления
+                        $cleanupStmt = $db->prepare("DELETE FROM oauth_state_tokens WHERE expires_at < DATE_SUB(NOW(), INTERVAL 1 HOUR)");
+                        $cleanupStmt->execute();
                     } else {
                         error_log('YouTube Callback: Invalid or expired state token');
                     }
