@@ -789,7 +789,27 @@ class TemplateController extends Controller
                 'vocal' => 'emotional',
                 'music' => 'atmospheric',
                 'aesthetic' => 'visual',
-                'ambience' => 'atmospheric'
+                'ambience' => 'atmospheric',
+                'dance' => 'visual',
+                'comedy' => 'emotional',
+                'cooking' => 'educational',
+                'fitness' => 'motivation',
+                'beauty' => 'visual',
+                'gaming' => 'emotional',
+                'pets' => 'emotional',
+                'travel' => 'atmospheric',
+                'diy' => 'educational',
+                'lifehack' => 'educational',
+                'motivation' => 'emotional',
+                'asmr' => 'atmospheric',
+                'prank' => 'emotional',
+                'challenge' => 'emotional',
+                'transformation' => 'visual',
+                'reaction' => 'emotional',
+                'tutorial' => 'educational',
+                'vlog' => 'atmospheric',
+                'fashion' => 'visual',
+                'tech' => 'educational'
             ];
 
             foreach ($variants as $variant) {
