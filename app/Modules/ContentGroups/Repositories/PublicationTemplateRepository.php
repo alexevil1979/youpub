@@ -22,18 +22,43 @@ class PublicationTemplateRepository extends Repository
         try {
             error_log("PublicationTemplateRepository::findByUserId: userId={$userId}, activeOnly=" . ($activeOnly ? 'true' : 'false'));
 
+            // Проверяем наличие колонки is_active
+            $hasIsActiveColumn = false;
+            try {
+                $checkStmt = $this->db->prepare("SHOW COLUMNS FROM `{$this->table}` LIKE 'is_active'");
+                $checkStmt->execute();
+                $hasIsActiveColumn = (bool)$checkStmt->fetch();
+            } catch (\Exception $e) {
+                error_log("PublicationTemplateRepository::findByUserId: Error checking is_active column: " . $e->getMessage());
+            }
+
             $sql = "SELECT * FROM {$this->table} WHERE user_id = ?";
             $params = [$userId];
 
-            if ($activeOnly) {
+            if ($activeOnly && $hasIsActiveColumn) {
                 $sql .= " AND is_active = 1";
             }
 
             $sql .= " ORDER BY created_at DESC";
 
             $stmt = $this->db->prepare($sql);
-            $stmt->execute($params);
-            $result = $stmt->fetchAll();
+            if (!$stmt) {
+                error_log("PublicationTemplateRepository::findByUserId: Failed to prepare statement. SQL: {$sql}");
+                return [];
+            }
+            
+            $result = $stmt->execute($params);
+            if (!$result) {
+                $errorInfo = $stmt->errorInfo();
+                error_log("PublicationTemplateRepository::findByUserId: Execute failed: " . print_r($errorInfo, true));
+                return [];
+            }
+            
+            $result = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            if (!is_array($result)) {
+                error_log("PublicationTemplateRepository::findByUserId: fetchAll returned non-array: " . gettype($result));
+                return [];
+            }
             
             error_log("PublicationTemplateRepository::findByUserId: Found " . count($result) . " templates");
             return $result;

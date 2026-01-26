@@ -57,11 +57,18 @@ $filteredTemplates = array_filter($templates, function($template) use ($searchQu
             return false;
         }
         
-        if ($filterStatus === 'active' && empty($template['is_active'])) {
-            return false;
+        // Проверяем статус (с проверкой наличия колонки is_active)
+        if ($filterStatus === 'active') {
+            // Если колонка is_active существует, проверяем её, иначе считаем все активными
+            if (isset($template['is_active']) && empty($template['is_active'])) {
+                return false;
+            }
         }
-        if ($filterStatus === 'inactive' && !empty($template['is_active'])) {
-            return false;
+        if ($filterStatus === 'inactive') {
+            // Если колонка is_active существует, проверяем её
+            if (isset($template['is_active']) && !empty($template['is_active'])) {
+                return false;
+            }
         }
         if ($searchQuery !== '') {
             $name = (string)($template['name'] ?? '');
@@ -200,8 +207,12 @@ try {
                             ?>
                         </td>
                         <td>
-                            <span class="status-badge status-<?= !empty($template['is_active']) ? 'active' : 'inactive' ?>">
-                                <?= !empty($template['is_active']) ? 'Активен' : 'Неактивен' ?>
+                            <?php 
+                            // Безопасная проверка is_active (может отсутствовать в старых записях)
+                            $isActive = isset($template['is_active']) ? !empty($template['is_active']) : true;
+                            ?>
+                            <span class="status-badge status-<?= $isActive ? 'active' : 'inactive' ?>">
+                                <?= $isActive ? 'Активен' : 'Неактивен' ?>
                             </span>
                         </td>
                         <td>
