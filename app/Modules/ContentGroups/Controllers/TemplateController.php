@@ -339,8 +339,25 @@ class TemplateController extends Controller
                         if (!isset($emojiGroups[$emojiKey])) {
                             $emojiGroups[$emojiKey] = [];
                         }
-                        // emoji может быть строкой или массивом
-                        $emojiList = is_array($content['emoji']) ? $content['emoji'] : array_filter(explode(',', $content['emoji']));
+                        // emoji может быть строкой (символы подряд) или массивом
+                        if (is_array($content['emoji'])) {
+                            $emojiList = $content['emoji'];
+                        } else {
+                            // Разбиваем строку на отдельные emoji символы (могут быть без разделителей)
+                            $emojiString = trim($content['emoji']);
+                            // Сначала пробуем разбить по запятым (если есть)
+                            if (strpos($emojiString, ',') !== false) {
+                                $emojiList = array_filter(array_map('trim', explode(',', $emojiString)));
+                            } else {
+                                // Если запятых нет, разбиваем по символам (каждый emoji - отдельный символ)
+                                // Используем preg_split для правильной обработки UTF-8 emoji
+                                $emojiList = preg_split('//u', $emojiString, -1, PREG_SPLIT_NO_EMPTY);
+                                $emojiList = array_filter($emojiList, function($char) {
+                                    // Фильтруем только emoji и пробелы (удаляем пробелы)
+                                    return trim($char) !== '';
+                                });
+                            }
+                        }
                         foreach ($emojiList as $emoji) {
                             $emoji = trim($emoji);
                             if (!empty($emoji) && !in_array($emoji, $emojiGroups[$emojiKey])) {
