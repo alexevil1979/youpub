@@ -141,6 +141,16 @@ ob_start();
                 <div class="group-actions">
                     <a href="/content-groups/<?= $group['id'] ?>" class="btn-action-icon btn-action-primary" title="Открыть группу"><?= \App\Helpers\IconHelper::render('view', 20) ?></a>
                     <a href="/content-groups/<?= $group['id'] ?>/edit" class="btn-action-icon btn-action-info" title="Редактировать"><?= \App\Helpers\IconHelper::render('edit', 20) ?></a>
+                    <button type="button" class="btn-action-icon btn-action-success" 
+                            onclick="publishAllUnpublished(<?= $group['id'] ?>)" 
+                            title="Опубликовать все неопубликованные видео">
+                        <?= \App\Helpers\IconHelper::render('publish', 20) ?>
+                    </button>
+                    <button type="button" class="btn-action-icon btn-action-warning" 
+                            onclick="clearAllPublication(<?= $group['id'] ?>)" 
+                            title="Сбросить опубликованность всех элементов">
+                        <?= \App\Helpers\IconHelper::render('refresh', 20) ?>
+                    </button>
                     <button type="button" class="btn-action-icon btn-action-<?= $group['status'] === 'active' ? 'warning' : 'success' ?>" 
                             onclick="toggleGroupStatus(<?= $group['id'] ?>, '<?= $group['status'] ?>')" 
                             title="<?= $group['status'] === 'active' ? 'Приостановить' : 'Включить' ?>">
@@ -261,6 +271,99 @@ function shuffleGroup(id) {
     })
     .catch(error => {
         console.error('Error:', error);
+        alert('Произошла ошибка');
+    });
+}
+
+function publishAllUnpublished(id) {
+    if (!confirm('Опубликовать все неопубликованные видео в группе сейчас?')) {
+        return;
+    }
+    
+    const btn = event.target.closest('button');
+    const originalContent = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+    }
+    
+    fetch('/content-groups/' + id + '/publish-all-unpublished', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (btn) {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+        }
+        if (data.success) {
+            const message = data.data ? 
+                `Опубликовано: ${data.data.success || 0}, Ошибок: ${data.data.errors || 0}` : 
+                (data.message || 'Видео опубликованы');
+            alert(message);
+            window.location.reload();
+        } else {
+            alert('Ошибка: ' + (data.message || 'Не удалось опубликовать видео'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        if (btn) {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+        }
+        alert('Произошла ошибка при публикации');
+    });
+}
+
+function clearAllPublication(id) {
+    if (!confirm('Сбросить статус опубликованности для всех элементов группы?')) {
+        return;
+    }
+    
+    if (!confirm('ВНИМАНИЕ: Это действие сбросит статус опубликованности для всех файлов в группе. Продолжить?')) {
+        return;
+    }
+    
+    const btn = event.target.closest('button');
+    const originalContent = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+    }
+    
+    fetch('/content-groups/' + id + '/clear-all-publication', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (btn) {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+        }
+        if (data.success) {
+            alert(data.message || 'Статус опубликованности сброшен');
+            window.location.reload();
+        } else {
+            alert('Ошибка: ' + (data.message || 'Не удалось сбросить статус'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        if (btn) {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+        }
         alert('Произошла ошибка');
     });
 }

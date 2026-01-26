@@ -854,4 +854,52 @@ class GroupController extends Controller
 
         $this->success(['preview' => $preview]);
     }
+
+    /**
+     * Опубликовать все неопубликованные видео в группе
+     */
+    public function publishAllUnpublished(int $id): void
+    {
+        if (!$this->validateCsrf()) {
+            $this->error('Invalid CSRF token', 403);
+            return;
+        }
+
+        $userId = $_SESSION['user_id'] ?? null;
+        if (!$userId) {
+            $this->error('Необходима авторизация', 401);
+            return;
+        }
+
+        $result = $this->groupService->publishAllUnpublished($id, $userId);
+        if ($result['success']) {
+            $this->success($result['data'] ?? [], $result['message'] ?? 'Видео опубликованы');
+        } else {
+            $this->error($result['message'] ?? 'Не удалось опубликовать видео', 400);
+        }
+    }
+
+    /**
+     * Сбросить статус опубликованности для всех файлов в группе
+     */
+    public function clearAllFilesPublication(int $id): void
+    {
+        if (!$this->validateCsrf()) {
+            $this->error('Invalid CSRF token', 403);
+            return;
+        }
+
+        $userId = $_SESSION['user_id'] ?? null;
+        if (!$userId) {
+            $this->error('Необходима авторизация', 401);
+            return;
+        }
+
+        $result = $this->groupService->clearAllFilesPublication($id, $userId);
+        if ($result['success']) {
+            $this->success($result['data'] ?? [], $result['message'] ?? 'Статус опубликованности сброшен');
+        } else {
+            $this->error($result['message'] ?? 'Не удалось сбросить статус', 400);
+        }
+    }
 }

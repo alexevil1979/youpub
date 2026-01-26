@@ -366,4 +366,96 @@ class GroupService extends Service
         $smartQueue = new \App\Modules\ContentGroups\Services\SmartQueueService();
         return $smartQueue->publishGroupFileNow($groupId, $fileId, $userId);
     }
+
+    /**
+     * Опубликовать все неопубликованные видео в группе
+     */
+    public function publishAllUnpublished(int $groupId, int $userId): array
+    {
+        try {
+            $group = $this->groupRepo->findById($groupId);
+            if (!$group) {
+                return ['success' => false, 'message' => 'Группа не найдена'];
+            }
+            if ($group['user_id'] !== $userId) {
+                return ['success' => false, 'message' => 'Нет доступа к этой группе'];
+            }
+
+            // Получаем все неопубликованные файлы
+            $unpublishedFiles = $this->fileRepo->findByGroupIdAndStatus($groupId, 'new');
+            $unpublishedFiles = array_merge($unpublishedFiles, $this->fileRepo->findByGroupIdAndStatus($groupId, 'paused'));
+            $unpublishedFiles = array_merge($unpublishedFiles, $this->fileRepo->findByGroupIdAndStatus($groupId, 'error'));
+
+            if (empty($unpublishedFiles)) {
+                return ['success' => false, 'message' => 'Нет неопубликованных видео в группе'];
+            }
+
+            $smartQueue = new \App\Modules\ContentGroups\Services\SmartQueueService();
+            $results = [];
+            $successCount = 0;
+            $errorCount = 0;
+
+            foreach ($unpublishedFiles as $file) {
+                $result = $smartQueue->publishGroupFileNow($groupId, $file['id'], $userId);
+                if ($result['success']) {
+                    $successCount++;
+                } else {
+                    $errorCount++;
+                    $results[] = [
+                        'file_id' => $file['id'],
+                        'video_id' => $file['video_id'],
+                        'error' => $result['message'] ?? 'Ошибка публикации'
+                    ];
+                }
+            }
+
+            return [
+                'success' => $successCount > 0,
+                'message' => "Опубликовано: {$successCount}, Ошибок: {$errorCount}",
+                'data' => [
+                    'total' => count($unpublishedFiles),
+                    'success' => $successCount,
+                    'errors' => $errorCount,
+                    'error_details' => $results
+                ]
+            ];
+        } catch (\Exception $e) {
+            error_log("GroupService::publishAllUnpublished: " . $e->getMessage());
+            return ['success' => false, 'message' => 'Произошла ошибка: ' . $e->getMessage()];
+        }
+    }
+
+    /**
+     * Сбросить статус опубликованности для всех файлов в группе
+     */
+    public function clearAllFilesPublication(int $groupId, int $userId): array
+    {
+        try {
+            $group = $this->groupRepo->findById($groupId);
+            if (!$group) {
+                return ['success' => false, 'message' => 'Группа не найдена'];
+            }
+            if ($group['user_id'] !== $userId) {
+                return ['success' => false, 'message' => 'Нет доступа к этой группе'];
+            }
+
+            // Получаем все файлы группы
+            $files = $this->fileRepo->findByGroupId($groupId);
+            if (empty($files)) {
+                return ['success' => false, 'message' => 'В группе нет файлов'];
+            }
+
+            $fileIds = array_map(static fn($file) => (int)$file['id'], $files);
+            $updatedCount = $this->fileRepo->clearPublicationStatusByIds($groupId, $fileIds);
+
+            return [
+                'success' => true,
+                'message' => "Статус опубликованности сброшен для {$updatedCount} файлов",
+                'data' => ['updated' => $updatedCount]
+            ];
+        } catch (\Exception $e) {
+            error_log("GroupService::clearAllFilesPublication: " . $e->getMessage());
+            return ['success' => false, 'message' => 'Произошла ошибка: ' . $e->getMessage()];
+        }
+    }
 }

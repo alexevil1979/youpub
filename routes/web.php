@@ -142,6 +142,8 @@ $router->post('/content-groups/{id}/files/{fileId}/publish-now', [GroupControlle
 $router->post('/content-groups/{id}/files/{fileId}/publish-now/preview', [GroupController::class, 'regeneratePublishPreview'], [AuthMiddleware::class]);
 $router->post('/content-groups/{id}/files/{fileId}/clear-publication', [GroupController::class, 'clearFilePublication'], [AuthMiddleware::class]);
 $router->post('/content-groups/{id}/files/clear-publication', [GroupController::class, 'clearFilesPublication'], [AuthMiddleware::class]);
+$router->post('/content-groups/{id}/publish-all-unpublished', [GroupController::class, 'publishAllUnpublished'], [AuthMiddleware::class]);
+$router->post('/content-groups/{id}/clear-all-publication', [GroupController::class, 'clearAllFilesPublication'], [AuthMiddleware::class]);
 $router->post('/content-groups/{id}/duplicate', [GroupController::class, 'duplicate'], [AuthMiddleware::class]);
 $router->delete('/content-groups/{id}', [GroupController::class, 'delete'], [AuthMiddleware::class]);
 
