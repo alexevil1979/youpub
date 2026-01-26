@@ -261,21 +261,118 @@ class TemplateController extends Controller
                     exit;
                 }
 
-                // Генерируем контент
-                $generatedResult = $this->getAutoGenerator()->generateFromIdea($videoIdea);
+                // Генерируем множественные варианты контента (как в suggestContent)
+                $variantCount = 25; // Генерируем 25 вариантов для богатого выбора
+                error_log('TemplateController::create: Generating ' . $variantCount . ' variants for idea: "' . $videoIdea . '"');
+                $variants = $this->getAutoGenerator()->generateMultipleVariants($videoIdea, $variantCount);
+                error_log('TemplateController::create: Generated ' . count($variants) . ' variants');
 
-                // Заполняем поля на основе сгенерированного контента
-                $content = $generatedResult['content'];
+                if (empty($variants)) {
+                    $_SESSION['error'] = 'Не удалось сгенерировать варианты контента. Попробуйте другую идею.';
+                    header('Location: /content-groups/templates/create-shorts');
+                    exit;
+                }
 
-                $titleVariants = $content['title_variants'] ?? [$content['title']];
-                $descriptionVariants = $content['description_variants'] ?? [];
-                $emojiGroups = $content['emoji_groups'] ?? [];
-                $baseTags = $content['base_tags'] ?? '';
-                $tagVariants = $content['tag_variants'] ?? [];
-                $questions = $content['questions'] ?? [];
-                $pinnedComments = $content['pinned_comments'] ?? [];
-                $focusPoints = $content['focus_points'] ?? [];
-                $hookType = $content['hook_type'] ?? 'vocal';
+                // Берем первый вариант как базовый
+                $firstVariant = $variants[0];
+
+                // Собираем все уникальные варианты из всех генераций (как в suggestContent)
+                $allTitles = [];
+                $allDescriptions = [];
+                $allTags = [];
+                $allEmojis = [];
+                $allPinnedComments = [];
+                $descriptionVariants = [];
+                $emojiGroups = [];
+                
+                // Маппинг настроения к ключам описаний для emoji групп
+                $moodToDescriptionKey = [
+                    'calm' => 'atmosphere',
+                    'emotional' => 'emotional',
+                    'romantic' => 'emotional',
+                    'mysterious' => 'question'
+                ];
+                
+                // Маппинг content_type к hook_type
+                $contentTypeToHookType = [
+                    'vocal' => 'emotional',
+                    'music' => 'atmospheric',
+                    'aesthetic' => 'visual',
+                    'ambience' => 'atmospheric'
+                ];
+
+                foreach ($variants as $variant) {
+                    $content = $variant['content'];
+                    $intent = $variant['intent'];
+
+                    // Собираем уникальные заголовки
+                    if (!empty($content['title']) && !in_array($content['title'], $allTitles)) {
+                        $allTitles[] = $content['title'];
+                    }
+
+                    // Собираем уникальные описания по настроению
+                    if (!empty($content['description'])) {
+                        $mood = $intent['mood'] ?? 'calm';
+                        // Маппим mood к ключам description_variants (emotional, atmosphere, question)
+                        $descKey = $moodToDescriptionKey[$mood] ?? 'atmosphere';
+                        if (!isset($descriptionVariants[$descKey])) {
+                            $descriptionVariants[$descKey] = [];
+                        }
+                        if (!in_array($content['description'], $descriptionVariants[$descKey])) {
+                            $descriptionVariants[$descKey][] = $content['description'];
+                        }
+                    }
+
+                    // Собираем уникальные теги
+                    if (!empty($content['tags']) && is_array($content['tags'])) {
+                        foreach ($content['tags'] as $tag) {
+                            if (!in_array($tag, $allTags)) {
+                                $allTags[] = $tag;
+                            }
+                        }
+                    }
+
+                    // Собираем emoji группы
+                    if (!empty($content['emoji'])) {
+                        $mood = $intent['mood'] ?? 'calm';
+                        $emojiKey = $moodToDescriptionKey[$mood] ?? 'atmosphere';
+                        if (!isset($emojiGroups[$emojiKey])) {
+                            $emojiGroups[$emojiKey] = [];
+                        }
+                        // emoji может быть строкой или массивом
+                        $emojiList = is_array($content['emoji']) ? $content['emoji'] : array_filter(explode(',', $content['emoji']));
+                        foreach ($emojiList as $emoji) {
+                            $emoji = trim($emoji);
+                            if (!empty($emoji) && !in_array($emoji, $emojiGroups[$emojiKey])) {
+                                $emojiGroups[$emojiKey][] = $emoji;
+                            }
+                        }
+                    }
+
+                    // Собираем уникальные закрепленные комментарии
+                    if (!empty($content['pinned_comment']) && !in_array($content['pinned_comment'], $allPinnedComments)) {
+                        $allPinnedComments[] = $content['pinned_comment'];
+                    }
+                }
+                
+                // Определяем hook_type из первого варианта
+                $firstContentType = $firstVariant['intent']['content_type'] ?? 'vocal';
+                $hookType = $contentTypeToHookType[$firstContentType] ?? 'emotional';
+
+                // Форматируем данные для сохранения
+                $titleVariants = array_slice($allTitles, 0, 20); // Ограничиваем до 20 вариантов
+                $baseTags = implode(', ', array_slice($allTags, 0, 10)); // Основные теги
+                $tagVariants = [array_slice($allTags, 0, 15)]; // Варианты наборов тегов
+                $questions = array_slice($allPinnedComments, 0, 10);
+                $pinnedComments = array_slice($allPinnedComments, 0, 10);
+                $focusPoints = [$firstVariant['intent']['visual_focus'] ?? 'neon'];
+                
+                // Преобразуем emojiGroups в строки (как ожидает форма)
+                foreach ($emojiGroups as $key => $emojiArray) {
+                    $emojiGroups[$key] = implode(',', $emojiArray);
+                }
+                
+                error_log('TemplateController::create: Auto-generated data - titles: ' . count($titleVariants) . ', descriptions: ' . count($descriptionVariants) . ', tags: ' . count($allTags));
 
             } else {
                 // Обычная обработка полей
