@@ -877,6 +877,63 @@ class GroupController extends Controller
             }
         }
 
+        // Получаем выбранные интеграции из settings группы и загружаем информацию о каналах
+        $selectedIntegrations = [];
+        $integrationAccounts = [];
+        if (!empty($group['settings'])) {
+            $settings = is_string($group['settings']) ? json_decode($group['settings'], true) : $group['settings'];
+            if (isset($settings['integrations']) && is_array($settings['integrations'])) {
+                $selectedIntegrations = $settings['integrations'];
+                
+                // Загружаем информацию о каналах
+                $youtubeRepo = new \App\Repositories\YoutubeIntegrationRepository();
+                $telegramRepo = new \App\Repositories\TelegramIntegrationRepository();
+                $tiktokRepo = new \App\Repositories\TiktokIntegrationRepository();
+                $instagramRepo = new \App\Repositories\InstagramIntegrationRepository();
+                $pinterestRepo = new \App\Repositories\PinterestIntegrationRepository();
+                
+                foreach ($selectedIntegrations as $integration) {
+                    $integrationPlatform = $integration['platform'] ?? '';
+                    $integrationId = isset($integration['integration_id']) ? (int)$integration['integration_id'] : null;
+                    
+                    if (!$integrationPlatform || !$integrationId) {
+                        continue;
+                    }
+                    
+                    $account = null;
+                    try {
+                        switch ($integrationPlatform) {
+                            case 'youtube':
+                                $account = $youtubeRepo->findByIdAndUserId($integrationId, $userId);
+                                break;
+                            case 'telegram':
+                                $account = $telegramRepo->findByIdAndUserId($integrationId, $userId);
+                                break;
+                            case 'tiktok':
+                                $account = $tiktokRepo->findByIdAndUserId($integrationId, $userId);
+                                break;
+                            case 'instagram':
+                                $account = $instagramRepo->findByIdAndUserId($integrationId, $userId);
+                                break;
+                            case 'pinterest':
+                                $account = $pinterestRepo->findByIdAndUserId($integrationId, $userId);
+                                break;
+                        }
+                        
+                        if ($account) {
+                            $integrationAccounts[] = [
+                                'platform' => $integrationPlatform,
+                                'integration_id' => $integrationId,
+                                'account' => $account
+                            ];
+                        }
+                    } catch (\Throwable $e) {
+                        error_log("Error loading integration {$integrationPlatform} ID {$integrationId}: " . $e->getMessage());
+                    }
+                }
+            }
+        }
+
         $context = [
             'group_name' => $group['name'],
             'index' => $file['order_index'] ?? 0,

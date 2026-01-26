@@ -43,6 +43,43 @@ ob_start();
             <div class="stat-value"><?= htmlspecialchars($templateName ?: 'Без шаблона') ?></div>
         </div>
     </div>
+    <?php if (!empty($integrationAccounts)): ?>
+        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #dee2e6;">
+            <div class="stat-label" style="margin-bottom: 0.5rem; font-weight: 500;">Каналы публикации:</div>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <?php 
+                $platformNames = [
+                    'youtube' => 'YouTube',
+                    'telegram' => 'Telegram',
+                    'tiktok' => 'TikTok',
+                    'instagram' => 'Instagram',
+                    'pinterest' => 'Pinterest'
+                ];
+                foreach ($integrationAccounts as $integration): 
+                    $integrationPlatform = $integration['platform'];
+                    $account = $integration['account'];
+                    $platformName = $platformNames[$integrationPlatform] ?? ucfirst($integrationPlatform);
+                    
+                    // Формируем название канала
+                    $channelName = $account['account_name']
+                        ?? $account['channel_name']
+                        ?? $account['channel_username']
+                        ?? $account['username']
+                        ?? 'Канал ' . $account['id'];
+                    
+                    if ($integrationPlatform === 'telegram' && $account['channel_username']) {
+                        $channelName = '@' . $account['channel_username'];
+                    }
+                ?>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: #f8f9fa; border-radius: 4px;">
+                        <?= \App\Helpers\IconHelper::render($integrationPlatform, 18, 'icon-inline') ?>
+                        <span style="font-weight: 500; min-width: 80px;"><?= htmlspecialchars($platformName) ?>:</span>
+                        <span><?= htmlspecialchars($channelName) ?></span>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    <?php endif; ?>
 </div>
 
 <div class="info-card" style="margin-bottom: 1.5rem;">
