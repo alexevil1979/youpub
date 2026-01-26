@@ -210,6 +210,63 @@ class GroupController extends Controller
         
         $templates = $this->templateService->getUserTemplates($userId, true);
         
+        // Получаем выбранные интеграции из settings группы и загружаем информацию о каналах
+        $selectedIntegrations = [];
+        $integrationAccounts = [];
+        if (!empty($group['settings'])) {
+            $settings = is_string($group['settings']) ? json_decode($group['settings'], true) : $group['settings'];
+            if (isset($settings['integrations']) && is_array($settings['integrations'])) {
+                $selectedIntegrations = $settings['integrations'];
+                
+                // Загружаем информацию о каналах
+                $youtubeRepo = new \App\Repositories\YoutubeIntegrationRepository();
+                $telegramRepo = new \App\Repositories\TelegramIntegrationRepository();
+                $tiktokRepo = new \App\Repositories\TiktokIntegrationRepository();
+                $instagramRepo = new \App\Repositories\InstagramIntegrationRepository();
+                $pinterestRepo = new \App\Repositories\PinterestIntegrationRepository();
+                
+                foreach ($selectedIntegrations as $integration) {
+                    $platform = $integration['platform'] ?? '';
+                    $integrationId = isset($integration['integration_id']) ? (int)$integration['integration_id'] : null;
+                    
+                    if (!$platform || !$integrationId) {
+                        continue;
+                    }
+                    
+                    $account = null;
+                    try {
+                        switch ($platform) {
+                            case 'youtube':
+                                $account = $youtubeRepo->findByIdAndUserId($integrationId, $userId);
+                                break;
+                            case 'telegram':
+                                $account = $telegramRepo->findByIdAndUserId($integrationId, $userId);
+                                break;
+                            case 'tiktok':
+                                $account = $tiktokRepo->findByIdAndUserId($integrationId, $userId);
+                                break;
+                            case 'instagram':
+                                $account = $instagramRepo->findByIdAndUserId($integrationId, $userId);
+                                break;
+                            case 'pinterest':
+                                $account = $pinterestRepo->findByIdAndUserId($integrationId, $userId);
+                                break;
+                        }
+                        
+                        if ($account) {
+                            $integrationAccounts[] = [
+                                'platform' => $platform,
+                                'integration_id' => $integrationId,
+                                'account' => $account
+                            ];
+                        }
+                    } catch (\Throwable $e) {
+                        error_log("Error loading integration {$platform} ID {$integrationId}: " . $e->getMessage());
+                    }
+                }
+            }
+        }
+        
         // Применяем шаблон для превью каждого файла в группе
         $filePreviews = [];
         if ($group['status'] === 'active' && !empty($files)) {

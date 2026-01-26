@@ -67,6 +67,47 @@ ob_start();
                 <?= ucfirst($group['status']) ?>
             </div>
         </div>
+        <div class="stat-item">
+            <div class="stat-label">Каналы публикации:</div>
+            <div class="stat-value" style="font-size: 1rem;">
+                <?php if (!empty($integrationAccounts)): ?>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;">
+                        <?php 
+                        $platformNames = [
+                            'youtube' => 'YouTube',
+                            'telegram' => 'Telegram',
+                            'tiktok' => 'TikTok',
+                            'instagram' => 'Instagram',
+                            'pinterest' => 'Pinterest'
+                        ];
+                        foreach ($integrationAccounts as $integration): 
+                            $platform = $integration['platform'];
+                            $account = $integration['account'];
+                            $platformName = $platformNames[$platform] ?? ucfirst($platform);
+                            
+                            // Формируем название канала
+                            $channelName = $account['account_name']
+                                ?? $account['channel_name']
+                                ?? $account['channel_username']
+                                ?? $account['username']
+                                ?? 'Канал ' . $account['id'];
+                            
+                            if ($platform === 'telegram' && $account['channel_username']) {
+                                $channelName = '@' . $account['channel_username'];
+                            }
+                        ?>
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <?= \App\Helpers\IconHelper::render($platform, 16, 'icon-inline') ?>
+                                <span style="font-weight: 500;"><?= htmlspecialchars($platformName) ?>:</span>
+                                <span><?= htmlspecialchars($channelName) ?></span>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php else: ?>
+                    <span style="color: #95a5a6;">Не назначены</span>
+                <?php endif; ?>
+            </div>
+        </div>
     </div>
 </div>
 
