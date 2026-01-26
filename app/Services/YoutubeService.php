@@ -292,7 +292,23 @@ class YoutubeService extends Service
         error_log("YoutubeService::publishVideo: Publishing with description: " . mb_substr($description, 0, 100));
         error_log("YoutubeService::publishVideo: Publishing with tags: " . mb_substr($tags, 0, 200));
         
-        // Сохраняем данные для отладки в сессии
+        // КРИТИЧНО: Проверяем title и description перед отправкой
+        if (empty($title) || strtolower($title) === 'unknown') {
+            error_log("YoutubeService::publishVideo: ERROR - Title is empty or 'unknown' before upload!");
+            $title = $video['file_name'] ?? 'Untitled Video';
+            if (empty($title)) {
+                $title = 'Untitled Video';
+            }
+            error_log("YoutubeService::publishVideo: Using fallback title: {$title}");
+        }
+        
+        if (empty($description)) {
+            error_log("YoutubeService::publishVideo: ERROR - Description is empty before upload!");
+            $description = 'Watch this video! 🎬';
+            error_log("YoutubeService::publishVideo: Using fallback description");
+        }
+        
+        // Сохраняем данные для отладки в сессии ПЕРЕД отправкой
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
@@ -304,8 +320,16 @@ class YoutubeService extends Service
             'file_name' => $video['file_name'] ?? 'N/A',
             'video_id' => $video['id'] ?? 'N/A',
             'schedule_id' => $scheduleId,
+            'metadata_received' => $metadata ? json_encode($metadata) : 'null',
+            'video_title_from_db' => $video['title'] ?? 'N/A',
+            'video_description_from_db' => $video['description'] ?? 'N/A',
             'timestamp' => date('Y-m-d H:i:s'),
         ];
+        // Сохраняем сессию явно
+        session_write_close();
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
         
         // Дополнительная проверка: если метаданные все еще пустые, это проблема
         if (empty($title) || strtolower($title) === 'unknown') {

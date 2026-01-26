@@ -69,9 +69,65 @@ ob_start();
         </div>
     </div>
     
-    <?php if (isset($_SESSION['youtube_upload_debug'])): ?>
-    <div style="margin-top: 1.5rem; padding: 1rem; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px;">
-        <h4 style="margin-top: 0; color: #495057;">🔍 Отладочная информация: Что было отправлено на YouTube</h4>
+    <?php 
+    // Показываем preview данные (что будет отправлено)
+    if (isset($_SESSION['youtube_preview_debug'])): 
+    ?>
+    <div style="margin-top: 1.5rem; padding: 1rem; background: #fff3cd; border: 2px solid #ffc107; border-radius: 4px;">
+        <h4 style="margin-top: 0; color: #856404;">🔍 Отладочная информация: Preview данных (что будет отправлено)</h4>
+        <div style="margin-top: 0.75rem;">
+            <strong>Время генерации:</strong> <?= htmlspecialchars($_SESSION['youtube_preview_debug']['timestamp'] ?? 'N/A') ?><br>
+            <strong>Video ID:</strong> <?= htmlspecialchars($_SESSION['youtube_preview_debug']['video_id'] ?? 'N/A') ?><br>
+            <strong>Video Title (из БД):</strong> <?= htmlspecialchars($_SESSION['youtube_preview_debug']['video_title'] ?? 'N/A') ?><br>
+            <strong>File Name:</strong> <?= htmlspecialchars($_SESSION['youtube_preview_debug']['video_file_name'] ?? 'N/A') ?><br>
+            <strong>Template ID:</strong> <?= htmlspecialchars($_SESSION['youtube_preview_debug']['template_id'] ?? 'N/A') ?><br>
+        </div>
+        <div style="margin-top: 1rem;">
+            <strong>Название (title) - будет отправлено:</strong>
+            <div style="padding: 0.5rem; background: white; border-radius: 4px; margin-top: 0.25rem; word-break: break-word; border: 2px solid <?= (empty($_SESSION['youtube_preview_debug']['title']) || strtolower($_SESSION['youtube_preview_debug']['title']) === 'unknown') ? '#dc3545' : '#28a745' ?>;">
+                <?= htmlspecialchars($_SESSION['youtube_preview_debug']['title'] ?? 'N/A') ?>
+            </div>
+            <div style="margin-top: 0.25rem; font-size: 0.9em; color: #6c757d;">
+                Длина: <?= mb_strlen($_SESSION['youtube_preview_debug']['title'] ?? '') ?> символов
+                <?php if (empty($_SESSION['youtube_preview_debug']['title']) || strtolower($_SESSION['youtube_preview_debug']['title']) === 'unknown'): ?>
+                    <span style="color: #dc3545; font-weight: bold;">⚠️ ПРОБЛЕМА: Title пустой или unknown!</span>
+                <?php endif; ?>
+            </div>
+        </div>
+        <div style="margin-top: 1rem;">
+            <strong>Описание (description) - будет отправлено:</strong>
+            <div style="padding: 0.5rem; background: white; border-radius: 4px; margin-top: 0.25rem; white-space: pre-wrap; word-break: break-word; max-height: 200px; overflow-y: auto; border: 2px solid <?= empty($_SESSION['youtube_preview_debug']['description']) ? '#dc3545' : '#28a745' ?>;">
+                <?= htmlspecialchars($_SESSION['youtube_preview_debug']['description'] ?? 'N/A') ?>
+            </div>
+            <div style="margin-top: 0.25rem; font-size: 0.9em; color: #6c757d;">
+                Длина: <?= mb_strlen($_SESSION['youtube_preview_debug']['description'] ?? '') ?> символов
+                <?php if (empty($_SESSION['youtube_preview_debug']['description'])): ?>
+                    <span style="color: #dc3545; font-weight: bold;">⚠️ ПРОБЛЕМА: Description пустой!</span>
+                <?php endif; ?>
+            </div>
+        </div>
+        <div style="margin-top: 1rem;">
+            <strong>Теги (tags) - будет отправлено:</strong>
+            <div style="padding: 0.5rem; background: white; border-radius: 4px; margin-top: 0.25rem; word-break: break-word;">
+                <?= htmlspecialchars($_SESSION['youtube_preview_debug']['tags'] ?? 'N/A') ?>
+            </div>
+            <div style="margin-top: 0.25rem; font-size: 0.9em; color: #6c757d;">
+                Длина: <?= mb_strlen($_SESSION['youtube_preview_debug']['tags'] ?? '') ?> символов
+            </div>
+        </div>
+        <details style="margin-top: 1rem;">
+            <summary style="cursor: pointer; color: #007bff; font-weight: bold;">📋 Полный JSON дамп preview</summary>
+            <pre style="margin-top: 0.5rem; padding: 0.75rem; background: #f1f3f5; border-radius: 4px; overflow-x: auto; font-size: 0.85em;"><?= htmlspecialchars(json_encode($_SESSION['youtube_preview_debug'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?></pre>
+        </details>
+    </div>
+    <?php endif; ?>
+    
+    <?php 
+    // Показываем данные, которые были фактически отправлены на YouTube
+    if (isset($_SESSION['youtube_upload_debug'])): 
+    ?>
+    <div style="margin-top: 1.5rem; padding: 1rem; background: #d1ecf1; border: 2px solid #0c5460; border-radius: 4px;">
+        <h4 style="margin-top: 0; color: #0c5460;">✅ Отладочная информация: Что было фактически отправлено на YouTube</h4>
         <div style="margin-top: 0.75rem;">
             <strong>Время отправки:</strong> <?= htmlspecialchars($_SESSION['youtube_upload_debug']['timestamp'] ?? 'N/A') ?><br>
             <strong>Schedule ID:</strong> <?= htmlspecialchars($_SESSION['youtube_upload_debug']['schedule_id'] ?? 'N/A') ?><br>
@@ -79,25 +135,31 @@ ob_start();
             <strong>File:</strong> <?= htmlspecialchars($_SESSION['youtube_upload_debug']['file_name'] ?? 'N/A') ?><br>
         </div>
         <div style="margin-top: 1rem;">
-            <strong>Название (title):</strong>
-            <div style="padding: 0.5rem; background: white; border-radius: 4px; margin-top: 0.25rem; word-break: break-word;">
+            <strong>Название (title) - отправлено:</strong>
+            <div style="padding: 0.5rem; background: white; border-radius: 4px; margin-top: 0.25rem; word-break: break-word; border: 2px solid <?= (empty($_SESSION['youtube_upload_debug']['title']) || strtolower($_SESSION['youtube_upload_debug']['title']) === 'unknown') ? '#dc3545' : '#28a745' ?>;">
                 <?= htmlspecialchars($_SESSION['youtube_upload_debug']['title'] ?? 'N/A') ?>
             </div>
             <div style="margin-top: 0.25rem; font-size: 0.9em; color: #6c757d;">
                 Длина: <?= mb_strlen($_SESSION['youtube_upload_debug']['title'] ?? '') ?> символов
+                <?php if (empty($_SESSION['youtube_upload_debug']['title']) || strtolower($_SESSION['youtube_upload_debug']['title']) === 'unknown'): ?>
+                    <span style="color: #dc3545; font-weight: bold;">⚠️ ПРОБЛЕМА: Title пустой или unknown!</span>
+                <?php endif; ?>
             </div>
         </div>
         <div style="margin-top: 1rem;">
-            <strong>Описание (description):</strong>
-            <div style="padding: 0.5rem; background: white; border-radius: 4px; margin-top: 0.25rem; white-space: pre-wrap; word-break: break-word; max-height: 200px; overflow-y: auto;">
+            <strong>Описание (description) - отправлено:</strong>
+            <div style="padding: 0.5rem; background: white; border-radius: 4px; margin-top: 0.25rem; white-space: pre-wrap; word-break: break-word; max-height: 200px; overflow-y: auto; border: 2px solid <?= empty($_SESSION['youtube_upload_debug']['description']) ? '#dc3545' : '#28a745' ?>;">
                 <?= htmlspecialchars($_SESSION['youtube_upload_debug']['description'] ?? 'N/A') ?>
             </div>
             <div style="margin-top: 0.25rem; font-size: 0.9em; color: #6c757d;">
                 Длина: <?= mb_strlen($_SESSION['youtube_upload_debug']['description'] ?? '') ?> символов
+                <?php if (empty($_SESSION['youtube_upload_debug']['description'])): ?>
+                    <span style="color: #dc3545; font-weight: bold;">⚠️ ПРОБЛЕМА: Description пустой!</span>
+                <?php endif; ?>
             </div>
         </div>
         <div style="margin-top: 1rem;">
-            <strong>Теги (tags):</strong>
+            <strong>Теги (tags) - отправлено:</strong>
             <div style="padding: 0.5rem; background: white; border-radius: 4px; margin-top: 0.25rem; word-break: break-word;">
                 <?= htmlspecialchars($_SESSION['youtube_upload_debug']['tags'] ?? 'N/A') ?>
             </div>
@@ -106,7 +168,7 @@ ob_start();
             </div>
         </div>
         <details style="margin-top: 1rem;">
-            <summary style="cursor: pointer; color: #007bff; font-weight: bold;">📋 Полный JSON дамп</summary>
+            <summary style="cursor: pointer; color: #007bff; font-weight: bold;">📋 Полный JSON дамп отправленных данных</summary>
             <pre style="margin-top: 0.5rem; padding: 0.75rem; background: #f1f3f5; border-radius: 4px; overflow-x: auto; font-size: 0.85em;"><?= htmlspecialchars(json_encode($_SESSION['youtube_upload_debug'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?></pre>
         </details>
     </div>

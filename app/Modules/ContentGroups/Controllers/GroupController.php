@@ -677,6 +677,21 @@ class GroupController extends Controller
             'tags' => $video['tags'] ?? '',
         ], $context);
 
+        // Сохраняем preview данные для отладки (что будет отправлено)
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $_SESSION['youtube_preview_debug'] = [
+            'title' => $preview['title'] ?? 'N/A',
+            'description' => $preview['description'] ?? 'N/A',
+            'tags' => $preview['tags'] ?? 'N/A',
+            'video_id' => $video['id'] ?? 'N/A',
+            'video_title' => $video['title'] ?? 'N/A',
+            'video_file_name' => $video['file_name'] ?? 'N/A',
+            'template_id' => $templateId,
+            'timestamp' => date('Y-m-d H:i:s'),
+        ];
+
         $canPublish = in_array($file['status'], ['new', 'queued', 'paused', 'error'], true);
         $csrfToken = (new \Core\Auth())->generateCsrfToken();
 
