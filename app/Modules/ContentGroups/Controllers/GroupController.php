@@ -727,13 +727,19 @@ class GroupController extends Controller
             'settings' => !empty($currentSettings) ? $currentSettings : null,
         ];
 
-        $result = $this->groupService->updateGroup($id, $userId, $data);
+        try {
+            $result = $this->groupService->updateGroup($id, $userId, $data);
 
-        if ($result['success']) {
-            $_SESSION['success'] = $result['message'];
-            header('Location: /content-groups/' . $id);
-        } else {
-            $_SESSION['error'] = $result['message'];
+            if ($result['success']) {
+                $_SESSION['success'] = $result['message'];
+                header('Location: /content-groups/' . $id);
+            } else {
+                $_SESSION['error'] = $result['message'];
+                header('Location: /content-groups/' . $id . '/edit');
+            }
+        } catch (\Exception $e) {
+            error_log("GroupController::update error: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+            $_SESSION['error'] = 'Ошибка при обновлении группы: ' . $e->getMessage();
             header('Location: /content-groups/' . $id . '/edit');
         }
         exit;

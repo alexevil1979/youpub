@@ -47,48 +47,73 @@ class GroupService extends Service
      */
     public function updateGroup(int $groupId, int $userId, array $data): array
     {
-        // Проверяем права доступа
-        $group = $this->groupRepo->findById($groupId);
-        if (!$group || $group['user_id'] !== $userId) {
+        try {
+            // Проверяем права доступа
+            $group = $this->groupRepo->findById($groupId);
+            if (!$group || $group['user_id'] !== $userId) {
+                return [
+                    'success' => false,
+                    'message' => 'Group not found or access denied'
+                ];
+            }
+
+            // Проверяем существование колонки schedule_id
+            $hasScheduleIdColumn = false;
+            try {
+                $db = \Core\Database::getInstance();
+                $stmt = $db->prepare("SHOW COLUMNS FROM `content_groups` LIKE 'schedule_id'");
+                $stmt->execute();
+                $hasScheduleIdColumn = (bool)$stmt->fetch();
+            } catch (\Exception $e) {
+                error_log("GroupService::updateGroup: Error checking schedule_id column: " . $e->getMessage());
+            }
+
+            $updateData = [];
+            if (isset($data['name'])) {
+                $updateData['name'] = $data['name'];
+            }
+            if (isset($data['description'])) {
+                $updateData['description'] = $data['description'];
+            }
+            if (isset($data['template_id'])) {
+                $updateData['template_id'] = $data['template_id'];
+            }
+            if (isset($data['schedule_id']) && $hasScheduleIdColumn) {
+                // schedule_id может быть null (если не выбрано расписание)
+                $scheduleId = $data['schedule_id'];
+                if ($scheduleId === '' || $scheduleId === null) {
+                    $updateData['schedule_id'] = null;
+                } else {
+                    $updateData['schedule_id'] = (int)$scheduleId;
+                }
+            }
+            if (isset($data['status'])) {
+                $updateData['status'] = $data['status'];
+            }
+            if (isset($data['settings'])) {
+                $updateData['settings'] = is_array($data['settings']) ? json_encode($data['settings']) : $data['settings'];
+            }
+
+            if (empty($updateData)) {
+                return [
+                    'success' => false,
+                    'message' => 'No data to update'
+                ];
+            }
+
+            $this->groupRepo->update($groupId, $updateData);
+
+            return [
+                'success' => true,
+                'message' => 'Group updated successfully'
+            ];
+        } catch (\Exception $e) {
+            error_log("GroupService::updateGroup error: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
             return [
                 'success' => false,
-                'message' => 'Group not found or access denied'
+                'message' => 'Ошибка при обновлении группы: ' . $e->getMessage()
             ];
         }
-
-        $updateData = [];
-        if (isset($data['name'])) {
-            $updateData['name'] = $data['name'];
-        }
-        if (isset($data['description'])) {
-            $updateData['description'] = $data['description'];
-        }
-        if (isset($data['template_id'])) {
-            $updateData['template_id'] = $data['template_id'];
-        }
-        if (isset($data['schedule_id'])) {
-            $updateData['schedule_id'] = $data['schedule_id'];
-        }
-        if (isset($data['status'])) {
-            $updateData['status'] = $data['status'];
-        }
-        if (isset($data['settings'])) {
-            $updateData['settings'] = is_array($data['settings']) ? json_encode($data['settings']) : $data['settings'];
-        }
-
-        if (empty($updateData)) {
-            return [
-                'success' => false,
-                'message' => 'No data to update'
-            ];
-        }
-
-        $this->groupRepo->update($groupId, $updateData);
-
-        return [
-            'success' => true,
-            'message' => 'Group updated successfully'
-        ];
     }
 
     /**
