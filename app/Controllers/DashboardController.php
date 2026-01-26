@@ -145,14 +145,26 @@ class DashboardController extends Controller
         // Логирование для отладки (можно убрать в production)
         error_log('YouTube OAuth: Client ID = ' . substr($clientId, 0, 20) . '..., Redirect URI = ' . $redirectUri);
 
-        // Генерация state токена для безопасности (включаем user_id для восстановления сессии)
-        $stateData = [
-            'token' => bin2hex(random_bytes(16)),
-            'user_id' => $userId,
-            'timestamp' => time()
-        ];
-        $state = base64_encode(json_encode($stateData));
-        $_SESSION['youtube_oauth_state'] = $stateData['token'];
+        // Генерация state токена для безопасности и сохранение в БД
+        $stateToken = bin2hex(random_bytes(32));
+        $expiresAt = date('Y-m-d H:i:s', time() + 600); // 10 минут
+        
+        // Сохраняем state токен в БД
+        $db = \Core\Database::getInstance();
+        try {
+            $stmt = $db->prepare("
+                INSERT INTO oauth_state_tokens (token, user_id, provider, expires_at) 
+                VALUES (?, ?, 'youtube', ?)
+            ");
+            $stmt->execute([$stateToken, $userId, $expiresAt]);
+        } catch (\Exception $e) {
+            error_log('YouTube OAuth: Error saving state token: ' . $e->getMessage());
+            $_SESSION['error'] = 'Ошибка инициализации авторизации. Попробуйте снова.';
+            header('Location: /integrations');
+            exit;
+        }
+        
+        $state = $stateToken;
 
         // Формирование URL для авторизации Google OAuth
         $scopes = [
@@ -198,56 +210,76 @@ class DashboardController extends Controller
             $state = filter_input(INPUT_GET, 'state', FILTER_UNSAFE_RAW) ?: null;
             $error = filter_input(INPUT_GET, 'error', FILTER_UNSAFE_RAW) ?: null;
 
-            // Восстановление user_id из state токена
+            // Восстановление user_id из state токена из БД
             $userId = null;
-            $stateToken = null;
             if ($state) {
+                $db = \Core\Database::getInstance();
                 try {
-                    $stateData = json_decode(base64_decode($state), true);
-                    if (isset($stateData['user_id']) && isset($stateData['token']) && isset($stateData['timestamp'])) {
-                        // Проверяем, что токен не старше 10 минут
-                        if (time() - $stateData['timestamp'] < 600) {
-                            $userId = (int)$stateData['user_id'];
-                            $stateToken = $stateData['token'];
-                        }
+                    $stmt = $db->prepare("
+                        SELECT user_id, expires_at 
+                        FROM oauth_state_tokens 
+                        WHERE token = ? AND provider = 'youtube' AND expires_at > NOW()
+                    ");
+                    $stmt->execute([$state]);
+                    $stateRecord = $stmt->fetch();
+                    
+                    if ($stateRecord) {
+                        $userId = (int)$stateRecord['user_id'];
+                        // Удаляем использованный токен
+                        $deleteStmt = $db->prepare("DELETE FROM oauth_state_tokens WHERE token = ?");
+                        $deleteStmt->execute([$state]);
+                        error_log('YouTube Callback: State token validated, user_id: ' . $userId);
+                    } else {
+                        error_log('YouTube Callback: Invalid or expired state token');
                     }
                 } catch (\Exception $e) {
-                    error_log('YouTube Callback: Error decoding state: ' . $e->getMessage());
+                    error_log('YouTube Callback: Error validating state token: ' . $e->getMessage());
                 }
             }
 
-            // Проверка state токена из сессии (если сессия еще жива)
-            $sessionStateToken = $_SESSION['youtube_oauth_state'] ?? null;
-            if ($sessionStateToken && $stateToken && hash_equals($sessionStateToken, $stateToken)) {
-                // Сессия жива, используем user_id из сессии
-                if (isset($_SESSION['user_id'])) {
-                    $userId = $_SESSION['user_id'];
-                }
-                unset($_SESSION['youtube_oauth_state']);
-            } elseif (!$userId) {
-                // Не удалось восстановить user_id
-                error_log('YouTube Callback: Cannot restore user_id from state. State: ' . ($state ? 'present' : 'missing') . ', Session state: ' . ($sessionStateToken ? 'present' : 'missing'));
-                $_SESSION['error'] = 'Неверный state токен или сессия истекла. Попробуйте снова.';
+            if (!$userId) {
+                error_log('YouTube Callback: Cannot restore user_id from state token');
+                $_SESSION['error'] = 'Неверный или истекший state токен. Попробуйте снова.';
                 header('Location: /login');
                 exit;
             }
 
-            // Восстанавливаем сессию пользователя, если она была потеряна
-            if (!isset($_SESSION['user_id']) && $userId) {
-                // Проверяем, что пользователь существует
-                $auth = new \Core\Auth();
-                $user = $auth->getUserById($userId);
-                if ($user) {
-                    $_SESSION['user_id'] = $user['id'];
-                    $_SESSION['user_email'] = $user['email'];
-                    $_SESSION['user_role'] = $user['role'] ?? 'user';
-                    $_SESSION['user_name'] = $user['name'] ?? '';
-                    error_log('YouTube Callback: Session restored for user ID: ' . $userId);
-                } else {
-                    error_log('YouTube Callback: User not found. ID: ' . $userId);
-                    $_SESSION['error'] = 'Пользователь не найден.';
-                    header('Location: /login');
-                    exit;
+            // Восстанавливаем сессию пользователя
+            $auth = new \Core\Auth();
+            $user = $auth->getUserById($userId);
+            if (!$user) {
+                error_log('YouTube Callback: User not found. ID: ' . $userId);
+                $_SESSION['error'] = 'Пользователь не найден.';
+                header('Location: /login');
+                exit;
+            }
+
+            // Восстанавливаем сессию
+            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['user_email'] = $user['email'];
+            $_SESSION['user_role'] = $user['role'] ?? 'user';
+            $_SESSION['user_name'] = $user['name'] ?? '';
+            
+            // Создаем запись сессии в БД, если её нет
+            if (!isset($_SESSION['session_id'])) {
+                $sessionId = bin2hex(random_bytes(32));
+                $lifetime = (int)($this->config['SESSION_LIFETIME'] ?? 3600);
+                $expiresAt = date('Y-m-d H:i:s', time() + $lifetime);
+                $clientIp = $_SERVER['REMOTE_ADDR'] ?? '';
+                $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+                
+                try {
+                    $db = \Core\Database::getInstance();
+                    $stmt = $db->prepare("
+                        INSERT INTO sessions (id, user_id, ip_address, user_agent, expires_at) 
+                        VALUES (?, ?, ?, ?, ?)
+                    ");
+                    $stmt->execute([$sessionId, $userId, $clientIp, $userAgent, $expiresAt]);
+                    $_SESSION['session_id'] = $sessionId;
+                    error_log('YouTube Callback: Session created for user ID: ' . $userId);
+                } catch (\Exception $e) {
+                    error_log('YouTube Callback: Error creating session: ' . $e->getMessage());
+                    // Продолжаем без session_id, так как это не критично для OAuth callback
                 }
             }
 
