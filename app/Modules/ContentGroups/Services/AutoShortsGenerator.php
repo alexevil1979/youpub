@@ -17,14 +17,54 @@ class AutoShortsGenerator
         'vocal' => ['голос', 'вокал', 'поёт', 'пение', 'певец', 'певица', 'голосом', 'песня', 'пою'],
         'music' => ['музыка', 'мелодия', 'звук', 'аудио', 'трек', 'композиция', 'мелодия', 'песня', 'мотив'],
         'aesthetic' => ['неон', 'свет', 'красиво', 'эстетика', 'визуал', 'цвета', 'ярко', 'картинка'],
-        'ambience' => ['атмосфера', 'настроение', 'спокойно', 'тихо', 'ночь', 'вечер', 'погружение', 'релакс']
+        'ambience' => ['атмосфера', 'настроение', 'спокойно', 'тихо', 'ночь', 'вечер', 'погружение', 'релакс'],
+        'dance' => ['танец', 'танцы', 'танцевать', 'танцор', 'хореография', 'движение', 'ритм', 'пляска'],
+        'comedy' => ['юмор', 'смех', 'смешно', 'комедия', 'прикол', 'шутка', 'весело', 'забавно'],
+        'cooking' => ['готовка', 'рецепт', 'еда', 'кухня', 'приготовление', 'блюдо', 'повар', 'кулинария'],
+        'fitness' => ['спорт', 'тренировка', 'фитнес', 'упражнение', 'зарядка', 'спортзал', 'тренироваться'],
+        'beauty' => ['красота', 'макияж', 'косметика', 'уход', 'красиво', 'стиль', 'мода', 'укладка'],
+        'gaming' => ['игра', 'гейминг', 'игры', 'геймер', 'прохождение', 'летсплей', 'стрим', 'киберспорт'],
+        'pets' => ['животное', 'питомец', 'кот', 'собака', 'кошка', 'пес', 'пушистый', 'милый'],
+        'travel' => ['путешествие', 'поездка', 'отпуск', 'отпуск', 'страна', 'город', 'туризм', 'приключение'],
+        'diy' => ['сделай', 'своими', 'руками', 'рукоделие', 'поделка', 'мастер', 'класс', 'творчество'],
+        'lifehack' => ['лайфхак', 'совет', 'полезно', 'хак', 'трюк', 'секрет', 'способ', 'метод'],
+        'motivation' => ['мотивация', 'вдохновение', 'успех', 'цель', 'мечта', 'достижение', 'победа', 'сила'],
+        'asmr' => ['асмр', 'релакс', 'успокаиваю', 'звуки', 'шепот', 'тихо', 'расслабление', 'медитация'],
+        'prank' => ['пранк', 'розыгрыш', 'шутка', 'обман', 'сюрприз', 'прикол', 'подстава'],
+        'challenge' => ['челлендж', 'вызов', 'испытание', 'задача', 'попробуй', 'сможешь', 'проверка'],
+        'transformation' => ['трансформация', 'превращение', 'до', 'после', 'изменение', 'метаморфоза', 'перевоплощение'],
+        'reaction' => ['реакция', 'реагирую', 'отзыв', 'мнение', 'впечатление', 'эмоция', 'ответ'],
+        'tutorial' => ['обучение', 'урок', 'инструкция', 'как', 'сделать', 'объяснение', 'мастер', 'класс'],
+        'vlog' => ['влог', 'блог', 'день', 'жизнь', 'повседневность', 'рутина', 'быт', 'личное'],
+        'fashion' => ['мода', 'стиль', 'одежда', 'наряд', 'лук', 'образ', 'тренд', 'одеваться'],
+        'tech' => ['технологии', 'гаджет', 'техника', 'устройство', 'новинка', 'обзор', 'тест', 'инновация']
     ];
 
     private const CONTENT_TYPES_EN = [
         'vocal' => ['voice', 'vocal', 'vocals', 'sing', 'singing', 'singer', 'song'],
         'music' => ['music', 'melody', 'track', 'beat', 'audio', 'sound'],
         'aesthetic' => ['neon', 'aesthetic', 'visual', 'colors', 'beautiful', 'pretty'],
-        'ambience' => ['ambience', 'atmosphere', 'mood', 'vibe', 'calm', 'night', 'relax']
+        'ambience' => ['ambience', 'atmosphere', 'mood', 'vibe', 'calm', 'night', 'relax'],
+        'dance' => ['dance', 'dancing', 'choreography', 'moves', 'rhythm', 'dancer'],
+        'comedy' => ['comedy', 'funny', 'laugh', 'joke', 'humor', 'comic', 'hilarious'],
+        'cooking' => ['cooking', 'recipe', 'food', 'kitchen', 'chef', 'cuisine', 'dish', 'meal'],
+        'fitness' => ['fitness', 'workout', 'exercise', 'gym', 'training', 'sport', 'athletic'],
+        'beauty' => ['beauty', 'makeup', 'cosmetics', 'skincare', 'style', 'glam', 'fashion'],
+        'gaming' => ['gaming', 'game', 'gamer', 'playthrough', 'stream', 'esports', 'play'],
+        'pets' => ['pet', 'animal', 'cat', 'dog', 'cute', 'fluffy', 'puppy', 'kitten'],
+        'travel' => ['travel', 'trip', 'vacation', 'journey', 'adventure', 'tourist', 'explore'],
+        'diy' => ['diy', 'craft', 'handmade', 'tutorial', 'make', 'create', 'project'],
+        'lifehack' => ['lifehack', 'tip', 'trick', 'hack', 'secret', 'method', 'way'],
+        'motivation' => ['motivation', 'inspiration', 'success', 'goal', 'dream', 'achievement', 'win'],
+        'asmr' => ['asmr', 'relax', 'sounds', 'whisper', 'calm', 'meditation', 'peaceful'],
+        'prank' => ['prank', 'joke', 'trick', 'surprise', 'funny', 'hilarious'],
+        'challenge' => ['challenge', 'try', 'dare', 'test', 'attempt', 'can you', 'impossible'],
+        'transformation' => ['transformation', 'before', 'after', 'change', 'metamorphosis', 'glow up'],
+        'reaction' => ['reaction', 'react', 'review', 'opinion', 'impression', 'response'],
+        'tutorial' => ['tutorial', 'how to', 'guide', 'lesson', 'instruction', 'explain'],
+        'vlog' => ['vlog', 'blog', 'day', 'life', 'daily', 'routine', 'lifestyle'],
+        'fashion' => ['fashion', 'style', 'outfit', 'look', 'trend', 'clothing', 'dress'],
+        'tech' => ['tech', 'technology', 'gadget', 'device', 'review', 'test', 'innovation']
     ];
 
     private const MOODS = [
@@ -90,6 +130,206 @@ class AutoShortsGenerator
             '{content} {visual} {emotion}',
             'Чувствую {emotion} {visual}',
             '{visual} {content} внутри'
+        ],
+        'dance' => [
+            'Этот {content} просто {emotion}',
+            '{visual} + {content} = {emotion}',
+            'Когда {content} {emotion}',
+            '{content} который {emotion}',
+            'Не могу перестать смотреть {content}',
+            '{visual} делает {content} {emotion}',
+            'Этот {content} зацепил',
+            '{emotion} {content} {visual}'
+        ],
+        'comedy' => [
+            'Этот {content} просто {emotion}',
+            '{visual} + {content} = смех',
+            'Когда {content} {emotion}',
+            '{content} который {emotion}',
+            'Не могу перестать смеяться',
+            '{visual} делает {content} {emotion}',
+            'Этот {content} убил',
+            '{emotion} {content} {visual}'
+        ],
+        'cooking' => [
+            'Этот {content} просто {emotion}',
+            '{visual} + {content} = вкус',
+            'Когда {content} {emotion}',
+            '{content} который {emotion}',
+            'Не могу перестать готовить {content}',
+            '{visual} делает {content} {emotion}',
+            'Этот {content} зацепил',
+            '{emotion} {content} {visual}'
+        ],
+        'fitness' => [
+            'Этот {content} просто {emotion}',
+            '{visual} + {content} = сила',
+            'Когда {content} {emotion}',
+            '{content} который {emotion}',
+            'Не могу перестать тренироваться',
+            '{visual} делает {content} {emotion}',
+            'Этот {content} зацепил',
+            '{emotion} {content} {visual}'
+        ],
+        'beauty' => [
+            'Этот {content} просто {emotion}',
+            '{visual} + {content} = красота',
+            'Когда {content} {emotion}',
+            '{content} который {emotion}',
+            'Не могу перестать смотреть {content}',
+            '{visual} делает {content} {emotion}',
+            'Этот {content} зацепил',
+            '{emotion} {content} {visual}'
+        ],
+        'gaming' => [
+            'Этот {content} просто {emotion}',
+            '{visual} + {content} = адреналин',
+            'Когда {content} {emotion}',
+            '{content} который {emotion}',
+            'Не могу перестать играть',
+            '{visual} делает {content} {emotion}',
+            'Этот {content} зацепил',
+            '{emotion} {content} {visual}'
+        ],
+        'pets' => [
+            'Этот {content} просто {emotion}',
+            '{visual} + {content} = милота',
+            'Когда {content} {emotion}',
+            '{content} который {emotion}',
+            'Не могу перестать смотреть {content}',
+            '{visual} делает {content} {emotion}',
+            'Этот {content} зацепил',
+            '{emotion} {content} {visual}'
+        ],
+        'travel' => [
+            'Этот {content} просто {emotion}',
+            '{visual} + {content} = приключение',
+            'Когда {content} {emotion}',
+            '{content} который {emotion}',
+            'Не могу перестать путешествовать',
+            '{visual} делает {content} {emotion}',
+            'Этот {content} зацепил',
+            '{emotion} {content} {visual}'
+        ],
+        'diy' => [
+            'Этот {content} просто {emotion}',
+            '{visual} + {content} = творчество',
+            'Когда {content} {emotion}',
+            '{content} который {emotion}',
+            'Не могу перестать творить',
+            '{visual} делает {content} {emotion}',
+            'Этот {content} зацепил',
+            '{emotion} {content} {visual}'
+        ],
+        'lifehack' => [
+            'Этот {content} просто {emotion}',
+            '{visual} + {content} = решение',
+            'Когда {content} {emotion}',
+            '{content} который {emotion}',
+            'Не могу перестать использовать {content}',
+            '{visual} делает {content} {emotion}',
+            'Этот {content} зацепил',
+            '{emotion} {content} {visual}'
+        ],
+        'motivation' => [
+            'Этот {content} просто {emotion}',
+            '{visual} + {content} = вдохновение',
+            'Когда {content} {emotion}',
+            '{content} который {emotion}',
+            'Не могу перестать вдохновляться',
+            '{visual} делает {content} {emotion}',
+            'Этот {content} зацепил',
+            '{emotion} {content} {visual}'
+        ],
+        'asmr' => [
+            'Этот {content} просто {emotion}',
+            '{visual} + {content} = релакс',
+            'Когда {content} {emotion}',
+            '{content} который {emotion}',
+            'Не могу перестать слушать {content}',
+            '{visual} делает {content} {emotion}',
+            'Этот {content} зацепил',
+            '{emotion} {content} {visual}'
+        ],
+        'prank' => [
+            'Этот {content} просто {emotion}',
+            '{visual} + {content} = смех',
+            'Когда {content} {emotion}',
+            '{content} который {emotion}',
+            'Не могу перестать смеяться',
+            '{visual} делает {content} {emotion}',
+            'Этот {content} зацепил',
+            '{emotion} {content} {visual}'
+        ],
+        'challenge' => [
+            'Этот {content} просто {emotion}',
+            '{visual} + {content} = вызов',
+            'Когда {content} {emotion}',
+            '{content} который {emotion}',
+            'Не могу перестать пробовать {content}',
+            '{visual} делает {content} {emotion}',
+            'Этот {content} зацепил',
+            '{emotion} {content} {visual}'
+        ],
+        'transformation' => [
+            'Этот {content} просто {emotion}',
+            '{visual} + {content} = изменение',
+            'Когда {content} {emotion}',
+            '{content} который {emotion}',
+            'Не могу поверить в {content}',
+            '{visual} делает {content} {emotion}',
+            'Этот {content} зацепил',
+            '{emotion} {content} {visual}'
+        ],
+        'reaction' => [
+            'Этот {content} просто {emotion}',
+            '{visual} + {content} = реакция',
+            'Когда {content} {emotion}',
+            '{content} который {emotion}',
+            'Не могу перестать реагировать',
+            '{visual} делает {content} {emotion}',
+            'Этот {content} зацепил',
+            '{emotion} {content} {visual}'
+        ],
+        'tutorial' => [
+            'Этот {content} просто {emotion}',
+            '{visual} + {content} = обучение',
+            'Когда {content} {emotion}',
+            '{content} который {emotion}',
+            'Не могу перестать учиться',
+            '{visual} делает {content} {emotion}',
+            'Этот {content} зацепил',
+            '{emotion} {content} {visual}'
+        ],
+        'vlog' => [
+            'Этот {content} просто {emotion}',
+            '{visual} + {content} = жизнь',
+            'Когда {content} {emotion}',
+            '{content} который {emotion}',
+            'Не могу перестать снимать {content}',
+            '{visual} делает {content} {emotion}',
+            'Этот {content} зацепил',
+            '{emotion} {content} {visual}'
+        ],
+        'fashion' => [
+            'Этот {content} просто {emotion}',
+            '{visual} + {content} = стиль',
+            'Когда {content} {emotion}',
+            '{content} который {emotion}',
+            'Не могу перестать смотреть {content}',
+            '{visual} делает {content} {emotion}',
+            'Этот {content} зацепил',
+            '{emotion} {content} {visual}'
+        ],
+        'tech' => [
+            'Этот {content} просто {emotion}',
+            '{visual} + {content} = технологии',
+            'Когда {content} {emotion}',
+            '{content} который {emotion}',
+            'Не могу перестать тестировать {content}',
+            '{visual} делает {content} {emotion}',
+            'Этот {content} зацепил',
+            '{emotion} {content} {visual}'
         ]
     ];
 
@@ -118,6 +358,166 @@ class AutoShortsGenerator
             '{emotion} {visual} atmosphere',
             'Lost in the {visual} {content}',
             'Who did it BEST?'
+        ],
+        'dance' => [
+            'This {content} is so {emotion}',
+            '{visual} {content} vibes',
+            'Can\'t stop watching this {content}',
+            'Who did it BEST?',
+            'She\'s SO FLEXIBLE!',
+            '{emotion} {content} in {visual}'
+        ],
+        'comedy' => [
+            'This {content} is so {emotion}',
+            '{visual} {content} vibes',
+            'Can\'t stop laughing',
+            'Who did it BEST?',
+            'This {content} killed me',
+            '{emotion} {content} in {visual}'
+        ],
+        'cooking' => [
+            'This {content} is so {emotion}',
+            '{visual} {content} vibes',
+            'Can\'t stop cooking this {content}',
+            'Who did it BEST?',
+            'This {content} looks amazing',
+            '{emotion} {content} in {visual}'
+        ],
+        'fitness' => [
+            'This {content} is so {emotion}',
+            '{visual} {content} vibes',
+            'Can\'t stop working out',
+            'Who did it BEST?',
+            'This {content} is intense',
+            '{emotion} {content} in {visual}'
+        ],
+        'beauty' => [
+            'This {content} is so {emotion}',
+            '{visual} {content} vibes',
+            'Can\'t stop watching this {content}',
+            'Who did it BEST?',
+            'This {content} looks amazing',
+            '{emotion} {content} in {visual}'
+        ],
+        'gaming' => [
+            'This {content} is so {emotion}',
+            '{visual} {content} vibes',
+            'Can\'t stop playing',
+            'Who did it BEST?',
+            'This {content} is insane',
+            '{emotion} {content} in {visual}'
+        ],
+        'pets' => [
+            'This {content} is so {emotion}',
+            '{visual} {content} vibes',
+            'Can\'t stop watching this {content}',
+            'Who did it BEST?',
+            'This {content} is so cute',
+            '{emotion} {content} in {visual}'
+        ],
+        'travel' => [
+            'This {content} is so {emotion}',
+            '{visual} {content} vibes',
+            'Can\'t stop traveling',
+            'Who did it BEST?',
+            'This {content} is amazing',
+            '{emotion} {content} in {visual}'
+        ],
+        'diy' => [
+            'This {content} is so {emotion}',
+            '{visual} {content} vibes',
+            'Can\'t stop creating',
+            'Who did it BEST?',
+            'This {content} is creative',
+            '{emotion} {content} in {visual}'
+        ],
+        'lifehack' => [
+            'This {content} is so {emotion}',
+            '{visual} {content} vibes',
+            'Can\'t stop using this {content}',
+            'Who did it BEST?',
+            'This {content} is genius',
+            '{emotion} {content} in {visual}'
+        ],
+        'motivation' => [
+            'This {content} is so {emotion}',
+            '{visual} {content} vibes',
+            'Can\'t stop being inspired',
+            'Who did it BEST?',
+            'This {content} is powerful',
+            '{emotion} {content} in {visual}'
+        ],
+        'asmr' => [
+            'This {content} is so {emotion}',
+            '{visual} {content} vibes',
+            'Can\'t stop listening to this {content}',
+            'Who did it BEST?',
+            'This {content} is so relaxing',
+            '{emotion} {content} in {visual}'
+        ],
+        'prank' => [
+            'This {content} is so {emotion}',
+            '{visual} {content} vibes',
+            'Can\'t stop laughing',
+            'Who did it BEST?',
+            'This {content} is hilarious',
+            '{emotion} {content} in {visual}'
+        ],
+        'challenge' => [
+            'This {content} is so {emotion}',
+            '{visual} {content} vibes',
+            'Can you do this?',
+            'Who did it BEST?',
+            'This {content} is impossible',
+            '{emotion} {content} in {visual}'
+        ],
+        'transformation' => [
+            'This {content} is so {emotion}',
+            '{visual} {content} vibes',
+            'Can\'t believe this {content}',
+            'Who did it BEST?',
+            'This {content} is incredible',
+            '{emotion} {content} in {visual}'
+        ],
+        'reaction' => [
+            'This {content} is so {emotion}',
+            '{visual} {content} vibes',
+            'Can\'t stop reacting',
+            'Who did it BEST?',
+            'This {content} is shocking',
+            '{emotion} {content} in {visual}'
+        ],
+        'tutorial' => [
+            'This {content} is so {emotion}',
+            '{visual} {content} vibes',
+            'Can\'t stop learning',
+            'Who did it BEST?',
+            'This {content} is helpful',
+            '{emotion} {content} in {visual}'
+        ],
+        'vlog' => [
+            'This {content} is so {emotion}',
+            '{visual} {content} vibes',
+            'Can\'t stop filming {content}',
+            'Who did it BEST?',
+            'This {content} is real',
+            '{emotion} {content} in {visual}'
+        ],
+        'fashion' => [
+            'This {content} is so {emotion}',
+            '{visual} {content} vibes',
+            'Can\'t stop watching this {content}',
+            'Who did it BEST?',
+            'This {content} is stylish',
+            '{emotion} {content} in {visual}'
+        ],
+        'tech' => [
+            'This {content} is so {emotion}',
+            '{visual} {content} vibes',
+            'Can\'t stop testing this {content}',
+            'Who did it BEST?',
+            'This {content} is innovative',
+            '{emotion} {content} in {visual}'
         ]
     ];
 
@@ -178,14 +578,54 @@ class AutoShortsGenerator
         'vocal' => ['#Shorts', '#Вокал', '#Голос', '#Пение', '#Музыка'],
         'music' => ['#Shorts', '#Музыка', '#Мелодия', '#Звук', '#Аудио'],
         'aesthetic' => ['#Shorts', '#Красиво', '#Эстетика', '#Визуал', '#Арт'],
-        'ambience' => ['#Shorts', '#Атмосфера', '#Настроение', '#Спокойно', '#Релакс']
+        'ambience' => ['#Shorts', '#Атмосфера', '#Настроение', '#Спокойно', '#Релакс'],
+        'dance' => ['#Shorts', '#Танец', '#Танцы', '#Хореография', '#Движение'],
+        'comedy' => ['#Shorts', '#Юмор', '#Смех', '#Комедия', '#Прикол'],
+        'cooking' => ['#Shorts', '#Готовка', '#Рецепт', '#Еда', '#Кухня'],
+        'fitness' => ['#Shorts', '#Спорт', '#Тренировка', '#Фитнес', '#Упражнения'],
+        'beauty' => ['#Shorts', '#Красота', '#Макияж', '#Косметика', '#Стиль'],
+        'gaming' => ['#Shorts', '#Игры', '#Гейминг', '#Геймер', '#Играю'],
+        'pets' => ['#Shorts', '#Животные', '#Питомец', '#Кот', '#Собака'],
+        'travel' => ['#Shorts', '#Путешествие', '#Поездка', '#Отпуск', '#Туризм'],
+        'diy' => ['#Shorts', '#СвоимиРуками', '#Рукоделие', '#Поделка', '#Творчество'],
+        'lifehack' => ['#Shorts', '#Лайфхак', '#Совет', '#Полезно', '#Трюк'],
+        'motivation' => ['#Shorts', '#Мотивация', '#Вдохновение', '#Успех', '#Цель'],
+        'asmr' => ['#Shorts', '#АСМР', '#Релакс', '#Звуки', '#Успокаиваю'],
+        'prank' => ['#Shorts', '#Пранк', '#Розыгрыш', '#Шутка', '#Прикол'],
+        'challenge' => ['#Shorts', '#Челлендж', '#Вызов', '#Испытание', '#Попробуй'],
+        'transformation' => ['#Shorts', '#Трансформация', '#ДоИПосле', '#Изменение', '#Превращение'],
+        'reaction' => ['#Shorts', '#Реакция', '#Реагирую', '#Отзыв', '#Мнение'],
+        'tutorial' => ['#Shorts', '#Обучение', '#Урок', '#Инструкция', '#КакСделать'],
+        'vlog' => ['#Shorts', '#Влог', '#Блог', '#ДеньИзЖизни', '#Повседневность'],
+        'fashion' => ['#Shorts', '#Мода', '#Стиль', '#Одежда', '#Лук'],
+        'tech' => ['#Shorts', '#Технологии', '#Гаджет', '#Обзор', '#Новинка']
     ];
 
     private const TAG_SETS_EN = [
         'vocal' => ['#Shorts', '#Singing', '#Vocal', '#Voice', '#Music'],
         'music' => ['#Shorts', '#Music', '#Melody', '#Sound', '#Audio'],
         'aesthetic' => ['#Shorts', '#Aesthetic', '#Visual', '#Beautiful', '#Art'],
-        'ambience' => ['#Shorts', '#Atmosphere', '#Mood', '#Calm', '#Relax']
+        'ambience' => ['#Shorts', '#Atmosphere', '#Mood', '#Calm', '#Relax'],
+        'dance' => ['#Shorts', '#Dance', '#Dancing', '#Choreography', '#Moves'],
+        'comedy' => ['#Shorts', '#Comedy', '#Funny', '#Laugh', '#Humor'],
+        'cooking' => ['#Shorts', '#Cooking', '#Recipe', '#Food', '#Kitchen'],
+        'fitness' => ['#Shorts', '#Fitness', '#Workout', '#Exercise', '#Gym'],
+        'beauty' => ['#Shorts', '#Beauty', '#Makeup', '#Cosmetics', '#Style'],
+        'gaming' => ['#Shorts', '#Gaming', '#Game', '#Gamer', '#Play'],
+        'pets' => ['#Shorts', '#Pets', '#Animals', '#Cat', '#Dog'],
+        'travel' => ['#Shorts', '#Travel', '#Trip', '#Vacation', '#Adventure'],
+        'diy' => ['#Shorts', '#DIY', '#Craft', '#Handmade', '#Tutorial'],
+        'lifehack' => ['#Shorts', '#Lifehack', '#Tip', '#Trick', '#Hack'],
+        'motivation' => ['#Shorts', '#Motivation', '#Inspiration', '#Success', '#Goal'],
+        'asmr' => ['#Shorts', '#ASMR', '#Relax', '#Sounds', '#Whisper'],
+        'prank' => ['#Shorts', '#Prank', '#Joke', '#Trick', '#Funny'],
+        'challenge' => ['#Shorts', '#Challenge', '#Try', '#Dare', '#Test'],
+        'transformation' => ['#Shorts', '#Transformation', '#BeforeAfter', '#Change', '#GlowUp'],
+        'reaction' => ['#Shorts', '#Reaction', '#React', '#Review', '#Opinion'],
+        'tutorial' => ['#Shorts', '#Tutorial', '#HowTo', '#Guide', '#Lesson'],
+        'vlog' => ['#Shorts', '#Vlog', '#Blog', '#DayInLife', '#Lifestyle'],
+        'fashion' => ['#Shorts', '#Fashion', '#Style', '#Outfit', '#Look'],
+        'tech' => ['#Shorts', '#Tech', '#Technology', '#Gadget', '#Review']
     ];
 
     // Вопросы для вовлечённости
@@ -217,6 +657,146 @@ class AutoShortsGenerator
             'Как тебе погружение?',
             'Хочешь ещё такой атмосферы?',
             'Стоит продолжать?'
+        ],
+        'dance' => [
+            'Как тебе танец?',
+            'Танцы зацепили?',
+            'Хочешь ещё таких танцев?',
+            'Залип на движения?',
+            'Стоит продолжать танцевать?'
+        ],
+        'comedy' => [
+            'Как тебе юмор?',
+            'Смешно было?',
+            'Хочешь ещё такого юмора?',
+            'Залип на приколы?',
+            'Стоит продолжать смеяться?'
+        ],
+        'cooking' => [
+            'Как тебе рецепт?',
+            'Готовка зацепила?',
+            'Хочешь ещё таких рецептов?',
+            'Залип на готовку?',
+            'Стоит продолжать готовить?'
+        ],
+        'fitness' => [
+            'Как тебе тренировка?',
+            'Спорт зацепил?',
+            'Хочешь ещё таких упражнений?',
+            'Залип на фитнес?',
+            'Стоит продолжать тренироваться?'
+        ],
+        'beauty' => [
+            'Как тебе макияж?',
+            'Красота зацепила?',
+            'Хочешь ещё таких образов?',
+            'Залип на стиль?',
+            'Стоит продолжать экспериментировать?'
+        ],
+        'gaming' => [
+            'Как тебе игра?',
+            'Гейминг зацепил?',
+            'Хочешь ещё таких игр?',
+            'Залип на прохождение?',
+            'Стоит продолжать играть?'
+        ],
+        'pets' => [
+            'Как тебе питомец?',
+            'Животное зацепило?',
+            'Хочешь ещё таких видео?',
+            'Залип на милоту?',
+            'Стоит продолжать снимать?'
+        ],
+        'travel' => [
+            'Как тебе путешествие?',
+            'Поездка зацепила?',
+            'Хочешь ещё таких видео?',
+            'Залип на приключения?',
+            'Стоит продолжать путешествовать?'
+        ],
+        'diy' => [
+            'Как тебе поделка?',
+            'Творчество зацепило?',
+            'Хочешь ещё таких идей?',
+            'Залип на рукоделие?',
+            'Стоит продолжать творить?'
+        ],
+        'lifehack' => [
+            'Как тебе лайфхак?',
+            'Совет зацепил?',
+            'Хочешь ещё таких трюков?',
+            'Залип на хитрости?',
+            'Стоит продолжать делиться?'
+        ],
+        'motivation' => [
+            'Как тебе мотивация?',
+            'Вдохновение зацепило?',
+            'Хочешь ещё такого контента?',
+            'Залип на успех?',
+            'Стоит продолжать вдохновляться?'
+        ],
+        'asmr' => [
+            'Как тебе звуки?',
+            'АСМР зацепил?',
+            'Хочешь ещё такого релакса?',
+            'Залип на успокаивающие звуки?',
+            'Стоит продолжать слушать?'
+        ],
+        'prank' => [
+            'Как тебе пранк?',
+            'Розыгрыш зацепил?',
+            'Хочешь ещё таких приколов?',
+            'Залип на пранки?',
+            'Стоит продолжать розыгрывать?'
+        ],
+        'challenge' => [
+            'Как тебе челлендж?',
+            'Вызов зацепил?',
+            'Хочешь ещё таких испытаний?',
+            'Залип на челленджи?',
+            'Стоит продолжать пробовать?'
+        ],
+        'transformation' => [
+            'Как тебе трансформация?',
+            'Изменение зацепило?',
+            'Хочешь ещё таких видео?',
+            'Залип на превращения?',
+            'Стоит продолжать снимать?'
+        ],
+        'reaction' => [
+            'Как тебе реакция?',
+            'Отзыв зацепил?',
+            'Хочешь ещё таких реакций?',
+            'Залип на мнения?',
+            'Стоит продолжать реагировать?'
+        ],
+        'tutorial' => [
+            'Как тебе урок?',
+            'Обучение зацепило?',
+            'Хочешь ещё таких инструкций?',
+            'Залип на мастер-классы?',
+            'Стоит продолжать учиться?'
+        ],
+        'vlog' => [
+            'Как тебе влог?',
+            'Блог зацепил?',
+            'Хочешь ещё таких видео?',
+            'Залип на повседневность?',
+            'Стоит продолжать снимать?'
+        ],
+        'fashion' => [
+            'Как тебе стиль?',
+            'Мода зацепила?',
+            'Хочешь ещё таких образов?',
+            'Залип на луки?',
+            'Стоит продолжать экспериментировать?'
+        ],
+        'tech' => [
+            'Как тебе гаджет?',
+            'Технологии зацепили?',
+            'Хочешь ещё таких обзоров?',
+            'Залип на новинки?',
+            'Стоит продолжать тестировать?'
         ]
     ];
 
@@ -242,6 +822,126 @@ class AutoShortsGenerator
             'Feel the atmosphere?',
             'Do you like the vibe?',
             'Want more like this?'
+        ],
+        'dance' => [
+            'How's the dance?',
+            'Did the moves hook you?',
+            'Want more like this?',
+            'Who did it BEST?'
+        ],
+        'comedy' => [
+            'Was it funny?',
+            'Did it make you laugh?',
+            'Want more like this?',
+            'Who did it BEST?'
+        ],
+        'cooking' => [
+            'How's the recipe?',
+            'Does it look good?',
+            'Want more like this?',
+            'Who did it BEST?'
+        ],
+        'fitness' => [
+            'How's the workout?',
+            'Did it motivate you?',
+            'Want more like this?',
+            'Who did it BEST?'
+        ],
+        'beauty' => [
+            'How's the look?',
+            'Does it look amazing?',
+            'Want more like this?',
+            'Who did it BEST?'
+        ],
+        'gaming' => [
+            'How's the game?',
+            'Did it hook you?',
+            'Want more like this?',
+            'Who did it BEST?'
+        ],
+        'pets' => [
+            'How cute is this?',
+            'Did it make you smile?',
+            'Want more like this?',
+            'Who did it BEST?'
+        ],
+        'travel' => [
+            'How's the trip?',
+            'Do you want to go there?',
+            'Want more like this?',
+            'Who did it BEST?'
+        ],
+        'diy' => [
+            'How's the craft?',
+            'Do you want to try this?',
+            'Want more like this?',
+            'Who did it BEST?'
+        ],
+        'lifehack' => [
+            'How useful is this?',
+            'Will you try this?',
+            'Want more like this?',
+            'Who did it BEST?'
+        ],
+        'motivation' => [
+            'How inspiring is this?',
+            'Did it motivate you?',
+            'Want more like this?',
+            'Who did it BEST?'
+        ],
+        'asmr' => [
+            'How relaxing is this?',
+            'Did it calm you down?',
+            'Want more like this?',
+            'Who did it BEST?'
+        ],
+        'prank' => [
+            'Was it funny?',
+            'Did it make you laugh?',
+            'Want more like this?',
+            'Who did it BEST?'
+        ],
+        'challenge' => [
+            'Can you do this?',
+            'Will you try this?',
+            'Want more like this?',
+            'Who did it BEST?'
+        ],
+        'transformation' => [
+            'How amazing is this?',
+            'Can you believe it?',
+            'Want more like this?',
+            'Who did it BEST?'
+        ],
+        'reaction' => [
+            'How was the reaction?',
+            'Did you agree?',
+            'Want more like this?',
+            'Who did it BEST?'
+        ],
+        'tutorial' => [
+            'How helpful is this?',
+            'Will you try this?',
+            'Want more like this?',
+            'Who did it BEST?'
+        ],
+        'vlog' => [
+            'How's the day?',
+            'Do you relate?',
+            'Want more like this?',
+            'Who did it BEST?'
+        ],
+        'fashion' => [
+            'How's the style?',
+            'Do you like the outfit?',
+            'Want more like this?',
+            'Who did it BEST?'
+        ],
+        'tech' => [
+            'How's the gadget?',
+            'Do you want this?',
+            'Want more like this?',
+            'Who did it BEST?'
         ]
     ];
 
@@ -449,6 +1149,13 @@ class AutoShortsGenerator
                         'environment', 'atmospheric_mood'
                     ];
                     break;
+                default:
+                    // Для новых типов используем общие углы
+                    $angles = [
+                        'content', 'style', 'vibe', 'energy', 'feeling',
+                        'moment', 'experience', 'quality', 'essence', 'spirit'
+                    ];
+                    break;
             }
         } else {
             switch ($intent['content_type']) {
@@ -479,6 +1186,13 @@ class AutoShortsGenerator
                         'эмоциональный_фон', 'пространственное_ощущение',
                         'атмосферное_погружение', 'эмоциональная_аура',
                         'окружающая_среда', 'атмосферное_настроение'
+                    ];
+                    break;
+                default:
+                    // Для новых типов используем общие углы
+                    $angles = [
+                        'контент', 'стиль', 'настроение', 'энергия', 'чувство',
+                        'момент', 'опыт', 'качество', 'суть', 'дух'
                     ];
                     break;
             }
@@ -858,13 +1572,53 @@ class AutoShortsGenerator
                 'vocal' => ['voice', 'vocals', 'singing', 'song'],
                 'music' => ['melody', 'music', 'track', 'sound'],
                 'aesthetic' => ['visual', 'beauty', 'aesthetic', 'light'],
-                'ambience' => ['atmosphere', 'mood', 'vibe', 'ambience']
+                'ambience' => ['atmosphere', 'mood', 'vibe', 'ambience'],
+                'dance' => ['dance', 'dancing', 'moves', 'choreography'],
+                'comedy' => ['comedy', 'joke', 'humor', 'fun'],
+                'cooking' => ['recipe', 'dish', 'food', 'meal'],
+                'fitness' => ['workout', 'exercise', 'training', 'fitness'],
+                'beauty' => ['look', 'style', 'makeup', 'beauty'],
+                'gaming' => ['game', 'play', 'gaming', 'stream'],
+                'pets' => ['pet', 'animal', 'friend', 'companion'],
+                'travel' => ['trip', 'journey', 'adventure', 'destination'],
+                'diy' => ['craft', 'project', 'creation', 'handmade'],
+                'lifehack' => ['tip', 'trick', 'hack', 'secret'],
+                'motivation' => ['inspiration', 'success', 'goal', 'dream'],
+                'asmr' => ['sound', 'whisper', 'relax', 'calm'],
+                'prank' => ['prank', 'joke', 'trick', 'surprise'],
+                'challenge' => ['challenge', 'dare', 'test', 'try'],
+                'transformation' => ['change', 'transformation', 'glow up', 'makeover'],
+                'reaction' => ['reaction', 'review', 'opinion', 'thought'],
+                'tutorial' => ['tutorial', 'guide', 'lesson', 'how to'],
+                'vlog' => ['day', 'life', 'vlog', 'blog'],
+                'fashion' => ['outfit', 'style', 'look', 'fashion'],
+                'tech' => ['gadget', 'device', 'tech', 'innovation']
             ]
             : [
                 'vocal' => ['голос', 'вокал', 'пение', 'звук'],
                 'music' => ['мелодия', 'музыка', 'композиция', 'звук'],
                 'aesthetic' => ['визуал', 'красота', 'эстетика', 'свет'],
-                'ambience' => ['атмосфера', 'настроение', 'погружение', 'ощущение']
+                'ambience' => ['атмосфера', 'настроение', 'погружение', 'ощущение'],
+                'dance' => ['танец', 'танцы', 'движение', 'хореография'],
+                'comedy' => ['юмор', 'шутка', 'прикол', 'смех'],
+                'cooking' => ['рецепт', 'блюдо', 'еда', 'кухня'],
+                'fitness' => ['тренировка', 'упражнение', 'спорт', 'фитнес'],
+                'beauty' => ['образ', 'стиль', 'макияж', 'красота'],
+                'gaming' => ['игра', 'гейминг', 'прохождение', 'стрим'],
+                'pets' => ['питомец', 'животное', 'друг', 'компаньон'],
+                'travel' => ['поездка', 'путешествие', 'приключение', 'отпуск'],
+                'diy' => ['поделка', 'проект', 'творчество', 'рукоделие'],
+                'lifehack' => ['совет', 'трюк', 'лайфхак', 'секрет'],
+                'motivation' => ['вдохновение', 'успех', 'цель', 'мечта'],
+                'asmr' => ['звук', 'шепот', 'релакс', 'спокойствие'],
+                'prank' => ['пранк', 'шутка', 'трюк', 'сюрприз'],
+                'challenge' => ['челлендж', 'вызов', 'испытание', 'попробуй'],
+                'transformation' => ['изменение', 'трансформация', 'превращение', 'метаморфоза'],
+                'reaction' => ['реакция', 'отзыв', 'мнение', 'мысль'],
+                'tutorial' => ['урок', 'инструкция', 'обучение', 'как сделать'],
+                'vlog' => ['день', 'жизнь', 'влог', 'блог'],
+                'fashion' => ['лук', 'стиль', 'образ', 'мода'],
+                'tech' => ['гаджет', 'устройство', 'технологии', 'новинка']
             ];
         $list = $words[$contentType] ?? $words['vocal'];
         return $list[array_rand($list)];
