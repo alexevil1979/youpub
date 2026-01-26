@@ -35,6 +35,21 @@ ob_start();
     </div>
 
     <div class="form-group">
+        <label for="schedule_id">Расписание публикации (опционально)</label>
+        <select id="schedule_id" name="schedule_id">
+            <option value="">Без расписания</option>
+            <?php foreach ($schedules as $schedule): ?>
+                <option value="<?= $schedule['id'] ?>" <?= ($group['schedule_id'] == $schedule['id']) ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($schedule['schedule_type'] ?? 'fixed') ?> - 
+                    <?= htmlspecialchars($schedule['platform'] ?? 'youtube') ?> - 
+                    <?= $schedule['publish_at'] ? date('d.m.Y H:i', strtotime($schedule['publish_at'])) : 'не указано' ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+        <small>Расписание определяет когда и как публиковать видео из группы. Можно <a href="/content-groups/schedules/create?group_id=<?= $group['id'] ?>">создать новое расписание</a>.</small>
+    </div>
+
+    <div class="form-group">
         <label>Каналы публикации</label>
         <div style="margin-top: 0.5rem;">
             <?php if (!empty($youtubeAccounts)): ?>

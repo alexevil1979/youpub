@@ -44,18 +44,6 @@ ob_start();
     </div>
 
     <div class="form-group">
-        <label for="template_id">Шаблон оформления (опционально)</label>
-        <select id="template_id" name="template_id">
-            <option value="">Без шаблона</option>
-            <?php foreach ($templates as $template): ?>
-                <option value="<?= $template['id'] ?>" <?= (isset($schedule['template_id']) && $schedule['template_id'] == $template['id']) ? 'selected' : '' ?>>
-                    <?= htmlspecialchars($template['name']) ?>
-                </option>
-            <?php endforeach; ?>
-        </select>
-    </div>
-
-    <div class="form-group">
         <label for="schedule_type">Тип расписания *</label>
         <select id="schedule_type" name="schedule_type" required onchange="toggleScheduleOptions()">
             <option value="fixed" <?= (isset($schedule['schedule_type']) && $schedule['schedule_type'] === 'fixed') ? 'selected' : '' ?>>Фиксированное (каждый день в определенное время)</option>

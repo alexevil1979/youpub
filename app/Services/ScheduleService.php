@@ -453,7 +453,6 @@ class ScheduleService extends Service
             'repeat_type' => $schedule['repeat_type'] ?? 'once',
             'repeat_until' => $schedule['repeat_until'] ?? null,
             'status' => 'pending',
-            'template_id' => $schedule['template_id'] ?? null,
             'schedule_type' => $schedule['schedule_type'] ?? null,
             'integration_id' => $schedule['integration_id'] ?? null,
             'integration_type' => $schedule['integration_type'] ?? null,

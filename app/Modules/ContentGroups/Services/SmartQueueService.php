@@ -118,8 +118,8 @@ class SmartQueueService extends Service
             return ['success' => false, 'message' => 'Video not found'];
         }
 
-        // Применяем шаблон, если есть
-        $templateId = $schedule['template_id'] ?? $group['template_id'] ?? null;
+        // Применяем шаблон из группы
+        $templateId = $group['template_id'] ?? null;
         
         // ВАЖНО: Проверяем video['title'] - если "unknown", используем file_name
         $videoTitle = $video['title'] ?? '';
@@ -670,7 +670,6 @@ class SmartQueueService extends Service
                         'user_id' => $userId,
                         'video_id' => (int)$groupFile['video_id'],
                         'content_group_id' => $groupId,
-                        'template_id' => $templateId,
                         'platform' => $platform,
                         'publish_at' => date('Y-m-d H:i:s'),
                         'status' => 'processing',

@@ -318,7 +318,6 @@ class SmartScheduleController extends Controller
             // Подготавливаем данные, исключая NULL значения для video_id
             $contentGroupId = $this->getParam('content_group_id') ? (int)$this->getParam('content_group_id') : null;
             $videoId = $this->getParam('video_id') ? (int)$this->getParam('video_id') : null;
-            $templateId = $this->getParam('template_id') ? (int)$this->getParam('template_id') : null;
             
             $data = [
                 'user_id' => $userId,
@@ -699,11 +698,11 @@ class SmartScheduleController extends Controller
                 }
             }
             
-            // Получаем шаблон, если есть
+            // Получаем шаблон из группы, если есть
             $template = null;
-            if (!empty($schedule['template_id'])) {
+            if (!empty($group['template_id'])) {
                 $templateRepo = new \App\Modules\ContentGroups\Repositories\PublicationTemplateRepository();
-                $template = $templateRepo->findById((int)$schedule['template_id']);
+                $template = $templateRepo->findById((int)$group['template_id']);
             }
             
             include __DIR__ . '/../../../../views/content_groups/schedules/show.php';
@@ -797,7 +796,6 @@ class SmartScheduleController extends Controller
             
             $updateData = [
                 'content_group_id' => $this->getParam('content_group_id') ? (int)$this->getParam('content_group_id') : null,
-                'template_id' => $this->getParam('template_id') ? (int)$this->getParam('template_id') : null,
                 'platform' => $this->getParam('platform', 'youtube'),
                 'schedule_type' => $this->getParam('schedule_type', 'fixed'),
                 'publish_at' => $this->getParam('publish_at') ? date('Y-m-d H:i:s', strtotime($this->getParam('publish_at'))) : null,

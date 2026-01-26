@@ -52,6 +52,17 @@ class GroupController extends Controller
         $templates = $this->templateService->getUserTemplates($userId, true);
         $csrfToken = (new \Core\Auth())->generateCsrfToken();
         
+        // Получаем все расписания пользователя для выбора
+        $schedules = [];
+        try {
+            $scheduleRepo = new \App\Repositories\ScheduleRepository();
+            $allSchedules = $scheduleRepo->findByUserId($userId);
+            // Фильтруем только расписания для групп (без video_id)
+            $schedules = array_filter($allSchedules, fn($s) => empty($s['video_id']) && !empty($s['content_group_id']));
+        } catch (\Throwable $e) {
+            $schedules = [];
+        }
+        
         // Получаем все доступные интеграции для отображения статуса
         $youtubeAccounts = [];
         $telegramAccounts = [];
@@ -131,6 +142,7 @@ class GroupController extends Controller
             'name' => $this->getParam('name', ''),
             'description' => $this->getParam('description', ''),
             'template_id' => $this->getParam('template_id') ? (int)$this->getParam('template_id') : null,
+            'schedule_id' => $this->getParam('schedule_id') ? (int)$this->getParam('schedule_id') : null,
             'status' => $this->getParam('status', 'active'),
             'settings' => !empty($settings) ? $settings : null,
         ];
@@ -270,13 +282,8 @@ class GroupController extends Controller
         // Применяем шаблон для превью каждого файла в группе
         $filePreviews = [];
         if ($group['status'] === 'active' && !empty($files)) {
-            // Определяем шаблон (из расписания или группы)
-            $templateId = null;
-            if (!empty($schedules) && isset($schedules[0]['template_id'])) {
-                $templateId = $schedules[0]['template_id'];
-            } elseif ($group['template_id']) {
-                $templateId = $group['template_id'];
-            }
+            // Определяем шаблон из группы
+            $templateId = $group['template_id'] ?? null;
             
             // Определяем платформу (из расписания или по умолчанию)
             $platform = 'youtube';
@@ -322,13 +329,8 @@ class GroupController extends Controller
                 $nextVideo = $videoRepo->findById($nextFile['video_id']);
                 
                 if ($nextVideo) {
-                    // Определяем шаблон (из расписания или группы)
-                    $templateId = null;
-                    if (!empty($schedules) && isset($schedules[0]['template_id'])) {
-                        $templateId = $schedules[0]['template_id'];
-                    } elseif ($group['template_id']) {
-                        $templateId = $group['template_id'];
-                    }
+                    // Определяем шаблон из группы
+                    $templateId = $group['template_id'] ?? null;
                     
                     // Определяем платформу (из расписания или по умолчанию)
                     $platform = 'youtube';
@@ -502,6 +504,18 @@ class GroupController extends Controller
         }
 
         $templates = $this->templateService->getUserTemplates($userId, true);
+        
+        // Получаем все расписания пользователя для выбора
+        $schedules = [];
+        try {
+            $scheduleRepo = new \App\Repositories\ScheduleRepository();
+            $allSchedules = $scheduleRepo->findByUserId($userId);
+            // Фильтруем только расписания для групп (без video_id)
+            $schedules = array_filter($allSchedules, fn($s) => empty($s['video_id']) && !empty($s['content_group_id']));
+        } catch (\Throwable $e) {
+            $schedules = [];
+        }
+        
         $csrfToken = (new \Core\Auth())->generateCsrfToken();
         
         if (!isset($templates)) {
@@ -862,7 +876,7 @@ class GroupController extends Controller
         $latestSchedules = $scheduleRepo->findLatestByGroupIds([(int)$id]);
         $schedule = $latestSchedules[$id] ?? null;
         $platform = $schedule['platform'] ?? 'youtube';
-        $templateId = $schedule['template_id'] ?? $group['template_id'] ?? null;
+        $templateId = $group['template_id'] ?? null;
 
         $templates = $this->templateService->getUserTemplates($userId, true);
         $templateName = null;
@@ -1100,7 +1114,7 @@ class GroupController extends Controller
         $latestSchedules = $scheduleRepo->findLatestByGroupIds([(int)$id]);
         $schedule = $latestSchedules[$id] ?? null;
         $platform = $schedule['platform'] ?? 'youtube';
-        $templateId = $schedule['template_id'] ?? $group['template_id'] ?? null;
+        $templateId = $group['template_id'] ?? null;
 
         $context = [
             'group_name' => $group['name'],
