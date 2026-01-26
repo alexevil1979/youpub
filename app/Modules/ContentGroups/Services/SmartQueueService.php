@@ -443,6 +443,16 @@ class SmartQueueService extends Service
                 error_log("SmartQueueService::publishGroupFileNow: Generated title: " . ($templated['title'] ?? 'N/A'));
             }
 
+            // Проверяем наличие колонок integration_id и integration_type в таблице schedules
+            $hasIntegrationColumns = false;
+            try {
+                $checkStmt = $this->db->prepare("SHOW COLUMNS FROM `schedules` LIKE 'integration_id'");
+                $checkStmt->execute();
+                $hasIntegrationColumns = (bool)$checkStmt->fetch();
+            } catch (\Exception $e) {
+                error_log("SmartQueueService::publishGroupFileNow: Error checking integration_id column: " . $e->getMessage());
+            }
+            
             // Публикуем для каждой выбранной интеграции
             $results = [];
             $allSuccess = true;
@@ -460,23 +470,40 @@ class SmartQueueService extends Service
                 $fileStatus = $groupFile['status'] ?? 'new';
                 if ($fileStatus === 'queued' || $fileStatus === 'published') {
                     // Проверяем активные расписания для этой интеграции
-                    $stmt = $this->db->prepare("
-                        SELECT id 
-                        FROM schedules 
-                        WHERE video_id = ? 
-                        AND platform = ?
-                        AND integration_id = ?
-                        AND integration_type = ?
-                        AND status IN ('processing', 'pending')
-                        AND created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
-                        LIMIT 1
-                    ");
-                    $stmt->execute([
-                        (int)$groupFile['video_id'],
-                        $platform,
-                        $integrationId,
-                        $platform
-                    ]);
+                    if ($hasIntegrationColumns && $integrationId !== null) {
+                        $stmt = $this->db->prepare("
+                            SELECT id 
+                            FROM schedules 
+                            WHERE video_id = ? 
+                            AND platform = ?
+                            AND integration_id = ?
+                            AND integration_type = ?
+                            AND status IN ('processing', 'pending')
+                            AND created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+                            LIMIT 1
+                        ");
+                        $stmt->execute([
+                            (int)$groupFile['video_id'],
+                            $platform,
+                            $integrationId,
+                            $platform
+                        ]);
+                    } else {
+                        // Если колонок нет или integration_id не указан, проверяем только по platform
+                        $stmt = $this->db->prepare("
+                            SELECT id 
+                            FROM schedules 
+                            WHERE video_id = ? 
+                            AND platform = ?
+                            AND status IN ('processing', 'pending')
+                            AND created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+                            LIMIT 1
+                        ");
+                        $stmt->execute([
+                            (int)$groupFile['video_id'],
+                            $platform
+                        ]);
+                    }
                     if ($stmt->fetch()) {
                         error_log("SmartQueueService::publishGroupFileNow: Video {$groupFile['video_id']} already has active schedule for {$platform} integration {$integrationId}");
                         $results[] = [
@@ -528,23 +555,40 @@ class SmartQueueService extends Service
                     }
                     
                     // Проверяем активные расписания для этой конкретной интеграции
-                    $stmt = $this->db->prepare("
-                        SELECT id, status, created_at 
-                        FROM schedules 
-                        WHERE video_id = ? 
-                        AND platform = ?
-                        AND integration_id = ?
-                        AND integration_type = ?
-                        AND status IN ('processing', 'pending')
-                        AND created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
-                        FOR UPDATE
-                    ");
-                    $stmt->execute([
-                        (int)$groupFile['video_id'],
-                        $platform,
-                        $integrationId,
-                        $platform
-                    ]);
+                    if ($hasIntegrationColumns && $integrationId !== null) {
+                        $stmt = $this->db->prepare("
+                            SELECT id, status, created_at 
+                            FROM schedules 
+                            WHERE video_id = ? 
+                            AND platform = ?
+                            AND integration_id = ?
+                            AND integration_type = ?
+                            AND status IN ('processing', 'pending')
+                            AND created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+                            FOR UPDATE
+                        ");
+                        $stmt->execute([
+                            (int)$groupFile['video_id'],
+                            $platform,
+                            $integrationId,
+                            $platform
+                        ]);
+                    } else {
+                        // Если колонок нет или integration_id не указан, проверяем только по platform
+                        $stmt = $this->db->prepare("
+                            SELECT id, status, created_at 
+                            FROM schedules 
+                            WHERE video_id = ? 
+                            AND platform = ?
+                            AND status IN ('processing', 'pending')
+                            AND created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+                            FOR UPDATE
+                        ");
+                        $stmt->execute([
+                            (int)$groupFile['video_id'],
+                            $platform
+                        ]);
+                    }
                     $activeSchedules = $stmt->fetchAll();
                     
                     if (!empty($activeSchedules)) {
@@ -561,22 +605,50 @@ class SmartQueueService extends Service
                     }
                     
                     // Проверяем успешные публикации только за последние 15 секунд для этой интеграции
-                    $pubStmt = $this->db->prepare("
-                        SELECT id, platform_id, created_at 
-                        FROM publications 
-                        WHERE video_id = ? 
-                        AND platform = ?
-                        AND integration_id = ?
-                        AND status = 'success'
-                        AND created_at >= DATE_SUB(NOW(), INTERVAL 15 SECOND)
-                        ORDER BY created_at DESC
-                        LIMIT 1
-                    ");
-                    $pubStmt->execute([
-                        (int)$groupFile['video_id'],
-                        $platform,
-                        $integrationId
-                    ]);
+                    // Проверяем наличие колонки integration_id в таблице publications
+                    $hasPubIntegrationColumn = false;
+                    try {
+                        $checkPubStmt = $this->db->prepare("SHOW COLUMNS FROM `publications` LIKE 'integration_id'");
+                        $checkPubStmt->execute();
+                        $hasPubIntegrationColumn = (bool)$checkPubStmt->fetch();
+                    } catch (\Exception $e) {
+                        error_log("SmartQueueService::publishGroupFileNow: Error checking integration_id column in publications: " . $e->getMessage());
+                    }
+                    
+                    if ($hasPubIntegrationColumn && $integrationId !== null) {
+                        $pubStmt = $this->db->prepare("
+                            SELECT id, platform_id, created_at 
+                            FROM publications 
+                            WHERE video_id = ? 
+                            AND platform = ?
+                            AND integration_id = ?
+                            AND status = 'success'
+                            AND created_at >= DATE_SUB(NOW(), INTERVAL 15 SECOND)
+                            ORDER BY created_at DESC
+                            LIMIT 1
+                        ");
+                        $pubStmt->execute([
+                            (int)$groupFile['video_id'],
+                            $platform,
+                            $integrationId
+                        ]);
+                    } else {
+                        // Если колонки нет или integration_id не указан, проверяем только по platform
+                        $pubStmt = $this->db->prepare("
+                            SELECT id, platform_id, created_at 
+                            FROM publications 
+                            WHERE video_id = ? 
+                            AND platform = ?
+                            AND status = 'success'
+                            AND created_at >= DATE_SUB(NOW(), INTERVAL 15 SECOND)
+                            ORDER BY created_at DESC
+                            LIMIT 1
+                        ");
+                        $pubStmt->execute([
+                            (int)$groupFile['video_id'],
+                            $platform
+                        ]);
+                    }
                     $recentPub = $pubStmt->fetch();
                     if ($recentPub) {
                         $this->db->rollBack();
@@ -604,8 +676,8 @@ class SmartQueueService extends Service
                         'status' => 'processing',
                     ];
                     
-                    // Добавляем integration_id и integration_type если указаны
-                    if ($integrationId !== null) {
+                    // Добавляем integration_id и integration_type если указаны и колонки существуют
+                    if ($hasIntegrationColumns && $integrationId !== null) {
                         $scheduleData['integration_id'] = $integrationId;
                         $scheduleData['integration_type'] = $platform;
                     }
@@ -628,24 +700,42 @@ class SmartQueueService extends Service
                     error_log("SmartQueueService::publishGroupFileNow: Created schedule ID: {$tempScheduleId} for video {$groupFile['video_id']} on {$platform} integration {$integrationId}");
                     
                     // Финальная проверка для этой интеграции
-                    $finalCheckStmt = $this->db->prepare("
-                        SELECT COUNT(*) as count
-                        FROM schedules 
-                        WHERE video_id = ? 
-                        AND platform = ?
-                        AND integration_id = ?
-                        AND integration_type = ?
-                        AND status IN ('processing', 'pending')
-                        AND id != ?
-                        AND created_at >= DATE_SUB(NOW(), INTERVAL 2 MINUTE)
-                    ");
-                    $finalCheckStmt->execute([
-                        (int)$groupFile['video_id'],
-                        $platform,
-                        $integrationId,
-                        $platform,
-                        $tempScheduleId
-                    ]);
+                    if ($hasIntegrationColumns && $integrationId !== null) {
+                        $finalCheckStmt = $this->db->prepare("
+                            SELECT COUNT(*) as count
+                            FROM schedules 
+                            WHERE video_id = ? 
+                            AND platform = ?
+                            AND integration_id = ?
+                            AND integration_type = ?
+                            AND status IN ('processing', 'pending')
+                            AND id != ?
+                            AND created_at >= DATE_SUB(NOW(), INTERVAL 2 MINUTE)
+                        ");
+                        $finalCheckStmt->execute([
+                            (int)$groupFile['video_id'],
+                            $platform,
+                            $integrationId,
+                            $platform,
+                            $tempScheduleId
+                        ]);
+                    } else {
+                        // Если колонок нет или integration_id не указан, проверяем только по platform
+                        $finalCheckStmt = $this->db->prepare("
+                            SELECT COUNT(*) as count
+                            FROM schedules 
+                            WHERE video_id = ? 
+                            AND platform = ?
+                            AND status IN ('processing', 'pending')
+                            AND id != ?
+                            AND created_at >= DATE_SUB(NOW(), INTERVAL 2 MINUTE)
+                        ");
+                        $finalCheckStmt->execute([
+                            (int)$groupFile['video_id'],
+                            $platform,
+                            $tempScheduleId
+                        ]);
+                    }
                     $finalCheck = $finalCheckStmt->fetch();
                     
                     if ($finalCheck && (int)$finalCheck['count'] > 0) {
