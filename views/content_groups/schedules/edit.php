@@ -24,7 +24,7 @@ ob_start();
     
     <div class="form-group">
         <label for="content_group_id">Группа контента *</label>
-        <select id="content_group_id" name="content_group_id" required>
+        <select id="content_group_id" name="content_group_id">
             <option value="">Выберите группу</option>
             <?php foreach ($groups as $group): ?>
                 <option value="<?= $group['id'] ?>" <?= (isset($schedule['content_group_id']) && $schedule['content_group_id'] == $group['id']) ? 'selected' : '' ?>>

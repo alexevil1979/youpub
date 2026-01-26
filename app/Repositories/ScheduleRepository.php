@@ -125,18 +125,28 @@ class ScheduleRepository extends Repository
     /**
      * Найти активные расписания с группами
      * Включает расписания со статусом 'pending' и 'published' (если есть неопубликованные видео)
+     * Ищет расписания, которые либо имеют content_group_id, либо используются группами через schedule_id
      */
     public function findActiveGroupSchedules(int $limit = 50): array
     {
         $limit = max(1, $limit);
         $sql = "
-            SELECT s.*, cg.name as group_name, cg.status as group_status
+            SELECT DISTINCT s.*, 
+                   COALESCE(cg1.name, cg2.name) as group_name, 
+                   COALESCE(cg1.status, cg2.status) as group_status
             FROM {$this->table} s
-            JOIN content_groups cg ON cg.id = s.content_group_id
+            LEFT JOIN content_groups cg1 ON cg1.id = s.content_group_id AND cg1.status = 'active'
+            LEFT JOIN content_groups cg2 ON cg2.schedule_id = s.id AND cg2.status = 'active'
             WHERE s.status IN ('pending', 'published')
             AND s.status != 'paused'
-            AND cg.status = 'active'
-            AND s.content_group_id IS NOT NULL
+            AND s.video_id IS NULL
+            AND (
+                -- Расписание с content_group_id (старая логика)
+                (s.content_group_id IS NOT NULL AND cg1.id IS NOT NULL)
+                OR
+                -- Расписание используется группами через schedule_id
+                (cg2.id IS NOT NULL)
+            )
             AND (
                 -- Для pending расписаний: время наступило или null
                 (s.status = 'pending' AND (s.publish_at <= NOW() OR s.publish_at IS NULL))
@@ -145,7 +155,9 @@ class ScheduleRepository extends Repository
                 (s.status = 'published' AND EXISTS (
                     SELECT 1 FROM content_group_files cgf
                     JOIN videos v ON v.id = cgf.video_id
-                    WHERE cgf.group_id = s.content_group_id
+                    WHERE (cgf.group_id = s.content_group_id OR cgf.group_id IN (
+                        SELECT id FROM content_groups WHERE schedule_id = s.id
+                    ))
                     AND cgf.status IN ('new', 'queued', 'paused')
                     AND v.status IN ('uploaded', 'ready')
                 ))

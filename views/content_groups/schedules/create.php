@@ -24,16 +24,16 @@ $selectedGroupId = isset($_GET['group_id']) ? (int)$_GET['group_id'] : 0;
     <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">
     
     <div class="form-group">
-        <label for="content_group_id">Группа контента *</label>
-        <select id="content_group_id" name="content_group_id" required>
-            <option value="">Выберите группу</option>
+        <label for="content_group_id">Группа контента (опционально)</label>
+        <select id="content_group_id" name="content_group_id">
+            <option value="">Без привязки к группе</option>
             <?php foreach ($groups as $group): ?>
                 <option value="<?= $group['id'] ?>" <?= ($selectedGroupId === (int)$group['id']) ? 'selected' : '' ?>>
                     <?= htmlspecialchars($group['name']) ?>
                 </option>
             <?php endforeach; ?>
         </select>
-        <small>Или <a href="/content-groups/create">создайте новую группу</a></small>
+        <small>Расписание можно использовать для нескольких групп. Привязка к группе не обязательна. Или <a href="/content-groups/create">создайте новую группу</a></small>
     </div>
 
     <div class="form-group">

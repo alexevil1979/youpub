@@ -39,11 +39,6 @@ class SmartQueueService extends Service
         error_log("SmartQueueService::processGroupSchedule: ===== START PROCESSING SCHEDULE ID {$schedule['id']} =====");
         error_log("SmartQueueService::processGroupSchedule: Schedule details - Group: " . ($schedule['group_name'] ?? 'unknown') . ", Platform: {$schedule['platform']}, Status: {$schedule['status']}, Publish_at: {$schedule['publish_at']}");
 
-        if (empty($schedule['content_group_id'])) {
-            error_log("SmartQueueService::processGroupSchedule: ERROR - No content group specified");
-            return ['success' => false, 'message' => 'No content group specified'];
-        }
-
         // Проверяем, готово ли расписание (проверка времени и лимитов)
         if (!$this->scheduleEngine->isScheduleReady($schedule)) {
             error_log("SmartQueueService::processGroupSchedule: Schedule ID {$schedule['id']} not ready. Publish_at: " . ($schedule['publish_at'] ?? 'NULL') . ", Status: " . ($schedule['status'] ?? 'NULL'));
@@ -52,14 +47,45 @@ class SmartQueueService extends Service
 
         error_log("SmartQueueService::processGroupSchedule: Schedule is ready for processing");
 
-        // Получаем группу
-        $group = $this->groupRepo->findById($schedule['content_group_id']);
-        if (!$group || $group['status'] !== 'active') {
-            error_log("SmartQueueService::processGroupSchedule: Group not found or inactive. Group ID: " . ($schedule['content_group_id'] ?? 'NULL') . ", Group status: " . ($group['status'] ?? 'not found'));
-            return ['success' => false, 'message' => 'Group not found or inactive'];
+        // Определяем группы для обработки
+        $groupsToProcess = [];
+        
+        // Если у расписания есть content_group_id (старая логика для обратной совместимости)
+        if (!empty($schedule['content_group_id'])) {
+            $group = $this->groupRepo->findById($schedule['content_group_id']);
+            if ($group && $group['status'] === 'active') {
+                $groupsToProcess[] = $group;
+            }
+        } else {
+            // Ищем все группы, которые используют это расписание через schedule_id
+            $stmt = $this->db->prepare("SELECT * FROM content_groups WHERE schedule_id = ? AND status = 'active'");
+            $stmt->execute([$schedule['id']]);
+            $groupsToProcess = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            error_log("SmartQueueService::processGroupSchedule: Found " . count($groupsToProcess) . " groups using schedule ID {$schedule['id']}");
         }
         
-        error_log("SmartQueueService::processGroupSchedule: Group found. Group ID: {$group['id']}, Status: {$group['status']}");
+        if (empty($groupsToProcess)) {
+            error_log("SmartQueueService::processGroupSchedule: No active groups found for schedule ID {$schedule['id']}");
+            return ['success' => false, 'message' => 'No active groups found for this schedule'];
+        }
+        
+        // Обрабатываем каждую группу
+        $results = [];
+        foreach ($groupsToProcess as $group) {
+            error_log("SmartQueueService::processGroupSchedule: Processing group ID {$group['id']}, Name: {$group['name']}");
+            $result = $this->processGroupForSchedule($group, $schedule);
+            $results[] = $result;
+        }
+        
+        return ['success' => true, 'results' => $results];
+    }
+    
+    /**
+     * Обработать одну группу для расписания
+     */
+    private function processGroupForSchedule(array $group, array $schedule): array
+    {
+        error_log("SmartQueueService::processGroupForSchedule: Processing group ID {$group['id']}");
         
         // Получаем выбранные интеграции из settings группы
         $selectedIntegrations = [];
@@ -80,33 +106,18 @@ class SmartQueueService extends Service
         $skipPublished = $schedule['skip_published'] ?? true;
 
         // Получаем следующее видео из группы
-        $groupFile = $this->fileRepo->findNextUnpublished($schedule['content_group_id']);
+        $groupFile = $this->fileRepo->findNextUnpublished($group['id']);
         
         if (!$groupFile) {
-            error_log("SmartQueueService::processGroupSchedule: No unpublished file found. Group ID: {$schedule['content_group_id']}, Skip published: " . ($skipPublished ? 'true' : 'false'));
+            error_log("SmartQueueService::processGroupForSchedule: No unpublished file found. Group ID: {$group['id']}, Skip published: " . ($skipPublished ? 'true' : 'false'));
             
-            // Все видео опубликованы или нет доступных
-            if ($skipPublished) {
-                // Останавливаем расписание, чтобы не попадать в повторную обработку
-                $this->scheduleRepo->update($schedule['id'], [
-                    'status' => 'published',
-                    'publish_at' => null
-                ]);
-                error_log("SmartQueueService::processGroupSchedule: Group schedule {$schedule['id']} marked as published (no unpublished videos)");
-                return ['success' => true, 'message' => 'No unpublished videos in group'];
-            }
-            
-            // Если не пропускаем, берем любое видео из группы
-            $files = $this->fileRepo->findByGroupId($schedule['content_group_id'], ['order_index' => 'ASC']);
-            if (empty($files)) {
-                error_log("SmartQueueService::processGroupSchedule: No files in group. Group ID: {$schedule['content_group_id']}");
-                return ['success' => false, 'message' => 'No videos in group'];
-            }
-            $groupFile = $files[0];
-            error_log("SmartQueueService::processGroupSchedule: Using first file from group. File ID: {$groupFile['id']}, Video ID: {$groupFile['video_id']}, Status: {$groupFile['status']}");
-        } else {
-            error_log("SmartQueueService::processGroupSchedule: Found unpublished file. File ID: {$groupFile['id']}, Video ID: {$groupFile['video_id']}, File status: " . ($groupFile['status'] ?? 'unknown') . ", Video status: " . ($groupFile['video_status'] ?? 'unknown'));
+            // Все видео опубликованы или нет доступных - пропускаем эту группу, но не останавливаем расписание
+            // так как оно может использоваться другими группами
+            error_log("SmartQueueService::processGroupForSchedule: No unpublished videos in group {$group['id']}, skipping this group");
+            return ['success' => true, 'message' => 'No unpublished videos in group', 'group_id' => $group['id']];
         }
+        
+        error_log("SmartQueueService::processGroupForSchedule: Found unpublished file. File ID: {$groupFile['id']}, Video ID: {$groupFile['video_id']}, File status: " . ($groupFile['status'] ?? 'unknown') . ", Video status: " . ($groupFile['video_status'] ?? 'unknown'));
 
         // Статус файла обновляется в транзакции при создании временного расписания
 
@@ -212,7 +223,7 @@ class SmartQueueService extends Service
             $scheduleData = [
                 'user_id' => $schedule['user_id'],
                 'video_id' => $groupFile['video_id'],
-                'content_group_id' => $schedule['content_group_id'],
+                'content_group_id' => $group['id'],
                 'platform' => $platform,
                 'publish_at' => date('Y-m-d H:i:s'),
                 'status' => 'processing',
@@ -289,8 +300,8 @@ class SmartQueueService extends Service
             ]);
 
             // Для групповых расписаний: проверяем, остались ли ещё видео для публикации
-            error_log("SmartQueueService::processGroupSchedule: Checking for remaining unpublished videos in group {$schedule['content_group_id']}");
-            $remainingFiles = $this->fileRepo->findNextUnpublished($schedule['content_group_id']);
+            error_log("SmartQueueService::processGroupForSchedule: Checking for remaining unpublished videos in group {$group['id']}");
+            $remainingFiles = $this->fileRepo->findNextUnpublished($group['id']);
 
             if ($remainingFiles) {
                 // Есть ещё видео для публикации - обновляем время следующей публикации

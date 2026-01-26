@@ -505,13 +505,13 @@ class GroupController extends Controller
 
         $templates = $this->templateService->getUserTemplates($userId, true);
         
-        // Получаем все расписания пользователя для выбора
+        // Получаем все расписания пользователя для выбора (без video_id - только для групп)
         $schedules = [];
         try {
             $scheduleRepo = new \App\Repositories\ScheduleRepository();
             $allSchedules = $scheduleRepo->findByUserId($userId);
-            // Фильтруем только расписания для групп (без video_id)
-            $schedules = array_filter($allSchedules, fn($s) => empty($s['video_id']) && !empty($s['content_group_id']));
+            // Фильтруем только расписания для групп (без video_id) - content_group_id не обязателен
+            $schedules = array_filter($allSchedules, fn($s) => empty($s['video_id']));
         } catch (\Throwable $e) {
             $schedules = [];
         }

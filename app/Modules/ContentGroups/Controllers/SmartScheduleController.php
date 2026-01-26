@@ -76,8 +76,9 @@ class SmartScheduleController extends Controller
                     $allSchedules = [];
                 }
                 
+                // Показываем все расписания для групп (без video_id)
                 $smartSchedules = array_filter($allSchedules, function($schedule) {
-                    return !empty($schedule['content_group_id']) && is_numeric($schedule['content_group_id']);
+                    return empty($schedule['video_id']);
                 });
                 
                 // Преобразуем в массив с числовыми индексами
