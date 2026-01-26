@@ -195,25 +195,70 @@ class GroupController extends Controller
         if ($group['status'] === 'active' && !empty($files)) {
             $scheduleRepo = new \App\Repositories\ScheduleRepository();
             
-            // Получаем все активные расписания для этой группы
-            $schedules = $scheduleRepo->findByGroupId($id);
+            // Получаем расписание группы через schedule_id
+            $schedule = null;
+            if (!empty($group['schedule_id'])) {
+                $schedule = $scheduleRepo->findById($group['schedule_id']);
+            }
             
-            // Для каждого файла находим следующее расписание
-            // Для групп контента расписание обычно для всей группы, а не для конкретного видео
-            if (!empty($schedules)) {
-                // Берем ближайшее расписание для группы
-                $nextSchedule = $schedules[0];
-                $nextPublishDate = $nextSchedule['publish_at'];
-                $platform = $nextSchedule['platform'] ?? 'youtube';
+            // Если расписание не найдено через schedule_id, ищем через content_group_id (старая логика)
+            if (!$schedule) {
+                $schedules = $scheduleRepo->findByGroupId($id);
+                if (!empty($schedules)) {
+                    $schedule = $schedules[0];
+                }
+            }
+            
+            if ($schedule) {
+                $scheduleType = $schedule['schedule_type'] ?? 'fixed';
+                $platform = $schedule['platform'] ?? 'youtube';
+                $now = time();
                 
-                // Присваиваем эту дату всем файлам, которые еще не опубликованы или в очереди
-                foreach ($files as $file) {
-                    if (in_array($file['status'], ['new', 'queued', 'paused'])) {
+                // Фильтруем файлы, которые еще не опубликованы
+                $unpublishedFiles = array_filter($files, fn($f) => in_array($f['status'], ['new', 'queued', 'paused']));
+                
+                if ($scheduleType === 'interval' && !empty($schedule['interval_minutes'])) {
+                    // Интервальное расписание: рассчитываем время для каждого файла
+                    $baseTime = strtotime($schedule['publish_at'] ?? 'now');
+                    $intervalMinutes = (int)$schedule['interval_minutes'];
+                    $interval = $intervalMinutes * 60;
+                    
+                    // Сортируем файлы по order_index для правильного расчета
+                    usort($unpublishedFiles, fn($a, $b) => ($a['order_index'] ?? 0) <=> ($b['order_index'] ?? 0));
+                    
+                    // Вычисляем базовое время следующей публикации
+                    if ($baseTime <= $now) {
+                        $elapsed = $now - $baseTime;
+                        $intervalsPassed = floor($elapsed / $interval);
+                        $nextBaseTime = $baseTime + (($intervalsPassed + 1) * $interval);
+                    } else {
+                        $nextBaseTime = $baseTime;
+                    }
+                    
+                    // Для каждого файла рассчитываем время публикации
+                    $fileIndex = 0;
+                    foreach ($unpublishedFiles as $file) {
+                        $publishTime = $nextBaseTime + ($fileIndex * $interval);
+                        $publishDate = date('Y-m-d H:i:s', $publishTime);
+                        
+                        $nextPublishDates[$file['id']] = $publishDate;
+                        $nextPublishInfo[$file['id']] = [
+                            'date' => $publishDate,
+                            'platform' => $platform,
+                            'schedule_id' => $schedule['id'] ?? null
+                        ];
+                        $fileIndex++;
+                    }
+                } else {
+                    // Фиксированное или другое расписание: используем publish_at из расписания
+                    $nextPublishDate = $schedule['publish_at'];
+                    
+                    foreach ($unpublishedFiles as $file) {
                         $nextPublishDates[$file['id']] = $nextPublishDate;
                         $nextPublishInfo[$file['id']] = [
                             'date' => $nextPublishDate,
                             'platform' => $platform,
-                            'schedule_id' => $nextSchedule['id'] ?? null
+                            'schedule_id' => $schedule['id'] ?? null
                         ];
                     }
                 }
