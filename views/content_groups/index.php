@@ -21,73 +21,100 @@ ob_start();
     $groupIds = array_map(static fn($group) => (int)($group['id'] ?? 0), $groups);
     $scheduleRepo = new \App\Repositories\ScheduleRepository();
     $latestSchedules = $scheduleRepo->findLatestByGroupIds($groupIds);
-    $youtubeAccount = null;
-    $telegramAccount = null;
-    $tiktokAccount = null;
-    $instagramAccount = null;
-    $pinterestAccount = null;
-    try {
-        $youtubeAccount = (new \App\Repositories\YoutubeIntegrationRepository())->findDefaultByUserId($_SESSION['user_id']);
-    } catch (\Throwable $e) {
-        $youtubeAccount = null;
-    }
-    try {
-        $telegramAccount = (new \App\Repositories\TelegramIntegrationRepository())->findDefaultByUserId($_SESSION['user_id']);
-    } catch (\Throwable $e) {
-        $telegramAccount = null;
-    }
-    try {
-        $tiktokAccount = (new \App\Repositories\TiktokIntegrationRepository())->findDefaultByUserId($_SESSION['user_id']);
-    } catch (\Throwable $e) {
-        $tiktokAccount = null;
-    }
-    try {
-        $instagramAccount = (new \App\Repositories\InstagramIntegrationRepository())->findDefaultByUserId($_SESSION['user_id']);
-    } catch (\Throwable $e) {
-        $instagramAccount = null;
-    }
-    try {
-        $pinterestAccount = (new \App\Repositories\PinterestIntegrationRepository())->findDefaultByUserId($_SESSION['user_id']);
-    } catch (\Throwable $e) {
-        $pinterestAccount = null;
-    }
+    
+    // Инициализируем репозитории для поиска интеграций
+    $youtubeRepo = new \App\Repositories\YoutubeIntegrationRepository();
+    $telegramRepo = new \App\Repositories\TelegramIntegrationRepository();
+    $tiktokRepo = new \App\Repositories\TiktokIntegrationRepository();
+    $instagramRepo = new \App\Repositories\InstagramIntegrationRepository();
+    $pinterestRepo = new \App\Repositories\PinterestIntegrationRepository();
+    $userId = $_SESSION['user_id'];
+    
+    $formatAccountName = static function (string $platformName, ?array $account): string {
+        if (!$account) {
+            return $platformName . ': не подключен';
+        }
+        $name = $account['account_name']
+            ?? $account['channel_name']
+            ?? $account['channel_username']
+            ?? $account['username']
+            ?? null;
+        if ($name) {
+            if ($platformName === 'Telegram' && $account['channel_username']) {
+                return $platformName . ': @' . $account['channel_username'];
+            }
+            return $platformName . ': ' . $name;
+        }
+        return $platformName . ': подключен';
+    };
     ?>
     <div class="groups-grid">
         <?php foreach ($groups as $group): ?>
             <?php
             $groupId = (int)($group['id'] ?? 0);
-            $latestSchedule = $latestSchedules[$groupId] ?? null;
-            $platform = $latestSchedule['platform'] ?? null;
-            $formatAccountName = static function (string $platformName, ?array $account): string {
-                if (!$account) {
-                    return $platformName . ': не подключен';
+            
+            // Получаем выбранные интеграции из settings группы
+            $selectedIntegrations = [];
+            $channelLabels = [];
+            
+            if (!empty($group['settings'])) {
+                $settings = is_string($group['settings']) ? json_decode($group['settings'], true) : $group['settings'];
+                if (isset($settings['integrations']) && is_array($settings['integrations'])) {
+                    $selectedIntegrations = $settings['integrations'];
                 }
-                $name = $account['account_name']
-                    ?? $account['channel_name']
-                    ?? $account['channel_username']
-                    ?? $account['username']
-                    ?? null;
-                if ($name) {
-                    if ($platformName === 'Telegram' && $account['channel_username']) {
-                        return $platformName . ': @' . $account['channel_username'];
+            }
+            
+            // Если есть выбранные интеграции, получаем информацию о каналах
+            if (!empty($selectedIntegrations)) {
+                foreach ($selectedIntegrations as $integration) {
+                    $platform = $integration['platform'] ?? '';
+                    $integrationId = (int)($integration['integration_id'] ?? 0);
+                    
+                    if (!$platform || !$integrationId) {
+                        continue;
                     }
-                    return $platformName . ': ' . $name;
+                    
+                    $account = null;
+                    try {
+                        switch ($platform) {
+                            case 'youtube':
+                                $account = $youtubeRepo->findByIdAndUserId($integrationId, $userId);
+                                break;
+                            case 'telegram':
+                                $account = $telegramRepo->findByIdAndUserId($integrationId, $userId);
+                                break;
+                            case 'tiktok':
+                                $account = $tiktokRepo->findByIdAndUserId($integrationId, $userId);
+                                break;
+                            case 'instagram':
+                                $account = $instagramRepo->findByIdAndUserId($integrationId, $userId);
+                                break;
+                            case 'pinterest':
+                                $account = $pinterestRepo->findByIdAndUserId($integrationId, $userId);
+                                break;
+                        }
+                        
+                        if ($account) {
+                            $platformNames = [
+                                'youtube' => 'YouTube',
+                                'telegram' => 'Telegram',
+                                'tiktok' => 'TikTok',
+                                'instagram' => 'Instagram',
+                                'pinterest' => 'Pinterest'
+                            ];
+                            $platformName = $platformNames[$platform] ?? ucfirst($platform);
+                            $channelLabels[] = $formatAccountName($platformName, $account);
+                        }
+                    } catch (\Throwable $e) {
+                        error_log("Error loading integration {$platform} ID {$integrationId}: " . $e->getMessage());
+                    }
                 }
-                return $platformName . ': подключен';
-            };
+            }
+            
+            // Формируем итоговую строку с каналами
             $channelLabel = 'Канал: не назначен';
-            if ($platform === 'youtube') {
-                $channelLabel = $formatAccountName('YouTube', $youtubeAccount);
-            } elseif ($platform === 'telegram') {
-                $channelLabel = $formatAccountName('Telegram', $telegramAccount);
-            } elseif ($platform === 'tiktok') {
-                $channelLabel = $formatAccountName('TikTok', $tiktokAccount);
-            } elseif ($platform === 'instagram') {
-                $channelLabel = $formatAccountName('Instagram', $instagramAccount);
-            } elseif ($platform === 'pinterest') {
-                $channelLabel = $formatAccountName('Pinterest', $pinterestAccount);
-            } elseif ($platform === 'both') {
-                $channelLabel = $formatAccountName('YouTube', $youtubeAccount) . ' • ' . $formatAccountName('Telegram', $telegramAccount);
+            if (!empty($channelLabels)) {
+                $channelLabel = implode(' • ', $channelLabels);
             }
             ?>
             <div class="group-card <?= $group['status'] === 'active' ? 'group-card-active' : 'group-card-paused' ?>">
