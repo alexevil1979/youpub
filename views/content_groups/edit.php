@@ -180,30 +180,323 @@ ob_start();
 <div style="margin-top: 2rem; padding: 1.5rem; background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">
     <h3 style="margin-top: 0; margin-bottom: 1rem;">📹 Добавить видео в группу</h3>
     
-    <?php if (empty($availableVideos)): ?>
-        <p style="color: #6c757d; margin-bottom: 1rem;">Нет доступных видео для добавления. Все ваши видео уже в этой группе или у вас нет загруженных видео.</p>
-        <a href="/videos/upload" class="btn btn-primary">Загрузить видео</a>
-    <?php else: ?>
-        <div style="margin-bottom: 1rem;">
-            <label for="video-select" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Выберите видео для добавления:</label>
-            <select id="video-select" multiple style="width: 100%; min-height: 200px; padding: 0.5rem; border: 1px solid #ced4da; border-radius: 4px; font-size: 0.9rem;">
-                <?php foreach ($availableVideos as $video): ?>
-                    <option value="<?= $video['id'] ?>">
-                        <?= htmlspecialchars($video['title'] ?: $video['file_name']) ?>
-                        <?php if ($video['file_size']): ?>
-                            (<?= number_format($video['file_size'] / 1024 / 1024, 2) ?> MB)
-                        <?php endif; ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-            <small style="display: block; margin-top: 0.5rem; color: #6c757d;">Удерживайте Ctrl (Cmd на Mac) для выбора нескольких видео</small>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+        <!-- Загрузка новых видео -->
+        <div style="padding: 1rem; background: white; border-radius: 6px; border: 2px solid #007bff;">
+            <h4 style="margin-top: 0; margin-bottom: 0.75rem; color: #007bff;">Загрузить новые видео</h4>
+            <div class="file-upload-area" id="fileUploadArea" style="position: relative; margin-bottom: 0.75rem;">
+                <input type="file" id="new-videos" name="new-videos[]" accept="video/*" multiple style="position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; z-index: 2;">
+                <div class="file-upload-dropzone" style="border: 2px dashed #007bff; border-radius: 6px; padding: 1.5rem; text-align: center; background: #f0f7ff; min-height: 120px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+                    <div style="margin-bottom: 0.5rem;">
+                        <?= \App\Helpers\IconHelper::render('upload', 32) ?>
+                    </div>
+                    <p style="margin: 0; font-size: 0.9rem;">Перетащите файлы сюда<br>или <span style="color: #007bff; text-decoration: underline; cursor: pointer;">выберите файлы</span></p>
+                    <small style="display: block; margin-top: 0.5rem; color: #6c757d;">Максимум 5GB на файл</small>
+                </div>
+                <div id="newFileList" style="margin-top: 0.75rem; max-height: 150px; overflow-y: auto;"></div>
+            </div>
+            <button type="button" id="upload-new-videos-btn" class="btn btn-primary" style="width: 100%;" disabled>
+                <?= \App\Helpers\IconHelper::render('upload', 16, 'icon-inline') ?> Загрузить и добавить в группу
+            </button>
+            <div id="upload-status" style="margin-top: 0.75rem; display: none;"></div>
         </div>
-        <button type="button" id="add-videos-btn" class="btn btn-success">
-            <?= \App\Helpers\IconHelper::render('add', 16, 'icon-inline') ?> Добавить выбранные видео
-        </button>
-        <div id="add-videos-status" style="margin-top: 1rem; display: none;"></div>
-    <?php endif; ?>
+        
+        <!-- Выбор существующих видео -->
+        <div style="padding: 1rem; background: white; border-radius: 6px; border: 2px solid #28a745;">
+            <h4 style="margin-top: 0; margin-bottom: 0.75rem; color: #28a745;">Добавить существующие видео</h4>
+            <?php if (empty($availableVideos)): ?>
+                <p style="color: #6c757d; margin-bottom: 0.75rem; font-size: 0.9rem;">Нет доступных видео для добавления. Все ваши видео уже в этой группе.</p>
+            <?php else: ?>
+                <div style="margin-bottom: 0.75rem;">
+                    <select id="video-select" multiple style="width: 100%; min-height: 150px; padding: 0.5rem; border: 1px solid #ced4da; border-radius: 4px; font-size: 0.9rem;">
+                        <?php foreach ($availableVideos as $video): ?>
+                            <option value="<?= $video['id'] ?>">
+                                <?= htmlspecialchars($video['title'] ?: $video['file_name']) ?>
+                                <?php if ($video['file_size']): ?>
+                                    (<?= number_format($video['file_size'] / 1024 / 1024, 2) ?> MB)
+                                <?php endif; ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small style="display: block; margin-top: 0.5rem; color: #6c757d; font-size: 0.85rem;">Удерживайте Ctrl (Cmd на Mac) для выбора нескольких</small>
+                </div>
+                <button type="button" id="add-videos-btn" class="btn btn-success" style="width: 100%;">
+                    <?= \App\Helpers\IconHelper::render('add', 16, 'icon-inline') ?> Добавить выбранные
+                </button>
+            <?php endif; ?>
+            <div id="add-videos-status" style="margin-top: 0.75rem; display: none;"></div>
+        </div>
+    </div>
 </div>
+
+<style>
+.file-upload-area.dragover .file-upload-dropzone {
+    border-color: #0056b3;
+    background: #e6f2ff;
+}
+
+.new-file-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem;
+    background: #f5f5f5;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.new-file-item-name {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-right: 0.5rem;
+}
+
+.new-file-item-size {
+    color: #6c757d;
+    margin-right: 0.5rem;
+}
+
+.new-file-item-remove {
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+    font-size: 0.75rem;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const newVideosInput = document.getElementById('new-videos');
+    const fileUploadArea = document.getElementById('fileUploadArea');
+    const newFileList = document.getElementById('newFileList');
+    const uploadNewVideosBtn = document.getElementById('upload-new-videos-btn');
+    const uploadStatus = document.getElementById('upload-status');
+    let selectedNewFiles = [];
+    
+    // Обработка выбора файлов
+    if (newVideosInput) {
+        newVideosInput.addEventListener('change', function(e) {
+            handleNewFiles(Array.from(e.target.files));
+        });
+    }
+    
+    // Drag and drop
+    if (fileUploadArea) {
+        fileUploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            fileUploadArea.classList.add('dragover');
+        });
+        
+        fileUploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            fileUploadArea.classList.remove('dragover');
+        });
+        
+        fileUploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            fileUploadArea.classList.remove('dragover');
+            const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('video/'));
+            handleNewFiles(files);
+        });
+    }
+    
+    function handleNewFiles(files) {
+        const MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024; // 5GB
+        
+        files.forEach(file => {
+            if (!file.type.startsWith('video/')) {
+                showStatus('Файл ' + file.name + ' не является видео файлом', 'error');
+                return;
+            }
+            
+            if (file.size > MAX_FILE_SIZE) {
+                showStatus('Файл ' + file.name + ' слишком большой (максимум 5GB)', 'error');
+                return;
+            }
+            
+            if (selectedNewFiles.some(f => f.name === file.name && f.size === file.size)) {
+                return;
+            }
+            
+            selectedNewFiles.push(file);
+        });
+        
+        updateNewFileList();
+    }
+    
+    function updateNewFileList() {
+        if (!newFileList) return;
+        
+        newFileList.innerHTML = '';
+        selectedNewFiles.forEach((file, index) => {
+            const item = document.createElement('div');
+            item.className = 'new-file-item';
+            item.innerHTML = `
+                <span class="new-file-item-name">${escapeHtml(file.name)}</span>
+                <span class="new-file-item-size">${formatFileSize(file.size)}</span>
+                <button type="button" class="new-file-item-remove" onclick="removeNewFile(${index})">✕</button>
+            `;
+            newFileList.appendChild(item);
+        });
+        
+        if (uploadNewVideosBtn) {
+            uploadNewVideosBtn.disabled = selectedNewFiles.length === 0;
+        }
+    }
+    
+    window.removeNewFile = function(index) {
+        selectedNewFiles.splice(index, 1);
+        updateNewFileList();
+        if (newVideosInput) {
+            const dataTransfer = new DataTransfer();
+            selectedNewFiles.forEach(file => dataTransfer.items.add(file));
+            newVideosInput.files = dataTransfer.files;
+        }
+    };
+    
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    function showStatus(message, type) {
+        if (!uploadStatus) return;
+        uploadStatus.style.display = 'block';
+        uploadStatus.className = 'alert alert-' + (type === 'error' ? 'error' : (type === 'success' ? 'success' : 'info'));
+        uploadStatus.textContent = message;
+    }
+    
+    // Загрузка новых видео
+    if (uploadNewVideosBtn) {
+        uploadNewVideosBtn.addEventListener('click', function() {
+            if (selectedNewFiles.length === 0) {
+                showStatus('Выберите файлы для загрузки', 'error');
+                return;
+            }
+            
+            uploadNewVideosBtn.disabled = true;
+            uploadNewVideosBtn.innerHTML = 'Загрузка...';
+            showStatus('Загрузка файлов...', 'info');
+            
+            const csrfToken = <?= json_encode($csrfToken) ?>;
+            const formData = new FormData();
+            formData.append('csrf_token', csrfToken);
+            formData.append('group_id', <?= $group['id'] ?>);
+            
+            selectedNewFiles.forEach((file, index) => {
+                formData.append('videos[]', file);
+            });
+            
+            fetch('/videos/upload-multiple', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showStatus('Видео успешно загружены и добавлены в группу!', 'success');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showStatus('Ошибка: ' + (data.message || 'Не удалось загрузить видео'), 'error');
+                    uploadNewVideosBtn.disabled = false;
+                    uploadNewVideosBtn.innerHTML = '<?= \App\Helpers\IconHelper::render('upload', 16, 'icon-inline') ?> Загрузить и добавить в группу';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showStatus('Произошла ошибка при загрузке видео', 'error');
+                uploadNewVideosBtn.disabled = false;
+                uploadNewVideosBtn.innerHTML = '<?= \App\Helpers\IconHelper::render('upload', 16, 'icon-inline') ?> Загрузить и добавить в группу';
+            });
+        });
+    }
+    
+    // Добавление существующих видео
+    const addVideosBtn = document.getElementById('add-videos-btn');
+    const videoSelect = document.getElementById('video-select');
+    const addVideosStatus = document.getElementById('add-videos-status');
+    
+    if (addVideosBtn && videoSelect) {
+        addVideosBtn.addEventListener('click', function() {
+            const selectedOptions = Array.from(videoSelect.selectedOptions);
+            const videoIds = selectedOptions.map(option => parseInt(option.value));
+            
+            if (videoIds.length === 0) {
+                alert('Выберите хотя бы одно видео для добавления');
+                return;
+            }
+            
+            if (!confirm('Добавить ' + videoIds.length + ' видео в группу?')) {
+                return;
+            }
+            
+            addVideosBtn.disabled = true;
+            addVideosBtn.style.opacity = '0.6';
+            addVideosStatus.style.display = 'block';
+            addVideosStatus.className = 'alert';
+            addVideosStatus.textContent = 'Добавление видео...';
+            
+            const csrfToken = <?= json_encode($csrfToken) ?>;
+            
+            fetch('/content-groups/<?= $group['id'] ?>/add-videos', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify({
+                    csrf_token: csrfToken,
+                    video_ids: videoIds
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    addVideosStatus.className = 'alert alert-success';
+                    addVideosStatus.textContent = 'Видео успешно добавлены в группу!';
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    addVideosStatus.className = 'alert alert-error';
+                    addVideosStatus.textContent = 'Ошибка: ' + (data.message || 'Не удалось добавить видео');
+                    addVideosBtn.disabled = false;
+                    addVideosBtn.style.opacity = '1';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                addVideosStatus.className = 'alert alert-error';
+                addVideosStatus.textContent = 'Произошла ошибка при добавлении видео';
+                addVideosBtn.disabled = false;
+                addVideosBtn.style.opacity = '1';
+            });
+        });
+    }
+});
+</script>
 
 <div style="margin-top: 2rem; padding: 1rem; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
     <h3 style="margin-top: 0;">💡 О шаблонах</h3>
