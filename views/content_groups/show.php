@@ -108,8 +108,140 @@ ob_start();
                 <?php endif; ?>
             </div>
         </div>
+        <?php if (!empty($scheduleInfo)): ?>
+        <div class="stat-item" style="grid-column: 1 / -1;">
+            <div class="stat-label">Расписание публикации:</div>
+            <div class="stat-value" style="font-size: 1rem; margin-top: 0.5rem;">
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <?php if (!empty($scheduleInfo['name'])): ?>
+                        <div style="font-weight: 600; color: #3498db;">
+                            <?= htmlspecialchars($scheduleInfo['name']) ?>
+                        </div>
+                    <?php endif; ?>
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
+                        <?php
+                        $scheduleTypeNames = [
+                            'fixed' => 'Фиксированное',
+                            'interval' => 'Интервальное',
+                            'batch' => 'Пакетное',
+                            'random' => 'Случайное',
+                            'wave' => 'Волновое'
+                        ];
+                        $scheduleTypeName = $scheduleTypeNames[$scheduleInfo['schedule_type']] ?? ucfirst($scheduleInfo['schedule_type']);
+                        ?>
+                        <span class="badge badge-info"><?= htmlspecialchars($scheduleTypeName) ?></span>
+                        <?php if ($scheduleInfo['schedule_type'] === 'interval' && !empty($scheduleInfo['interval_minutes'])): ?>
+                            <span style="color: #555;">Каждые <?= (int)$scheduleInfo['interval_minutes'] ?> минут</span>
+                        <?php elseif ($scheduleInfo['schedule_type'] === 'batch' && !empty($scheduleInfo['batch_count']) && !empty($scheduleInfo['batch_window_hours'])): ?>
+                            <span style="color: #555;"><?= (int)$scheduleInfo['batch_count'] ?> видео за <?= (int)$scheduleInfo['batch_window_hours'] ?> часов</span>
+                        <?php elseif (!empty($scheduleInfo['publish_at'])): ?>
+                            <span style="color: #555;">Начало: <?= date('d.m.Y H:i', strtotime($scheduleInfo['publish_at'])) ?></span>
+                        <?php endif; ?>
+                    </div>
+                    <div style="margin-top: 0.5rem;">
+                        <a href="/content-groups/schedules/<?= (int)$scheduleInfo['id'] ?>" class="btn btn-xs btn-secondary" style="font-size: 0.85rem;">Просмотр расписания</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php else: ?>
+        <div class="stat-item" style="grid-column: 1 / -1;">
+            <div class="stat-label">Расписание публикации:</div>
+            <div class="stat-value" style="font-size: 1rem; color: #95a5a6;">
+                Не назначено
+                <a href="/content-groups/schedules/create?group_id=<?= $group['id'] ?>" class="btn btn-xs btn-primary" style="margin-left: 0.5rem; font-size: 0.85rem;">Создать</a>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
+
+<?php if (!empty($publicationPlan)): ?>
+<div class="info-card publication-plan" style="margin-top: 1.5rem;">
+    <h3>План отправки по расписанию</h3>
+    <div style="margin-top: 1rem;">
+        <table class="data-table" style="width: 100%;">
+            <thead>
+                <tr>
+                    <th style="width: 50px;">#</th>
+                    <th>Видео</th>
+                    <th style="width: 200px;">Дата и время</th>
+                    <th style="width: 120px;">Платформа</th>
+                    <th style="width: 100px;">Статус</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($publicationPlan as $index => $item): 
+                    $file = $item['file'];
+                    $publishInfo = $item['publish_info'];
+                    $publishTimestamp = $item['publish_timestamp'];
+                    $now = time();
+                ?>
+                    <tr>
+                        <td><?= $index + 1 ?></td>
+                        <td>
+                            <a href="/videos/<?= $file['video_id'] ?>">
+                                <?= htmlspecialchars($file['title'] ?? $file['file_name'] ?? 'Без названия') ?>
+                            </a>
+                        </td>
+                        <td>
+                            <div style="font-weight: 500; color: #3498db;">
+                                <?= date('d.m.Y H:i', $publishTimestamp) ?>
+                            </div>
+                            <?php if ($publishTimestamp > $now): ?>
+                                <div style="font-size: 0.85rem; color: #95a5a6;">
+                                    <?php
+                                    $diff = $publishTimestamp - $now;
+                                    $hours = floor($diff / 3600);
+                                    $minutes = floor(($diff % 3600) / 60);
+                                    if ($hours > 0) {
+                                        echo "через {$hours} ч. {$minutes} мин.";
+                                    } else {
+                                        echo "через {$minutes} мин.";
+                                    }
+                                    ?>
+                                </div>
+                            <?php else: ?>
+                                <div style="font-size: 0.85rem; color: #e74c3c;">Просрочено</div>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <span class="platform-badge platform-<?= $publishInfo['platform'] ?>">
+                                <?php
+                                $platformIcons = [
+                                    'youtube' => \App\Helpers\IconHelper::render('youtube', 14, 'icon-inline'),
+                                    'telegram' => \App\Helpers\IconHelper::render('telegram', 14, 'icon-inline'),
+                                    'tiktok' => \App\Helpers\IconHelper::render('tiktok', 14, 'icon-inline'),
+                                    'instagram' => \App\Helpers\IconHelper::render('instagram', 14, 'icon-inline'),
+                                    'pinterest' => \App\Helpers\IconHelper::render('pinterest', 14, 'icon-inline')
+                                ];
+                                echo $platformIcons[$publishInfo['platform']] ?? '';
+                                ?>
+                                <?= ucfirst($publishInfo['platform']) ?>
+                            </span>
+                        </td>
+                        <td>
+                            <span class="status-badge status-<?= $file['status'] ?>">
+                                <?php
+                                $statusLabels = [
+                                    'new' => 'Новый',
+                                    'queued' => 'В очереди',
+                                    'published' => 'Опубликовано',
+                                    'error' => 'Ошибка',
+                                    'paused' => 'На паузе',
+                                    'skipped' => 'Пропущено'
+                                ];
+                                echo $statusLabels[$file['status']] ?? ucfirst($file['status']);
+                                ?>
+                            </span>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+<?php endif; ?>
 
 <?php if ($nextVideoPreview): ?>
 <div class="info-card next-video-preview" style="margin-top: 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
