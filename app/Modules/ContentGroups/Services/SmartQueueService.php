@@ -299,31 +299,61 @@ class SmartQueueService extends Service
                 'error_message' => null
             ]);
 
-            // Для групповых расписаний: проверяем, остались ли ещё видео для публикации
+            // Проверяем, остались ли ещё видео для публикации в этой группе
             error_log("SmartQueueService::processGroupForSchedule: Checking for remaining unpublished videos in group {$group['id']}");
             $remainingFiles = $this->fileRepo->findNextUnpublished($group['id']);
 
             if ($remainingFiles) {
-                // Есть ещё видео для публикации - обновляем время следующей публикации
-                error_log("SmartQueueService::processGroupSchedule: Found remaining videos. Updating publish_at for next video");
+                // Есть ещё видео для публикации в этой группе - обновляем время следующей публикации
+                error_log("SmartQueueService::processGroupForSchedule: Found remaining videos in group {$group['id']}. Updating publish_at for next video");
                 $nextPublishTime = $this->scheduleEngine->getNextPublishTime($schedule);
                 if ($nextPublishTime) {
                     $this->scheduleRepo->update($schedule['id'], [
                         'publish_at' => $nextPublishTime,
                         'status' => 'pending' // Оставляем активным для следующих видео
                     ]);
-                    error_log("SmartQueueService::processGroupSchedule: Updated schedule {$schedule['id']} publish_at to {$nextPublishTime}, status to 'pending'");
+                    error_log("SmartQueueService::processGroupForSchedule: Updated schedule {$schedule['id']} publish_at to {$nextPublishTime}, status to 'pending'");
                 } else {
-                    error_log("SmartQueueService::processGroupSchedule: Could not calculate next publish time, keeping schedule active");
+                    error_log("SmartQueueService::processGroupForSchedule: Could not calculate next publish time, keeping schedule active");
                 }
             } else {
-                // Все видео опубликованы - завершаем групповое расписание
-                error_log("SmartQueueService::processGroupSchedule: No remaining videos found. Completing group schedule {$schedule['id']}");
-                $this->scheduleRepo->update($schedule['id'], [
-                    'status' => 'published',
-                    'publish_at' => null // Убираем время публикации
-                ]);
-                error_log("SmartQueueService::processGroupSchedule: Group schedule {$schedule['id']} marked as published and publish_at set to null");
+                // Все видео опубликованы в этой группе - проверяем другие группы, использующие это расписание
+                error_log("SmartQueueService::processGroupForSchedule: No remaining videos in group {$group['id']}. Checking other groups using schedule {$schedule['id']}");
+                
+                // Ищем все группы, использующие это расписание
+                $stmt = $this->db->prepare("SELECT id FROM content_groups WHERE schedule_id = ? AND status = 'active'");
+                $stmt->execute([$schedule['id']]);
+                $allGroups = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+                
+                $hasUnpublishedVideos = false;
+                foreach ($allGroups as $otherGroup) {
+                    $otherFiles = $this->fileRepo->findNextUnpublished($otherGroup['id']);
+                    if ($otherFiles) {
+                        $hasUnpublishedVideos = true;
+                        error_log("SmartQueueService::processGroupForSchedule: Found unpublished videos in group {$otherGroup['id']}");
+                        break;
+                    }
+                }
+                
+                if (!$hasUnpublishedVideos) {
+                    // Все видео опубликованы во всех группах - завершаем расписание
+                    error_log("SmartQueueService::processGroupForSchedule: No remaining videos in any group. Completing schedule {$schedule['id']}");
+                    $this->scheduleRepo->update($schedule['id'], [
+                        'status' => 'published',
+                        'publish_at' => null // Убираем время публикации
+                    ]);
+                    error_log("SmartQueueService::processGroupForSchedule: Schedule {$schedule['id']} marked as published and publish_at set to null");
+                } else {
+                    // Есть видео в других группах - обновляем время следующей публикации
+                    $nextPublishTime = $this->scheduleEngine->getNextPublishTime($schedule);
+                    if ($nextPublishTime) {
+                        $this->scheduleRepo->update($schedule['id'], [
+                            'publish_at' => $nextPublishTime,
+                            'status' => 'pending'
+                        ]);
+                        error_log("SmartQueueService::processGroupForSchedule: Updated schedule {$schedule['id']} publish_at to {$nextPublishTime} for other groups");
+                    }
+                }
             }
         } else {
             $this->fileRepo->updateFileStatus($groupFile['id'], 'error');
