@@ -266,25 +266,63 @@ class SmartScheduleController extends Controller
      */
     public function showCreate(): void
     {
-        $userId = $_SESSION['user_id'] ?? null;
-        
-        if (!$userId) {
-            header('Location: /login');
-            exit;
+        try {
+            $userId = $_SESSION['user_id'] ?? null;
+            
+            if (!$userId) {
+                header('Location: /login');
+                exit;
+            }
+            
+            $groups = $this->groupService->getUserGroups($userId);
+            $templates = $this->templateService->getUserTemplates($userId, true);
+            $csrfToken = (new \Core\Auth())->generateCsrfToken();
+            
+            if (!isset($groups)) {
+                $groups = [];
+            }
+            if (!isset($templates)) {
+                $templates = [];
+            }
+            
+            // Проверяем существование файла представления
+            $viewPath = __DIR__ . '/../../../../views/content_groups/schedules/create.php';
+            if (!file_exists($viewPath)) {
+                throw new \Exception("View file not found: {$viewPath}");
+            }
+            
+            include $viewPath;
+        } catch (\Exception $e) {
+            error_log("SmartScheduleController::showCreate: Exception - " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+            
+            // Очищаем буфер вывода, если он был начат
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+            
+            // Показываем HTML страницу с ошибкой
+            $title = 'Ошибка';
+            ob_start();
+            ?>
+            <div class="alert alert-error">
+                <h2>Ошибка при загрузке формы создания расписания</h2>
+                <p><?= htmlspecialchars($e->getMessage()) ?></p>
+                <p><a href="/content-groups/schedules" class="btn btn-secondary">Вернуться к расписаниям</a></p>
+            </div>
+            <?php
+            $content = ob_get_clean();
+            
+            $layoutPath = __DIR__ . '/../../../../views/layout.php';
+            if (file_exists($layoutPath)) {
+                include $layoutPath;
+            } else {
+                echo $content;
+            }
+        } catch (\Throwable $e) {
+            error_log("SmartScheduleController::showCreate: FATAL - " . $e->getMessage());
+            http_response_code(500);
+            echo "Internal Server Error. Please check server logs.";
         }
-        
-        $groups = $this->groupService->getUserGroups($userId);
-        $templates = $this->templateService->getUserTemplates($userId, true);
-        $csrfToken = (new \Core\Auth())->generateCsrfToken();
-        
-        if (!isset($groups)) {
-            $groups = [];
-        }
-        if (!isset($templates)) {
-            $templates = [];
-        }
-        
-        include __DIR__ . '/../../../../views/content_groups/schedules/create.php';
     }
 
     /**
