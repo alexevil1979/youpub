@@ -52,36 +52,41 @@ class GroupController extends Controller
         $templates = $this->templateService->getUserTemplates($userId, true);
         $csrfToken = (new \Core\Auth())->generateCsrfToken();
         
-        // Получаем доступные интеграции для отображения статуса
-        $youtubeAccount = null;
-        $telegramAccount = null;
-        $tiktokAccount = null;
-        $instagramAccount = null;
-        $pinterestAccount = null;
+        // Получаем все доступные интеграции для отображения статуса
+        $youtubeAccounts = [];
+        $telegramAccounts = [];
+        $tiktokAccounts = [];
+        $instagramAccounts = [];
+        $pinterestAccounts = [];
         try {
-            $youtubeAccount = (new \App\Repositories\YoutubeIntegrationRepository())->findDefaultByUserId($userId);
+            $youtubeAccounts = (new \App\Repositories\YoutubeIntegrationRepository())->findByUserId($userId);
+            $youtubeAccounts = array_filter($youtubeAccounts, fn($acc) => ($acc['status'] ?? '') === 'connected');
         } catch (\Throwable $e) {
-            $youtubeAccount = null;
+            $youtubeAccounts = [];
         }
         try {
-            $telegramAccount = (new \App\Repositories\TelegramIntegrationRepository())->findDefaultByUserId($userId);
+            $telegramAccounts = (new \App\Repositories\TelegramIntegrationRepository())->findByUserId($userId);
+            $telegramAccounts = array_filter($telegramAccounts, fn($acc) => ($acc['status'] ?? '') === 'connected');
         } catch (\Throwable $e) {
-            $telegramAccount = null;
+            $telegramAccounts = [];
         }
         try {
-            $tiktokAccount = (new \App\Repositories\TiktokIntegrationRepository())->findDefaultByUserId($userId);
+            $tiktokAccounts = (new \App\Repositories\TiktokIntegrationRepository())->findByUserId($userId);
+            $tiktokAccounts = array_filter($tiktokAccounts, fn($acc) => ($acc['status'] ?? '') === 'connected');
         } catch (\Throwable $e) {
-            $tiktokAccount = null;
+            $tiktokAccounts = [];
         }
         try {
-            $instagramAccount = (new \App\Repositories\InstagramIntegrationRepository())->findDefaultByUserId($userId);
+            $instagramAccounts = (new \App\Repositories\InstagramIntegrationRepository())->findByUserId($userId);
+            $instagramAccounts = array_filter($instagramAccounts, fn($acc) => ($acc['status'] ?? '') === 'connected');
         } catch (\Throwable $e) {
-            $instagramAccount = null;
+            $instagramAccounts = [];
         }
         try {
-            $pinterestAccount = (new \App\Repositories\PinterestIntegrationRepository())->findDefaultByUserId($userId);
+            $pinterestAccounts = (new \App\Repositories\PinterestIntegrationRepository())->findByUserId($userId);
+            $pinterestAccounts = array_filter($pinterestAccounts, fn($acc) => ($acc['status'] ?? '') === 'connected');
         } catch (\Throwable $e) {
-            $pinterestAccount = null;
+            $pinterestAccounts = [];
         }
         
         include __DIR__ . '/../../../../views/content_groups/create.php';
@@ -449,36 +454,41 @@ class GroupController extends Controller
         // Фильтруем видео - показываем только те, которых еще нет в группе
         $availableVideos = array_filter($videos, static fn($video) => !in_array((int)$video['id'], $groupVideoIds, true));
         
-        // Получаем доступные интеграции для отображения статуса
-        $youtubeAccount = null;
-        $telegramAccount = null;
-        $tiktokAccount = null;
-        $instagramAccount = null;
-        $pinterestAccount = null;
+        // Получаем все доступные интеграции для отображения статуса
+        $youtubeAccounts = [];
+        $telegramAccounts = [];
+        $tiktokAccounts = [];
+        $instagramAccounts = [];
+        $pinterestAccounts = [];
         try {
-            $youtubeAccount = (new \App\Repositories\YoutubeIntegrationRepository())->findDefaultByUserId($userId);
+            $youtubeAccounts = (new \App\Repositories\YoutubeIntegrationRepository())->findByUserId($userId);
+            $youtubeAccounts = array_filter($youtubeAccounts, fn($acc) => ($acc['status'] ?? '') === 'connected');
         } catch (\Throwable $e) {
-            $youtubeAccount = null;
+            $youtubeAccounts = [];
         }
         try {
-            $telegramAccount = (new \App\Repositories\TelegramIntegrationRepository())->findDefaultByUserId($userId);
+            $telegramAccounts = (new \App\Repositories\TelegramIntegrationRepository())->findByUserId($userId);
+            $telegramAccounts = array_filter($telegramAccounts, fn($acc) => ($acc['status'] ?? '') === 'connected');
         } catch (\Throwable $e) {
-            $telegramAccount = null;
+            $telegramAccounts = [];
         }
         try {
-            $tiktokAccount = (new \App\Repositories\TiktokIntegrationRepository())->findDefaultByUserId($userId);
+            $tiktokAccounts = (new \App\Repositories\TiktokIntegrationRepository())->findByUserId($userId);
+            $tiktokAccounts = array_filter($tiktokAccounts, fn($acc) => ($acc['status'] ?? '') === 'connected');
         } catch (\Throwable $e) {
-            $tiktokAccount = null;
+            $tiktokAccounts = [];
         }
         try {
-            $instagramAccount = (new \App\Repositories\InstagramIntegrationRepository())->findDefaultByUserId($userId);
+            $instagramAccounts = (new \App\Repositories\InstagramIntegrationRepository())->findByUserId($userId);
+            $instagramAccounts = array_filter($instagramAccounts, fn($acc) => ($acc['status'] ?? '') === 'connected');
         } catch (\Throwable $e) {
-            $instagramAccount = null;
+            $instagramAccounts = [];
         }
         try {
-            $pinterestAccount = (new \App\Repositories\PinterestIntegrationRepository())->findDefaultByUserId($userId);
+            $pinterestAccounts = (new \App\Repositories\PinterestIntegrationRepository())->findByUserId($userId);
+            $pinterestAccounts = array_filter($pinterestAccounts, fn($acc) => ($acc['status'] ?? '') === 'connected');
         } catch (\Throwable $e) {
-            $pinterestAccount = null;
+            $pinterestAccounts = [];
         }
         
         // Получаем выбранные платформы из settings

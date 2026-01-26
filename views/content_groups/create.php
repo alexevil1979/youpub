@@ -48,7 +48,16 @@ ob_start();
                         <span style="margin-left: 0.5rem;">YouTube</span>
                     </div>
                     <small style="display: block; color: #6c757d; margin-top: 0.25rem;">
-                        <?= $youtubeAccount ? '✓ ' . htmlspecialchars($youtubeAccount['channel_name'] ?? $youtubeAccount['account_name'] ?? 'Подключен') : 'Не подключен' ?>
+                        <?php if (!empty($youtubeAccounts)): ?>
+                            ✓ Подключено: <?= count($youtubeAccounts) ?> <?= count($youtubeAccounts) === 1 ? 'канал' : (count($youtubeAccounts) < 5 ? 'канала' : 'каналов') ?>
+                            <?php if (count($youtubeAccounts) <= 3): ?>
+                                (<?= implode(', ', array_map(function($acc) {
+                                    return htmlspecialchars($acc['channel_name'] ?? $acc['account_name'] ?? 'Канал ' . $acc['id']);
+                                }, $youtubeAccounts)) ?>)
+                            <?php endif; ?>
+                        <?php else: ?>
+                            Не подключен
+                        <?php endif; ?>
                     </small>
                 </div>
             </label>
@@ -63,7 +72,17 @@ ob_start();
                         <span style="margin-left: 0.5rem;">Telegram</span>
                     </div>
                     <small style="display: block; color: #6c757d; margin-top: 0.25rem;">
-                        <?= $telegramAccount ? '✓ ' . htmlspecialchars($telegramAccount['channel_username'] ? '@' . $telegramAccount['channel_username'] : ($telegramAccount['channel_name'] ?? 'Подключен')) : 'Не подключен' ?>
+                        <?php if (!empty($telegramAccounts)): ?>
+                            ✓ Подключено: <?= count($telegramAccounts) ?> <?= count($telegramAccounts) === 1 ? 'канал' : (count($telegramAccounts) < 5 ? 'канала' : 'каналов') ?>
+                            <?php if (count($telegramAccounts) <= 3): ?>
+                                (<?= implode(', ', array_map(function($acc) {
+                                    $name = $acc['channel_username'] ? '@' . $acc['channel_username'] : ($acc['channel_name'] ?? 'Канал ' . $acc['id']);
+                                    return htmlspecialchars($name);
+                                }, $telegramAccounts)) ?>)
+                            <?php endif; ?>
+                        <?php else: ?>
+                            Не подключен
+                        <?php endif; ?>
                     </small>
                 </div>
             </label>
@@ -78,7 +97,16 @@ ob_start();
                         <span style="margin-left: 0.5rem;">TikTok</span>
                     </div>
                     <small style="display: block; color: #6c757d; margin-top: 0.25rem;">
-                        <?= $tiktokAccount ? '✓ ' . htmlspecialchars($tiktokAccount['username'] ?? 'Подключен') : 'Не подключен' ?>
+                        <?php if (!empty($tiktokAccounts)): ?>
+                            ✓ Подключено: <?= count($tiktokAccounts) ?> <?= count($tiktokAccounts) === 1 ? 'аккаунт' : (count($tiktokAccounts) < 5 ? 'аккаунта' : 'аккаунтов') ?>
+                            <?php if (count($tiktokAccounts) <= 3): ?>
+                                (<?= implode(', ', array_map(function($acc) {
+                                    return htmlspecialchars($acc['username'] ?? 'Аккаунт ' . $acc['id']);
+                                }, $tiktokAccounts)) ?>)
+                            <?php endif; ?>
+                        <?php else: ?>
+                            Не подключен
+                        <?php endif; ?>
                     </small>
                 </div>
             </label>
@@ -93,7 +121,16 @@ ob_start();
                         <span style="margin-left: 0.5rem;">Instagram</span>
                     </div>
                     <small style="display: block; color: #6c757d; margin-top: 0.25rem;">
-                        <?= $instagramAccount ? '✓ ' . htmlspecialchars($instagramAccount['username'] ?? 'Подключен') : 'Не подключен' ?>
+                        <?php if (!empty($instagramAccounts)): ?>
+                            ✓ Подключено: <?= count($instagramAccounts) ?> <?= count($instagramAccounts) === 1 ? 'аккаунт' : (count($instagramAccounts) < 5 ? 'аккаунта' : 'аккаунтов') ?>
+                            <?php if (count($instagramAccounts) <= 3): ?>
+                                (<?= implode(', ', array_map(function($acc) {
+                                    return htmlspecialchars($acc['username'] ?? 'Аккаунт ' . $acc['id']);
+                                }, $instagramAccounts)) ?>)
+                            <?php endif; ?>
+                        <?php else: ?>
+                            Не подключен
+                        <?php endif; ?>
                     </small>
                 </div>
             </label>
@@ -108,13 +145,22 @@ ob_start();
                         <span style="margin-left: 0.5rem;">Pinterest</span>
                     </div>
                     <small style="display: block; color: #6c757d; margin-top: 0.25rem;">
-                        <?= $pinterestAccount ? '✓ ' . htmlspecialchars($pinterestAccount['username'] ?? 'Подключен') : 'Не подключен' ?>
+                        <?php if (!empty($pinterestAccounts)): ?>
+                            ✓ Подключено: <?= count($pinterestAccounts) ?> <?= count($pinterestAccounts) === 1 ? 'аккаунт' : (count($pinterestAccounts) < 5 ? 'аккаунта' : 'аккаунтов') ?>
+                            <?php if (count($pinterestAccounts) <= 3): ?>
+                                (<?= implode(', ', array_map(function($acc) {
+                                    return htmlspecialchars($acc['username'] ?? 'Аккаунт ' . $acc['id']);
+                                }, $pinterestAccounts)) ?>)
+                            <?php endif; ?>
+                        <?php else: ?>
+                            Не подключен
+                        <?php endif; ?>
                     </small>
                 </div>
             </label>
         </div>
         <small style="display: block; margin-top: 0.5rem; color: #6c757d;">Выберите один или несколько каналов для публикации. Можно выбрать позже при создании расписания.</small>
-        <?php if (!$youtubeAccount && !$telegramAccount && !$tiktokAccount && !$instagramAccount && !$pinterestAccount): ?>
+        <?php if (empty($youtubeAccounts) && empty($telegramAccounts) && empty($tiktokAccounts) && empty($instagramAccounts) && empty($pinterestAccounts)): ?>
             <div style="margin-top: 0.75rem; padding: 0.75rem; background: #fff3cd; border-radius: 4px; border-left: 4px solid #ffc107;">
                 <strong>⚠️ Нет подключенных каналов</strong>
                 <p style="margin: 0.5rem 0 0 0; font-size: 0.9em;">Для публикации необходимо подключить хотя бы один канал в <a href="/integrations">разделе интеграций</a>.</p>
