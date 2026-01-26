@@ -639,6 +639,7 @@ class GroupController extends Controller
             'name' => $this->getParam('name', ''),
             'description' => $this->getParam('description', ''),
             'template_id' => $this->getParam('template_id') ? (int)$this->getParam('template_id') : null,
+            'schedule_id' => $this->getParam('schedule_id') ? (int)$this->getParam('schedule_id') : null,
             'status' => $this->getParam('status', 'active'),
             'settings' => !empty($currentSettings) ? $currentSettings : null,
         ];
