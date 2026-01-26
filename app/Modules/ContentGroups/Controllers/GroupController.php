@@ -387,6 +387,17 @@ class GroupController extends Controller
             $templates = [];
         }
         
+        // Получаем список видео пользователя для добавления в группу
+        $videoService = new \App\Services\VideoService();
+        $videos = $videoService->getUserVideos($userId);
+        
+        // Получаем видео, которые уже в группе
+        $groupFiles = $this->groupService->getGroupFiles($id, $userId);
+        $groupVideoIds = array_map(static fn($file) => (int)($file['video_id'] ?? 0), $groupFiles);
+        
+        // Фильтруем видео - показываем только те, которых еще нет в группе
+        $availableVideos = array_filter($videos, static fn($video) => !in_array((int)$video['id'], $groupVideoIds, true));
+        
         include __DIR__ . '/../../../../views/content_groups/edit.php';
     }
 
