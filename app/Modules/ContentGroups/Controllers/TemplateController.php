@@ -774,7 +774,8 @@ class TemplateController extends Controller
             error_log('TemplateController::suggestContent: Stack trace: ' . $e->getTraceAsString());
             header('Content-Type: application/json');
             echo json_encode(['success' => false, 'message' => 'Ошибка генерации контента.']);
-        exit;
+            exit;
+        }
     }
 
     /**
