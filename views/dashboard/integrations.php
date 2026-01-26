@@ -654,6 +654,7 @@ function showTelegramForm() {
     gap: 1.5rem;
     position: relative;
     z-index: 1;
+    flex-wrap: wrap;
 }
 
 .account-left-section {
@@ -662,7 +663,7 @@ function showTelegramForm() {
     gap: 1.25rem;
     flex: 1;
     min-width: 0;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .account-icon-wrapper {
@@ -741,11 +742,14 @@ function showTelegramForm() {
 
 .account-header-row {
     display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
     margin-bottom: 0.5rem;
     min-width: 0;
     width: 100%;
+    flex-wrap: wrap;
 }
 
 .account-badges-row {
@@ -763,6 +767,8 @@ function showTelegramForm() {
     line-height: 1.3;
     word-break: break-word;
     letter-spacing: -0.01em;
+    flex: 1;
+    min-width: 0;
 }
 
 .account-subtitle {
@@ -784,10 +790,8 @@ function showTelegramForm() {
     white-space: nowrap;
     box-shadow: 0 2px 4px rgba(0,0,0,0.08);
     transition: all 0.2s ease;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
     flex-shrink: 0;
+    min-width: fit-content;
 }
 
 .account-card:hover .account-status-badge {
@@ -1060,7 +1064,18 @@ function showTelegramForm() {
     }
     
     .account-header-row {
-        gap: 0.5rem;
+        flex-direction: column;
+        gap: 0.75rem;
+        align-items: flex-start;
+    }
+    
+    .account-badges-row {
+        justify-content: flex-start;
+        width: 100%;
+    }
+    
+    .account-title {
+        width: 100%;
     }
 }
 </style>
