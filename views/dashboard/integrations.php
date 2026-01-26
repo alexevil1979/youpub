@@ -42,11 +42,19 @@ ob_start();
                                                 <span class="badge badge-default"><?= \App\Helpers\IconHelper::render('star', 16, 'icon-inline') ?> По умолчанию</span>
                                             <?php endif; ?>
                                             <span class="account-status-badge status-<?= $account['status'] === 'connected' ? 'connected' : ($account['status'] === 'error' ? 'error' : 'disconnected') ?>">
-                                                <?php if ($account['status'] === 'connected'): ?>
-                                                    <span class="status-dot"></span> Подключено
-                                                <?php else: ?>
-                                                    <span class="status-dot"></span> <?= ucfirst($account['status']) ?>
-                                                <?php endif; ?>
+                                                <?php 
+                                                $statusText = 'Не подключено';
+                                                if ($account['status'] === 'connected') {
+                                                    $statusText = 'Подключено';
+                                                } elseif ($account['status'] === 'error') {
+                                                    $statusText = 'Ошибка';
+                                                } elseif ($account['status'] === 'pending') {
+                                                    $statusText = 'Ожидание';
+                                                } elseif ($account['status'] === 'disconnected') {
+                                                    $statusText = 'Отключено';
+                                                }
+                                                ?>
+                                                <span class="status-dot"></span> <?= htmlspecialchars($statusText) ?>
                                             </span>
                                         </div>
                                     </div>
@@ -106,11 +114,19 @@ ob_start();
                                                 <span class="badge badge-default"><?= \App\Helpers\IconHelper::render('star', 16, 'icon-inline') ?> По умолчанию</span>
                                             <?php endif; ?>
                                             <span class="account-status-badge status-<?= $account['status'] === 'connected' ? 'connected' : ($account['status'] === 'error' ? 'error' : 'disconnected') ?>">
-                                                <?php if ($account['status'] === 'connected'): ?>
-                                                    <span class="status-dot"></span> Подключено
-                                                <?php else: ?>
-                                                    <span class="status-dot"></span> <?= ucfirst($account['status']) ?>
-                                                <?php endif; ?>
+                                                <?php 
+                                                $statusText = 'Не подключено';
+                                                if ($account['status'] === 'connected') {
+                                                    $statusText = 'Подключено';
+                                                } elseif ($account['status'] === 'error') {
+                                                    $statusText = 'Ошибка';
+                                                } elseif ($account['status'] === 'pending') {
+                                                    $statusText = 'Ожидание';
+                                                } elseif ($account['status'] === 'disconnected') {
+                                                    $statusText = 'Отключено';
+                                                }
+                                                ?>
+                                                <span class="status-dot"></span> <?= htmlspecialchars($statusText) ?>
                                             </span>
                                         </div>
                                     </div>
@@ -167,11 +183,19 @@ ob_start();
                                                 <span class="badge badge-default"><?= \App\Helpers\IconHelper::render('star', 16, 'icon-inline') ?> По умолчанию</span>
                                             <?php endif; ?>
                                             <span class="account-status-badge status-<?= $account['status'] === 'connected' ? 'connected' : ($account['status'] === 'error' ? 'error' : 'disconnected') ?>">
-                                                <?php if ($account['status'] === 'connected'): ?>
-                                                    <span class="status-dot"></span> Подключено
-                                                <?php else: ?>
-                                                    <span class="status-dot"></span> <?= ucfirst($account['status']) ?>
-                                                <?php endif; ?>
+                                                <?php 
+                                                $statusText = 'Не подключено';
+                                                if ($account['status'] === 'connected') {
+                                                    $statusText = 'Подключено';
+                                                } elseif ($account['status'] === 'error') {
+                                                    $statusText = 'Ошибка';
+                                                } elseif ($account['status'] === 'pending') {
+                                                    $statusText = 'Ожидание';
+                                                } elseif ($account['status'] === 'disconnected') {
+                                                    $statusText = 'Отключено';
+                                                }
+                                                ?>
+                                                <span class="status-dot"></span> <?= htmlspecialchars($statusText) ?>
                                             </span>
                                         </div>
                                     </div>
@@ -228,11 +252,19 @@ ob_start();
                                                 <span class="badge badge-default"><?= \App\Helpers\IconHelper::render('star', 16, 'icon-inline') ?> По умолчанию</span>
                                             <?php endif; ?>
                                             <span class="account-status-badge status-<?= $account['status'] === 'connected' ? 'connected' : ($account['status'] === 'error' ? 'error' : 'disconnected') ?>">
-                                                <?php if ($account['status'] === 'connected'): ?>
-                                                    <span class="status-dot"></span> Подключено
-                                                <?php else: ?>
-                                                    <span class="status-dot"></span> <?= ucfirst($account['status']) ?>
-                                                <?php endif; ?>
+                                                <?php 
+                                                $statusText = 'Не подключено';
+                                                if ($account['status'] === 'connected') {
+                                                    $statusText = 'Подключено';
+                                                } elseif ($account['status'] === 'error') {
+                                                    $statusText = 'Ошибка';
+                                                } elseif ($account['status'] === 'pending') {
+                                                    $statusText = 'Ожидание';
+                                                } elseif ($account['status'] === 'disconnected') {
+                                                    $statusText = 'Отключено';
+                                                }
+                                                ?>
+                                                <span class="status-dot"></span> <?= htmlspecialchars($statusText) ?>
                                             </span>
                                         </div>
                                     </div>
@@ -289,11 +321,19 @@ ob_start();
                                                 <span class="badge badge-default"><?= \App\Helpers\IconHelper::render('star', 16, 'icon-inline') ?> По умолчанию</span>
                                             <?php endif; ?>
                                             <span class="account-status-badge status-<?= $account['status'] === 'connected' ? 'connected' : ($account['status'] === 'error' ? 'error' : 'disconnected') ?>">
-                                                <?php if ($account['status'] === 'connected'): ?>
-                                                    <span class="status-dot"></span> Подключено
-                                                <?php else: ?>
-                                                    <span class="status-dot"></span> <?= ucfirst($account['status']) ?>
-                                                <?php endif; ?>
+                                                <?php 
+                                                $statusText = 'Не подключено';
+                                                if ($account['status'] === 'connected') {
+                                                    $statusText = 'Подключено';
+                                                } elseif ($account['status'] === 'error') {
+                                                    $statusText = 'Ошибка';
+                                                } elseif ($account['status'] === 'pending') {
+                                                    $statusText = 'Ожидание';
+                                                } elseif ($account['status'] === 'disconnected') {
+                                                    $statusText = 'Отключено';
+                                                }
+                                                ?>
+                                                <span class="status-dot"></span> <?= htmlspecialchars($statusText) ?>
                                             </span>
                                         </div>
                                     </div>
@@ -622,6 +662,7 @@ function showTelegramForm() {
     gap: 1.25rem;
     flex: 1;
     min-width: 0;
+    overflow: hidden;
 }
 
 .account-icon-wrapper {
@@ -703,6 +744,8 @@ function showTelegramForm() {
     flex-direction: column;
     gap: 0.75rem;
     margin-bottom: 0.5rem;
+    min-width: 0;
+    width: 100%;
 }
 
 .account-badges-row {
@@ -741,6 +784,10 @@ function showTelegramForm() {
     white-space: nowrap;
     box-shadow: 0 2px 4px rgba(0,0,0,0.08);
     transition: all 0.2s ease;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
 }
 
 .account-card:hover .account-status-badge {
