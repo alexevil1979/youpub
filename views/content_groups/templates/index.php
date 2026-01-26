@@ -253,24 +253,38 @@ function deleteTemplate(id) {
 
 <?php
 try {
-    $content = ob_get_clean();
-    if ($content === false) {
-        error_log("Templates index view: Failed to get buffer content");
-        $content = '<div class="alert alert-error">Ошибка при загрузке содержимого</div>';
+    // Проверяем, что буфер активен
+    if (ob_get_level() > 0) {
+        $content = ob_get_clean();
+        if ($content === false) {
+            error_log("Templates index view: Failed to get buffer content");
+            $content = '<div class="alert alert-error">Ошибка при загрузке содержимого</div>';
+        }
+    } else {
+        error_log("Templates index view: No output buffer active");
+        $content = '<div class="alert alert-error">Ошибка: буфер вывода не активен</div>';
     }
     
     $layoutPath = __DIR__ . '/../../layout.php';
     if (!file_exists($layoutPath)) {
         error_log("Templates index view: Layout file not found: {$layoutPath}");
-        http_response_code(500);
-        echo "Layout file not found. Please check server logs.";
-        exit;
+        // Пробуем альтернативный путь
+        $layoutPath = __DIR__ . '/../../../layout.php';
+        if (!file_exists($layoutPath)) {
+            error_log("Templates index view: Alternative layout path also not found: {$layoutPath}");
+            http_response_code(500);
+            echo "Layout file not found. Please check server logs.";
+            exit;
+        }
     }
     
     include $layoutPath;
 } catch (\Throwable $e) {
     error_log("Templates index view: Fatal error: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
-    ob_end_clean();
+    // Очищаем все буферы
+    while (ob_get_level() > 0) {
+        @ob_end_clean();
+    }
     http_response_code(500);
     echo "Fatal error loading templates page. Please check server logs.";
     exit;

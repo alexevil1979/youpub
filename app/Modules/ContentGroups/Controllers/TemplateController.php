@@ -92,8 +92,14 @@ class TemplateController extends Controller
             
             error_log("TemplateController::index: Including view file");
             // Включаем представление
-            include $viewPath;
-            error_log("TemplateController::index: View file included successfully");
+            // Представление само управляет буферизацией и layout
+            try {
+                include $viewPath;
+                error_log("TemplateController::index: View file included successfully");
+            } catch (\Throwable $viewError) {
+                error_log("TemplateController::index: Error in view: " . $viewError->getMessage() . " in " . $viewError->getFile() . ":" . $viewError->getLine());
+                throw $viewError; // Пробрасываем дальше для обработки в catch блоке
+            }
             
         } catch (\Exception $e) {
             error_log("TemplateController::index: Exception - " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
