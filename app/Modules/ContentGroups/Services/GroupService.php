@@ -103,12 +103,18 @@ class GroupService extends Service
                 $updateData['settings'] = is_array($data['settings']) ? json_encode($data['settings']) : $data['settings'];
             }
 
-            if (empty($updateData)) {
+            // Проверяем, есть ли данные для обновления
+            // empty() вернет true если массив пустой, но также вернет true если все значения null
+            // Поэтому проверяем количество элементов
+            if (count($updateData) === 0) {
                 return [
                     'success' => false,
                     'message' => 'No data to update'
                 ];
             }
+            
+            error_log("GroupService::updateGroup: updateData keys: " . implode(', ', array_keys($updateData)));
+            error_log("GroupService::updateGroup: updateData values: " . json_encode($updateData));
 
             $this->groupRepo->update($groupId, $updateData);
 
