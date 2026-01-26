@@ -60,6 +60,21 @@ class SmartQueueService extends Service
         }
         
         error_log("SmartQueueService::processGroupSchedule: Group found. Group ID: {$group['id']}, Status: {$group['status']}");
+        
+        // Получаем выбранные интеграции из settings группы
+        $selectedIntegrations = [];
+        if (!empty($group['settings'])) {
+            $settings = is_string($group['settings']) ? json_decode($group['settings'], true) : $group['settings'];
+            if (isset($settings['integrations']) && is_array($settings['integrations'])) {
+                $selectedIntegrations = $settings['integrations'];
+            }
+        }
+        
+        // Если интеграции не выбраны, используем платформу из расписания (для обратной совместимости)
+        if (empty($selectedIntegrations)) {
+            $platform = $schedule['platform'] ?? 'youtube';
+            $selectedIntegrations = [['platform' => $platform, 'integration_id' => null]];
+        }
 
         // Проверяем, нужно ли пропускать опубликованные
         $skipPublished = $schedule['skip_published'] ?? true;
@@ -187,16 +202,29 @@ class SmartQueueService extends Service
             
             error_log("SmartQueueService::processGroupSchedule: No active processing schedules found for video {$groupFile['video_id']}, proceeding with publication");
 
+            // Используем первую интеграцию из списка (или платформу из расписания для обратной совместимости)
+            $integrationToUse = !empty($selectedIntegrations) ? $selectedIntegrations[0] : null;
+            $platform = $integrationToUse['platform'] ?? $schedule['platform'] ?? 'youtube';
+            $integrationId = isset($integrationToUse['integration_id']) ? (int)$integrationToUse['integration_id'] : null;
+            
             // Создаем временное расписание для публикации
-            error_log("SmartQueueService::processGroupSchedule: Creating temporary schedule for video {$groupFile['video_id']}, platform: {$schedule['platform']}");
-            $tempScheduleId = $this->scheduleRepo->create([
+            error_log("SmartQueueService::processGroupSchedule: Creating temporary schedule for video {$groupFile['video_id']}, platform: {$platform}, integration_id: " . ($integrationId ?? 'null'));
+            $scheduleData = [
                 'user_id' => $schedule['user_id'],
                 'video_id' => $groupFile['video_id'],
                 'content_group_id' => $schedule['content_group_id'],
-                'platform' => $schedule['platform'],
+                'platform' => $platform,
                 'publish_at' => date('Y-m-d H:i:s'),
                 'status' => 'processing',
-            ]);
+            ];
+            
+            // Добавляем integration_id и integration_type если указаны
+            if ($integrationId !== null) {
+                $scheduleData['integration_id'] = $integrationId;
+                $scheduleData['integration_type'] = $platform;
+            }
+            
+            $tempScheduleId = $this->scheduleRepo->create($scheduleData);
             
             if (!$tempScheduleId) {
                 $this->db->rollBack();
@@ -232,12 +260,13 @@ class SmartQueueService extends Service
         }
 
         // Публикуем
+        $platform = $integrationToUse['platform'] ?? $schedule['platform'] ?? 'youtube';
         error_log("SmartQueueService::processGroupSchedule: ===== CALLING PUBLISH VIDEO =====");
-        error_log("SmartQueueService::processGroupSchedule: Platform: {$schedule['platform']}, Temp schedule ID: {$tempScheduleId}, Video ID: {$groupFile['video_id']}");
+        error_log("SmartQueueService::processGroupSchedule: Platform: {$platform}, Temp schedule ID: {$tempScheduleId}, Video ID: {$groupFile['video_id']}");
         error_log("SmartQueueService::processGroupSchedule: Template applied: " . (!empty($templated) ? 'yes' : 'no'));
 
         try {
-            $result = $this->publishVideo($schedule['platform'], $tempScheduleId, $templated);
+            $result = $this->publishVideo($platform, $tempScheduleId, $templated);
             error_log("SmartQueueService::processGroupSchedule: ===== PUBLISH VIDEO COMPLETED =====");
             error_log("SmartQueueService::processGroupSchedule: publishVideo result. Success: " . ($result['success'] ? 'true' : 'false') . ", Message: " . ($result['message'] ?? 'no message'));
         } catch (Exception $e) {
@@ -348,10 +377,25 @@ class SmartQueueService extends Service
                 return ['success' => false, 'message' => 'Файл видео не найден'];
             }
 
-            $latestSchedules = $this->scheduleRepo->findLatestByGroupIds([$groupId]);
-            $schedule = $latestSchedules[$groupId] ?? null;
-            $platform = $schedule['platform'] ?? 'youtube';
-            $templateId = $schedule['template_id'] ?? $group['template_id'] ?? null;
+            // Получаем выбранные интеграции из settings группы
+            $selectedIntegrations = [];
+            if (!empty($group['settings'])) {
+                $settings = is_string($group['settings']) ? json_decode($group['settings'], true) : $group['settings'];
+                if (isset($settings['integrations']) && is_array($settings['integrations'])) {
+                    $selectedIntegrations = $settings['integrations'];
+                }
+            }
+            
+            // Если интеграции не выбраны, используем старую логику (для обратной совместимости)
+            if (empty($selectedIntegrations)) {
+                $latestSchedules = $this->scheduleRepo->findLatestByGroupIds([$groupId]);
+                $schedule = $latestSchedules[$groupId] ?? null;
+                $platform = $schedule['platform'] ?? 'youtube';
+                // Создаем фиктивную интеграцию для обратной совместимости
+                $selectedIntegrations = [['platform' => $platform, 'integration_id' => null]];
+            }
+            
+            $templateId = $group['template_id'] ?? null;
 
             // Проверяем, есть ли сохраненное оформление в сессии (из превью)
             $previewKey = "{$groupId}_{$fileId}";
@@ -370,12 +414,14 @@ class SmartQueueService extends Service
                 error_log("SmartQueueService::publishGroupFileNow: Session keys: " . (isset($_SESSION['publish_previews']) ? implode(', ', array_keys($_SESSION['publish_previews'])) : 'no publish_previews in session'));
             }
             
-            // Если сохраненного оформления нет, генерируем новое
+            // Генерируем оформление один раз для всех интеграций (если не было сохранено)
             if (!$templated) {
+                // Используем первую платформу для контекста шаблона
+                $firstPlatform = !empty($selectedIntegrations) ? $selectedIntegrations[0]['platform'] : 'youtube';
                 $context = [
                     'group_name' => $group['name'] ?? '',
                     'index' => $groupFile['order_index'] ?? 0,
-                    'platform' => $platform,
+                    'platform' => $firstPlatform,
                 ];
 
                 // ВАЖНО: Проверяем video['title'] - если "unknown", используем file_name
@@ -395,197 +441,332 @@ class SmartQueueService extends Service
                 error_log("SmartQueueService::publishGroupFileNow: Generated title: " . ($templated['title'] ?? 'N/A'));
             }
 
-            // Проверяем, не публикуется ли уже этот файл
-            $fileStatus = $groupFile['status'] ?? 'new';
-            if ($fileStatus === 'queued' || $fileStatus === 'published') {
-                // Проверяем, есть ли активные расписания для этого видео
-                $stmt = $this->db->prepare("
-                    SELECT id 
-                    FROM schedules 
-                    WHERE video_id = ? 
-                    AND status IN ('processing', 'pending')
-                    AND created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
-                    LIMIT 1
-                ");
-                $stmt->execute([(int)$groupFile['video_id']]);
-                if ($stmt->fetch()) {
-                    error_log("SmartQueueService::publishGroupFileNow: Video {$groupFile['video_id']} already has active schedule");
-                    return ['success' => false, 'message' => 'Этот файл уже публикуется или в очереди'];
-                }
-            }
-
-            $this->db->beginTransaction();
-            try {
-                // Блокируем строку файла для предотвращения параллельной публикации
-                $fileLockStmt = $this->db->prepare("
-                    SELECT id, status 
-                    FROM content_group_files 
-                    WHERE id = ? 
-                    FOR UPDATE
-                ");
-                $fileLockStmt->execute([(int)$groupFile['id']]);
-                $lockedFile = $fileLockStmt->fetch();
+            // Публикуем для каждой выбранной интеграции
+            $results = [];
+            $allSuccess = true;
+            $errorMessages = [];
+            
+            foreach ($selectedIntegrations as $integration) {
+                $platform = $integration['platform'] ?? 'youtube';
+                $integrationId = isset($integration['integration_id']) ? (int)$integration['integration_id'] : null;
                 
-                if (!$lockedFile) {
-                    $this->db->rollBack();
-                    return ['success' => false, 'message' => 'Файл не найден'];
+                if (!$platform) {
+                    continue;
                 }
                 
-                // Проверяем статус файла еще раз после блокировки
-                if (!in_array($lockedFile['status'], $allowedStatuses, true)) {
-                    $this->db->rollBack();
-                    return ['success' => false, 'message' => 'Этот файл нельзя опубликовать сейчас (статус: ' . $lockedFile['status'] . ')'];
-                }
-                
-                // Проверяем только РЕАЛЬНО активные расписания (processing, pending), не published
-                // Блокируем только активные расписания для этого видео
-                $stmt = $this->db->prepare("
-                    SELECT id, status, created_at 
-                    FROM schedules 
-                    WHERE video_id = ? 
-                    AND status IN ('processing', 'pending')
-                    AND created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
-                    FOR UPDATE
-                ");
-                $stmt->execute([(int)$groupFile['video_id']]);
-                $activeSchedules = $stmt->fetchAll();
-                
-                if (!empty($activeSchedules)) {
-                    $this->db->rollBack();
-                    error_log("SmartQueueService::publishGroupFileNow: Video {$groupFile['video_id']} already has active schedule(s): " . count($activeSchedules));
-                    foreach ($activeSchedules as $sched) {
-                        error_log("SmartQueueService::publishGroupFileNow: Active schedule ID: {$sched['id']}, status: {$sched['status']}, created: {$sched['created_at']}");
-                    }
-                    return ['success' => false, 'message' => 'Видео уже публикуется, попробуйте позже'];
-                }
-                
-                // Проверяем успешные публикации только за последние 15 секунд (чтобы не блокировать повторные публикации)
-                $pubStmt = $this->db->prepare("
-                    SELECT id, platform_id, created_at 
-                    FROM publications 
-                    WHERE video_id = ? 
-                    AND platform = ?
-                    AND status = 'success'
-                    AND created_at >= DATE_SUB(NOW(), INTERVAL 15 SECOND)
-                    ORDER BY created_at DESC
-                    LIMIT 1
-                ");
-                $pubStmt->execute([(int)$groupFile['video_id'], $platform]);
-                $recentPub = $pubStmt->fetch();
-                if ($recentPub) {
-                    $this->db->rollBack();
-                    error_log("SmartQueueService::publishGroupFileNow: Video {$groupFile['video_id']} was just published to {$platform} (publication ID: {$recentPub['id']}, created: {$recentPub['created_at']})");
-                    return ['success' => false, 'message' => 'Это видео только что было опубликовано на ' . $platform . '. Подождите 15 секунд.'];
-                }
-                
-                error_log("SmartQueueService::publishGroupFileNow: All checks passed, creating schedule for video {$groupFile['video_id']}");
-
-                // Создаем расписание с проверкой на дубликаты на уровне БД
-                // Используем INSERT IGNORE или проверку перед вставкой
-                $tempScheduleId = $this->scheduleRepo->create([
-                    'user_id' => $userId,
-                    'video_id' => (int)$groupFile['video_id'],
-                    'content_group_id' => $groupId,
-                    'template_id' => $templateId,
-                    'platform' => $platform,
-                    'publish_at' => date('Y-m-d H:i:s'),
-                    'status' => 'processing',
-                ]);
-                
-                if (!$tempScheduleId) {
-                    $this->db->rollBack();
-                    error_log("SmartQueueService::publishGroupFileNow: Failed to create schedule");
-                    return ['success' => false, 'message' => 'Не удалось создать расписание'];
-                }
-                
-                error_log("SmartQueueService::publishGroupFileNow: Created schedule ID: {$tempScheduleId} for video {$groupFile['video_id']}");
-                
-                // Финальная проверка: убеждаемся, что мы единственное активное расписание для этого видео
-                // Проверяем только в рамках этой транзакции (другие транзакции не видят наше расписание до коммита)
-                // Эта проверка нужна на случай, если два запроса прошли первую проверку одновременно
-                $finalCheckStmt = $this->db->prepare("
-                    SELECT COUNT(*) as count
-                    FROM schedules 
-                    WHERE video_id = ? 
-                    AND status IN ('processing', 'pending')
-                    AND id != ?
-                    AND created_at >= DATE_SUB(NOW(), INTERVAL 2 MINUTE)
-                ");
-                $finalCheckStmt->execute([(int)$groupFile['video_id'], $tempScheduleId]);
-                $finalCheck = $finalCheckStmt->fetch();
-                
-                if ($finalCheck && (int)$finalCheck['count'] > 0) {
-                    // Отменяем только что созданное расписание
-                    $this->scheduleRepo->update($tempScheduleId, [
-                        'status' => 'cancelled',
-                        'error_message' => 'Another schedule was found after creation'
+                // Проверяем, не публикуется ли уже этот файл на эту конкретную интеграцию
+                $fileStatus = $groupFile['status'] ?? 'new';
+                if ($fileStatus === 'queued' || $fileStatus === 'published') {
+                    // Проверяем активные расписания для этой интеграции
+                    $stmt = $this->db->prepare("
+                        SELECT id 
+                        FROM schedules 
+                        WHERE video_id = ? 
+                        AND platform = ?
+                        AND integration_id = ?
+                        AND integration_type = ?
+                        AND status IN ('processing', 'pending')
+                        AND created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+                        LIMIT 1
+                    ");
+                    $stmt->execute([
+                        (int)$groupFile['video_id'],
+                        $platform,
+                        $integrationId,
+                        $platform
                     ]);
-                    $this->db->rollBack();
-                    error_log("SmartQueueService::publishGroupFileNow: Found other active schedules after creation, cancelled schedule {$tempScheduleId}");
-                    return ['success' => false, 'message' => 'Видео уже публикуется другим расписанием'];
+                    if ($stmt->fetch()) {
+                        error_log("SmartQueueService::publishGroupFileNow: Video {$groupFile['video_id']} already has active schedule for {$platform} integration {$integrationId}");
+                        $results[] = [
+                            'platform' => $platform,
+                            'integration_id' => $integrationId,
+                            'success' => false,
+                            'message' => 'Этот файл уже публикуется на этот канал'
+                        ];
+                        $allSuccess = false;
+                        continue;
+                    }
                 }
 
-                if (!$tempScheduleId) {
+                $this->db->beginTransaction();
+                try {
+                    // Блокируем строку файла для предотвращения параллельной публикации
+                    $fileLockStmt = $this->db->prepare("
+                        SELECT id, status 
+                        FROM content_group_files 
+                        WHERE id = ? 
+                        FOR UPDATE
+                    ");
+                    $fileLockStmt->execute([(int)$groupFile['id']]);
+                    $lockedFile = $fileLockStmt->fetch();
+                    
+                    if (!$lockedFile) {
+                        $this->db->rollBack();
+                        $results[] = [
+                            'platform' => $platform,
+                            'integration_id' => $integrationId,
+                            'success' => false,
+                            'message' => 'Файл не найден'
+                        ];
+                        $allSuccess = false;
+                        continue;
+                    }
+                    
+                    // Проверяем статус файла еще раз после блокировки
+                    if (!in_array($lockedFile['status'], $allowedStatuses, true)) {
+                        $this->db->rollBack();
+                        $results[] = [
+                            'platform' => $platform,
+                            'integration_id' => $integrationId,
+                            'success' => false,
+                            'message' => 'Этот файл нельзя опубликовать сейчас (статус: ' . $lockedFile['status'] . ')'
+                        ];
+                        $allSuccess = false;
+                        continue;
+                    }
+                    
+                    // Проверяем активные расписания для этой конкретной интеграции
+                    $stmt = $this->db->prepare("
+                        SELECT id, status, created_at 
+                        FROM schedules 
+                        WHERE video_id = ? 
+                        AND platform = ?
+                        AND integration_id = ?
+                        AND integration_type = ?
+                        AND status IN ('processing', 'pending')
+                        AND created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+                        FOR UPDATE
+                    ");
+                    $stmt->execute([
+                        (int)$groupFile['video_id'],
+                        $platform,
+                        $integrationId,
+                        $platform
+                    ]);
+                    $activeSchedules = $stmt->fetchAll();
+                    
+                    if (!empty($activeSchedules)) {
+                        $this->db->rollBack();
+                        error_log("SmartQueueService::publishGroupFileNow: Video {$groupFile['video_id']} already has active schedule(s) for {$platform} integration {$integrationId}: " . count($activeSchedules));
+                        $results[] = [
+                            'platform' => $platform,
+                            'integration_id' => $integrationId,
+                            'success' => false,
+                            'message' => 'Видео уже публикуется на этот канал, попробуйте позже'
+                        ];
+                        $allSuccess = false;
+                        continue;
+                    }
+                    
+                    // Проверяем успешные публикации только за последние 15 секунд для этой интеграции
+                    $pubStmt = $this->db->prepare("
+                        SELECT id, platform_id, created_at 
+                        FROM publications 
+                        WHERE video_id = ? 
+                        AND platform = ?
+                        AND integration_id = ?
+                        AND status = 'success'
+                        AND created_at >= DATE_SUB(NOW(), INTERVAL 15 SECOND)
+                        ORDER BY created_at DESC
+                        LIMIT 1
+                    ");
+                    $pubStmt->execute([
+                        (int)$groupFile['video_id'],
+                        $platform,
+                        $integrationId
+                    ]);
+                    $recentPub = $pubStmt->fetch();
+                    if ($recentPub) {
+                        $this->db->rollBack();
+                        error_log("SmartQueueService::publishGroupFileNow: Video {$groupFile['video_id']} was just published to {$platform} integration {$integrationId} (publication ID: {$recentPub['id']}, created: {$recentPub['created_at']})");
+                        $results[] = [
+                            'platform' => $platform,
+                            'integration_id' => $integrationId,
+                            'success' => false,
+                            'message' => 'Это видео только что было опубликовано на этот канал. Подождите 15 секунд.'
+                        ];
+                        $allSuccess = false;
+                        continue;
+                    }
+                    
+                    error_log("SmartQueueService::publishGroupFileNow: All checks passed, creating schedule for video {$groupFile['video_id']} on {$platform} integration {$integrationId}");
+
+                    // Создаем расписание с указанием integration_id и integration_type
+                    $scheduleData = [
+                        'user_id' => $userId,
+                        'video_id' => (int)$groupFile['video_id'],
+                        'content_group_id' => $groupId,
+                        'template_id' => $templateId,
+                        'platform' => $platform,
+                        'publish_at' => date('Y-m-d H:i:s'),
+                        'status' => 'processing',
+                    ];
+                    
+                    // Добавляем integration_id и integration_type если указаны
+                    if ($integrationId !== null) {
+                        $scheduleData['integration_id'] = $integrationId;
+                        $scheduleData['integration_type'] = $platform;
+                    }
+                    
+                    $tempScheduleId = $this->scheduleRepo->create($scheduleData);
+                    
+                    if (!$tempScheduleId) {
+                        $this->db->rollBack();
+                        error_log("SmartQueueService::publishGroupFileNow: Failed to create schedule for {$platform} integration {$integrationId}");
+                        $results[] = [
+                            'platform' => $platform,
+                            'integration_id' => $integrationId,
+                            'success' => false,
+                            'message' => 'Не удалось создать расписание'
+                        ];
+                        $allSuccess = false;
+                        continue;
+                    }
+                    
+                    error_log("SmartQueueService::publishGroupFileNow: Created schedule ID: {$tempScheduleId} for video {$groupFile['video_id']} on {$platform} integration {$integrationId}");
+                    
+                    // Финальная проверка для этой интеграции
+                    $finalCheckStmt = $this->db->prepare("
+                        SELECT COUNT(*) as count
+                        FROM schedules 
+                        WHERE video_id = ? 
+                        AND platform = ?
+                        AND integration_id = ?
+                        AND integration_type = ?
+                        AND status IN ('processing', 'pending')
+                        AND id != ?
+                        AND created_at >= DATE_SUB(NOW(), INTERVAL 2 MINUTE)
+                    ");
+                    $finalCheckStmt->execute([
+                        (int)$groupFile['video_id'],
+                        $platform,
+                        $integrationId,
+                        $platform,
+                        $tempScheduleId
+                    ]);
+                    $finalCheck = $finalCheckStmt->fetch();
+                    
+                    if ($finalCheck && (int)$finalCheck['count'] > 0) {
+                        // Отменяем только что созданное расписание
+                        $this->scheduleRepo->update($tempScheduleId, [
+                            'status' => 'cancelled',
+                            'error_message' => 'Another schedule was found after creation'
+                        ]);
+                        $this->db->rollBack();
+                        error_log("SmartQueueService::publishGroupFileNow: Found other active schedules after creation, cancelled schedule {$tempScheduleId}");
+                        $results[] = [
+                            'platform' => $platform,
+                            'integration_id' => $integrationId,
+                            'success' => false,
+                            'message' => 'Видео уже публикуется другим расписанием на этот канал'
+                        ];
+                        $allSuccess = false;
+                        continue;
+                    }
+
+                    $this->fileRepo->updateFileStatus((int)$groupFile['id'], 'queued');
+                    $this->db->commit();
+                    
+                    // Обновляем метаданные видео ПЕРЕД публикацией
+                    try {
+                        $this->updateVideoMetadata($tempScheduleId, $templated);
+                        error_log("SmartQueueService::publishGroupFileNow: Video metadata updated successfully for schedule {$tempScheduleId}");
+                    } catch (\Exception $e) {
+                        error_log("SmartQueueService::publishGroupFileNow: Error updating metadata: " . $e->getMessage());
+                    }
+                    
+                    // Публикуем
+                    error_log("SmartQueueService::publishGroupFileNow: Starting publishVideo for schedule {$tempScheduleId} ({$platform})");
+                    try {
+                        $result = $this->publishVideo($platform, $tempScheduleId, $templated);
+                        error_log("SmartQueueService::publishGroupFileNow: publishVideo completed for {$platform}. Success: " . ($result['success'] ? 'true' : 'false'));
+                        
+                        if ($result['success']) {
+                            $publicationId = $result['data']['publication_id'] ?? null;
+                            $this->fileRepo->updateFileStatus((int)$groupFile['id'], 'published', $publicationId ? (int)$publicationId : null);
+                            $this->scheduleRepo->update($tempScheduleId, [
+                                'status' => 'published',
+                                'error_message' => null,
+                            ]);
+                            error_log("SmartQueueService::publishGroupFileNow: Publication successful for {$platform}. Publication ID: {$publicationId}");
+                            $results[] = [
+                                'platform' => $platform,
+                                'integration_id' => $integrationId,
+                                'success' => true,
+                                'message' => 'Опубликовано на ' . $platform,
+                                'publication_id' => $publicationId
+                            ];
+                        } else {
+                            $errorMessage = $result['message'] ?? 'Unknown error';
+                            error_log("SmartQueueService::publishGroupFileNow: Publication failed for {$platform}. Error: {$errorMessage}");
+                            $this->fileRepo->updateFileStatus((int)$groupFile['id'], 'error');
+                            $this->fileRepo->update((int)$groupFile['id'], [
+                                'error_message' => $errorMessage
+                            ]);
+                            $this->scheduleRepo->update($tempScheduleId, [
+                                'status' => 'failed',
+                                'error_message' => $errorMessage,
+                            ]);
+                            $results[] = [
+                                'platform' => $platform,
+                                'integration_id' => $integrationId,
+                                'success' => false,
+                                'message' => $errorMessage
+                            ];
+                            $allSuccess = false;
+                            $errorMessages[] = "{$platform}: {$errorMessage}";
+                        }
+                    } catch (\Exception $e) {
+                        error_log("SmartQueueService::publishGroupFileNow: Exception in publishVideo for {$platform}: " . $e->getMessage());
+                        $this->fileRepo->updateFileStatus((int)$groupFile['id'], 'error');
+                        $this->scheduleRepo->update($tempScheduleId, [
+                            'status' => 'failed',
+                            'error_message' => $e->getMessage(),
+                        ]);
+                        $results[] = [
+                            'platform' => $platform,
+                            'integration_id' => $integrationId,
+                            'success' => false,
+                            'message' => 'Ошибка при публикации: ' . $e->getMessage()
+                        ];
+                        $allSuccess = false;
+                        $errorMessages[] = "{$platform}: " . $e->getMessage();
+                    }
+                } catch (\Exception $e) {
                     $this->db->rollBack();
-                    return ['success' => false, 'message' => 'Не удалось создать временное расписание'];
+                    error_log("SmartQueueService::publishGroupFileNow: Exception in transaction for {$platform}: " . $e->getMessage());
+                    $results[] = [
+                        'platform' => $platform,
+                        'integration_id' => $integrationId,
+                        'success' => false,
+                        'message' => 'Ошибка подготовки публикации: ' . $e->getMessage()
+                    ];
+                    $allSuccess = false;
+                    $errorMessages[] = "{$platform}: " . $e->getMessage();
                 }
-
-                $this->fileRepo->updateFileStatus((int)$groupFile['id'], 'queued');
-                $this->db->commit();
-            } catch (\Exception $e) {
-                $this->db->rollBack();
-                return ['success' => false, 'message' => 'Ошибка подготовки публикации: ' . $e->getMessage()];
-            }
-
-            // ВАЖНО: Обновляем метаданные видео ПЕРЕД публикацией, чтобы YoutubeService использовал правильные данные
-            error_log("SmartQueueService::publishGroupFileNow: Updating video metadata before publication");
-            error_log("SmartQueueService::publishGroupFileNow: Template data - title: " . mb_substr($templated['title'] ?? 'N/A', 0, 100));
-            error_log("SmartQueueService::publishGroupFileNow: Template data - description: " . mb_substr($templated['description'] ?? 'N/A', 0, 100));
-            error_log("SmartQueueService::publishGroupFileNow: Template data - tags: " . mb_substr($templated['tags'] ?? 'N/A', 0, 200));
-            
-            // Обновляем метаданные видео СРАЗУ после создания расписания
-            try {
-                $this->updateVideoMetadata($tempScheduleId, $templated);
-                error_log("SmartQueueService::publishGroupFileNow: Video metadata updated successfully");
-            } catch (\Exception $e) {
-                error_log("SmartQueueService::publishGroupFileNow: Error updating metadata: " . $e->getMessage());
-                // Продолжаем публикацию, даже если обновление метаданных не удалось
             }
             
-            error_log("SmartQueueService::publishGroupFileNow: Starting publishVideo for schedule {$tempScheduleId}");
-            try {
-                $result = $this->publishVideo($platform, $tempScheduleId, $templated);
-                error_log("SmartQueueService::publishGroupFileNow: publishVideo completed. Success: " . ($result['success'] ? 'true' : 'false') . ", Message: " . ($result['message'] ?? 'no message'));
-            } catch (\Exception $e) {
-                error_log("SmartQueueService::publishGroupFileNow: Exception in publishVideo: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
-                $result = [
-                    'success' => false,
-                    'message' => 'Ошибка при публикации: ' . $e->getMessage()
+            // Формируем итоговый результат
+            if (empty($results)) {
+                return ['success' => false, 'message' => 'Не выбрано ни одной интеграции для публикации'];
+            }
+            
+            $successCount = count(array_filter($results, fn($r) => $r['success']));
+            $totalCount = count($results);
+            
+            if ($allSuccess) {
+                return [
+                    'success' => true,
+                    'message' => "Опубликовано на {$successCount} из {$totalCount} каналов",
+                    'data' => ['results' => $results]
+                ];
+            } else {
+                return [
+                    'success' => $successCount > 0,
+                    'message' => "Опубликовано на {$successCount} из {$totalCount} каналов. Ошибки: " . implode('; ', $errorMessages),
+                    'data' => ['results' => $results]
                 ];
             }
-
-            if ($result['success']) {
-                $publicationId = $result['data']['publication_id'] ?? null;
-                $this->fileRepo->updateFileStatus((int)$groupFile['id'], 'published', $publicationId ? (int)$publicationId : null);
-                $this->scheduleRepo->update($tempScheduleId, [
-                    'status' => 'published',
-                    'error_message' => null,
-                ]);
-                error_log("SmartQueueService::publishGroupFileNow: Publication successful. Publication ID: {$publicationId}");
-            } else {
-                $errorMessage = $result['message'] ?? 'Unknown error';
-                error_log("SmartQueueService::publishGroupFileNow: Publication failed. Error: {$errorMessage}");
-                $this->fileRepo->updateFileStatus((int)$groupFile['id'], 'error');
-                $this->fileRepo->update((int)$groupFile['id'], [
-                    'error_message' => $errorMessage
-                ]);
-                $this->scheduleRepo->update($tempScheduleId, [
-                    'status' => 'failed',
-                    'error_message' => $errorMessage,
-                ]);
-            }
-
-            return $result;
         } catch (\Exception $e) {
             error_log("SmartQueueService::publishGroupFileNow error: " . $e->getMessage());
             return ['success' => false, 'message' => 'Ошибка публикации: ' . $e->getMessage()];
