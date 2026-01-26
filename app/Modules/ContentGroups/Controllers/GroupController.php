@@ -105,18 +105,26 @@ class GroupController extends Controller
 
         $userId = $_SESSION['user_id'];
         
-        // Получаем выбранные платформы
-        $platforms = $this->getParam('platforms', []);
-        if (!is_array($platforms)) {
-            $platforms = [];
+        // Получаем выбранные интеграции (формат: platform_id, например "youtube_1", "telegram_2")
+        $integrations = $this->getParam('integrations', []);
+        if (!is_array($integrations)) {
+            $integrations = [];
         }
-        // Фильтруем только допустимые платформы
-        $allowedPlatforms = ['youtube', 'telegram', 'tiktok', 'instagram', 'pinterest'];
-        $platforms = array_filter($platforms, fn($p) => in_array($p, $allowedPlatforms, true));
+        
+        // Парсим интеграции: разделяем на platform и integration_id
+        $integrationsList = [];
+        foreach ($integrations as $integrationStr) {
+            if (preg_match('/^(youtube|telegram|tiktok|instagram|pinterest)_(\d+)$/', $integrationStr, $matches)) {
+                $integrationsList[] = [
+                    'platform' => $matches[1],
+                    'integration_id' => (int)$matches[2],
+                ];
+            }
+        }
         
         $settings = [];
-        if (!empty($platforms)) {
-            $settings['platforms'] = array_values($platforms);
+        if (!empty($integrationsList)) {
+            $settings['integrations'] = $integrationsList;
         }
         
         $data = [
@@ -491,12 +499,12 @@ class GroupController extends Controller
             $pinterestAccounts = [];
         }
         
-        // Получаем выбранные платформы из settings
-        $selectedPlatforms = [];
+        // Получаем выбранные интеграции из settings
+        $selectedIntegrations = [];
         if (!empty($group['settings'])) {
             $settings = is_string($group['settings']) ? json_decode($group['settings'], true) : $group['settings'];
-            if (isset($settings['platforms']) && is_array($settings['platforms'])) {
-                $selectedPlatforms = $settings['platforms'];
+            if (isset($settings['integrations']) && is_array($settings['integrations'])) {
+                $selectedIntegrations = $settings['integrations'];
             }
         }
         
@@ -523,14 +531,22 @@ class GroupController extends Controller
             exit;
         }
 
-        // Получаем выбранные платформы
-        $platforms = $this->getParam('platforms', []);
-        if (!is_array($platforms)) {
-            $platforms = [];
+        // Получаем выбранные интеграции (формат: platform_id, например "youtube_1", "telegram_2")
+        $integrations = $this->getParam('integrations', []);
+        if (!is_array($integrations)) {
+            $integrations = [];
         }
-        // Фильтруем только допустимые платформы
-        $allowedPlatforms = ['youtube', 'telegram', 'tiktok', 'instagram', 'pinterest'];
-        $platforms = array_filter($platforms, fn($p) => in_array($p, $allowedPlatforms, true));
+        
+        // Парсим интеграции: разделяем на platform и integration_id
+        $integrationsList = [];
+        foreach ($integrations as $integrationStr) {
+            if (preg_match('/^(youtube|telegram|tiktok|instagram|pinterest)_(\d+)$/', $integrationStr, $matches)) {
+                $integrationsList[] = [
+                    'platform' => $matches[1],
+                    'integration_id' => (int)$matches[2],
+                ];
+            }
+        }
         
         // Получаем текущие settings группы
         $currentSettings = [];
@@ -541,11 +557,11 @@ class GroupController extends Controller
             }
         }
         
-        // Обновляем платформы в settings
-        if (!empty($platforms)) {
-            $currentSettings['platforms'] = array_values($platforms);
+        // Обновляем интеграции в settings
+        if (!empty($integrationsList)) {
+            $currentSettings['integrations'] = $integrationsList;
         } else {
-            unset($currentSettings['platforms']);
+            unset($currentSettings['integrations']);
         }
         
         $data = [

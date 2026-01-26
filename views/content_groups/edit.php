@@ -36,129 +36,189 @@ ob_start();
 
     <div class="form-group">
         <label>Каналы публикации</label>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; margin-top: 0.5rem;">
-            <label style="display: flex; align-items: center; padding: 0.75rem; border: 2px solid #dee2e6; border-radius: 6px; cursor: pointer; transition: all 0.2s;" 
-                   onmouseover="this.style.borderColor='#007bff'; this.style.backgroundColor='#f8f9ff';" 
-                   onmouseout="this.style.borderColor='#dee2e6'; this.style.backgroundColor='';">
-                <input type="checkbox" name="platforms[]" value="youtube" style="margin-right: 0.5rem; cursor: pointer;" <?= in_array('youtube', $selectedPlatforms, true) ? 'checked' : '' ?>>
-                <div style="flex: 1;">
-                    <div style="font-weight: 500; display: flex; align-items: center;">
+        <div style="margin-top: 0.5rem;">
+            <?php if (!empty($youtubeAccounts)): ?>
+                <div style="margin-bottom: 1rem; padding: 1rem; background: #fff; border: 1px solid #dee2e6; border-radius: 6px;">
+                    <div style="font-weight: 500; display: flex; align-items: center; margin-bottom: 0.75rem;">
                         <?= \App\Helpers\IconHelper::render('youtube', 20, 'icon-inline') ?>
                         <span style="margin-left: 0.5rem;">YouTube</span>
                     </div>
-                    <small style="display: block; color: #6c757d; margin-top: 0.25rem;">
-                        <?php if (!empty($youtubeAccounts)): ?>
-                            ✓ Подключено: <?= count($youtubeAccounts) ?> <?= count($youtubeAccounts) === 1 ? 'канал' : (count($youtubeAccounts) < 5 ? 'канала' : 'каналов') ?>
-                            <?php if (count($youtubeAccounts) <= 3): ?>
-                                (<?= implode(', ', array_map(function($acc) {
-                                    return htmlspecialchars($acc['channel_name'] ?? $acc['account_name'] ?? 'Канал ' . $acc['id']);
-                                }, $youtubeAccounts)) ?>)
-                            <?php endif; ?>
-                        <?php else: ?>
-                            Не подключен
-                        <?php endif; ?>
-                    </small>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <?php foreach ($youtubeAccounts as $account): ?>
+                            <?php
+                            $isSelected = false;
+                            foreach ($selectedIntegrations as $sel) {
+                                if (($sel['platform'] ?? '') === 'youtube' && ($sel['integration_id'] ?? 0) === (int)$account['id']) {
+                                    $isSelected = true;
+                                    break;
+                                }
+                            }
+                            ?>
+                            <label style="display: flex; align-items: center; padding: 0.5rem; border: 1px solid #dee2e6; border-radius: 4px; cursor: pointer; transition: all 0.2s;" 
+                                   onmouseover="this.style.borderColor='#007bff'; this.style.backgroundColor='#f8f9ff';" 
+                                   onmouseout="this.style.borderColor='#dee2e6'; this.style.backgroundColor='';">
+                                <input type="checkbox" name="integrations[]" value="youtube_<?= $account['id'] ?>" style="margin-right: 0.5rem; cursor: pointer;" <?= $isSelected ? 'checked' : '' ?>>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 500;">
+                                        <?= htmlspecialchars($account['channel_name'] ?? $account['account_name'] ?? 'Канал ' . $account['id']) ?>
+                                        <?php if (!empty($account['is_default'])): ?>
+                                            <span style="color: #28a745; font-size: 0.85em; margin-left: 0.5rem;">(по умолчанию)</span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <?php if ($account['channel_id']): ?>
+                                        <small style="color: #6c757d; font-size: 0.85em;">ID: <?= htmlspecialchars($account['channel_id']) ?></small>
+                                    <?php endif; ?>
+                                </div>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
-            </label>
+            <?php endif; ?>
             
-            <label style="display: flex; align-items: center; padding: 0.75rem; border: 2px solid #dee2e6; border-radius: 6px; cursor: pointer; transition: all 0.2s;" 
-                   onmouseover="this.style.borderColor='#007bff'; this.style.backgroundColor='#f8f9ff';" 
-                   onmouseout="this.style.borderColor='#dee2e6'; this.style.backgroundColor='';">
-                <input type="checkbox" name="platforms[]" value="telegram" style="margin-right: 0.5rem; cursor: pointer;" <?= in_array('telegram', $selectedPlatforms, true) ? 'checked' : '' ?>>
-                <div style="flex: 1;">
-                    <div style="font-weight: 500; display: flex; align-items: center;">
+            <?php if (!empty($telegramAccounts)): ?>
+                <div style="margin-bottom: 1rem; padding: 1rem; background: #fff; border: 1px solid #dee2e6; border-radius: 6px;">
+                    <div style="font-weight: 500; display: flex; align-items: center; margin-bottom: 0.75rem;">
                         <?= \App\Helpers\IconHelper::render('telegram', 20, 'icon-inline') ?>
                         <span style="margin-left: 0.5rem;">Telegram</span>
                     </div>
-                    <small style="display: block; color: #6c757d; margin-top: 0.25rem;">
-                        <?php if (!empty($telegramAccounts)): ?>
-                            ✓ Подключено: <?= count($telegramAccounts) ?> <?= count($telegramAccounts) === 1 ? 'канал' : (count($telegramAccounts) < 5 ? 'канала' : 'каналов') ?>
-                            <?php if (count($telegramAccounts) <= 3): ?>
-                                (<?= implode(', ', array_map(function($acc) {
-                                    $name = $acc['channel_username'] ? '@' . $acc['channel_username'] : ($acc['channel_name'] ?? 'Канал ' . $acc['id']);
-                                    return htmlspecialchars($name);
-                                }, $telegramAccounts)) ?>)
-                            <?php endif; ?>
-                        <?php else: ?>
-                            Не подключен
-                        <?php endif; ?>
-                    </small>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <?php foreach ($telegramAccounts as $account): ?>
+                            <?php
+                            $isSelected = false;
+                            foreach ($selectedIntegrations as $sel) {
+                                if (($sel['platform'] ?? '') === 'telegram' && ($sel['integration_id'] ?? 0) === (int)$account['id']) {
+                                    $isSelected = true;
+                                    break;
+                                }
+                            }
+                            ?>
+                            <label style="display: flex; align-items: center; padding: 0.5rem; border: 1px solid #dee2e6; border-radius: 4px; cursor: pointer; transition: all 0.2s;" 
+                                   onmouseover="this.style.borderColor='#007bff'; this.style.backgroundColor='#f8f9ff';" 
+                                   onmouseout="this.style.borderColor='#dee2e6'; this.style.backgroundColor='';">
+                                <input type="checkbox" name="integrations[]" value="telegram_<?= $account['id'] ?>" style="margin-right: 0.5rem; cursor: pointer;" <?= $isSelected ? 'checked' : '' ?>>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 500;">
+                                        <?php
+                                        $name = $account['channel_username'] ? '@' . $account['channel_username'] : ($account['channel_name'] ?? 'Канал ' . $account['id']);
+                                        echo htmlspecialchars($name);
+                                        ?>
+                                        <?php if (!empty($account['is_default'])): ?>
+                                            <span style="color: #28a745; font-size: 0.85em; margin-left: 0.5rem;">(по умолчанию)</span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
-            </label>
+            <?php endif; ?>
             
-            <label style="display: flex; align-items: center; padding: 0.75rem; border: 2px solid #dee2e6; border-radius: 6px; cursor: pointer; transition: all 0.2s;" 
-                   onmouseover="this.style.borderColor='#007bff'; this.style.backgroundColor='#f8f9ff';" 
-                   onmouseout="this.style.borderColor='#dee2e6'; this.style.backgroundColor='';">
-                <input type="checkbox" name="platforms[]" value="tiktok" style="margin-right: 0.5rem; cursor: pointer;" <?= in_array('tiktok', $selectedPlatforms, true) ? 'checked' : '' ?>>
-                <div style="flex: 1;">
-                    <div style="font-weight: 500; display: flex; align-items: center;">
+            <?php if (!empty($tiktokAccounts)): ?>
+                <div style="margin-bottom: 1rem; padding: 1rem; background: #fff; border: 1px solid #dee2e6; border-radius: 6px;">
+                    <div style="font-weight: 500; display: flex; align-items: center; margin-bottom: 0.75rem;">
                         <?= \App\Helpers\IconHelper::render('tiktok', 20, 'icon-inline') ?>
                         <span style="margin-left: 0.5rem;">TikTok</span>
                     </div>
-                    <small style="display: block; color: #6c757d; margin-top: 0.25rem;">
-                        <?php if (!empty($tiktokAccounts)): ?>
-                            ✓ Подключено: <?= count($tiktokAccounts) ?> <?= count($tiktokAccounts) === 1 ? 'аккаунт' : (count($tiktokAccounts) < 5 ? 'аккаунта' : 'аккаунтов') ?>
-                            <?php if (count($tiktokAccounts) <= 3): ?>
-                                (<?= implode(', ', array_map(function($acc) {
-                                    return htmlspecialchars($acc['username'] ?? 'Аккаунт ' . $acc['id']);
-                                }, $tiktokAccounts)) ?>)
-                            <?php endif; ?>
-                        <?php else: ?>
-                            Не подключен
-                        <?php endif; ?>
-                    </small>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <?php foreach ($tiktokAccounts as $account): ?>
+                            <?php
+                            $isSelected = false;
+                            foreach ($selectedIntegrations as $sel) {
+                                if (($sel['platform'] ?? '') === 'tiktok' && ($sel['integration_id'] ?? 0) === (int)$account['id']) {
+                                    $isSelected = true;
+                                    break;
+                                }
+                            }
+                            ?>
+                            <label style="display: flex; align-items: center; padding: 0.5rem; border: 1px solid #dee2e6; border-radius: 4px; cursor: pointer; transition: all 0.2s;" 
+                                   onmouseover="this.style.borderColor='#007bff'; this.style.backgroundColor='#f8f9ff';" 
+                                   onmouseout="this.style.borderColor='#dee2e6'; this.style.backgroundColor='';">
+                                <input type="checkbox" name="integrations[]" value="tiktok_<?= $account['id'] ?>" style="margin-right: 0.5rem; cursor: pointer;" <?= $isSelected ? 'checked' : '' ?>>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 500;">
+                                        <?= htmlspecialchars($account['username'] ?? 'Аккаунт ' . $account['id']) ?>
+                                        <?php if (!empty($account['is_default'])): ?>
+                                            <span style="color: #28a745; font-size: 0.85em; margin-left: 0.5rem;">(по умолчанию)</span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
-            </label>
+            <?php endif; ?>
             
-            <label style="display: flex; align-items: center; padding: 0.75rem; border: 2px solid #dee2e6; border-radius: 6px; cursor: pointer; transition: all 0.2s;" 
-                   onmouseover="this.style.borderColor='#007bff'; this.style.backgroundColor='#f8f9ff';" 
-                   onmouseout="this.style.borderColor='#dee2e6'; this.style.backgroundColor='';">
-                <input type="checkbox" name="platforms[]" value="instagram" style="margin-right: 0.5rem; cursor: pointer;" <?= in_array('instagram', $selectedPlatforms, true) ? 'checked' : '' ?>>
-                <div style="flex: 1;">
-                    <div style="font-weight: 500; display: flex; align-items: center;">
+            <?php if (!empty($instagramAccounts)): ?>
+                <div style="margin-bottom: 1rem; padding: 1rem; background: #fff; border: 1px solid #dee2e6; border-radius: 6px;">
+                    <div style="font-weight: 500; display: flex; align-items: center; margin-bottom: 0.75rem;">
                         <?= \App\Helpers\IconHelper::render('instagram', 20, 'icon-inline') ?>
                         <span style="margin-left: 0.5rem;">Instagram</span>
                     </div>
-                    <small style="display: block; color: #6c757d; margin-top: 0.25rem;">
-                        <?php if (!empty($instagramAccounts)): ?>
-                            ✓ Подключено: <?= count($instagramAccounts) ?> <?= count($instagramAccounts) === 1 ? 'аккаунт' : (count($instagramAccounts) < 5 ? 'аккаунта' : 'аккаунтов') ?>
-                            <?php if (count($instagramAccounts) <= 3): ?>
-                                (<?= implode(', ', array_map(function($acc) {
-                                    return htmlspecialchars($acc['username'] ?? 'Аккаунт ' . $acc['id']);
-                                }, $instagramAccounts)) ?>)
-                            <?php endif; ?>
-                        <?php else: ?>
-                            Не подключен
-                        <?php endif; ?>
-                    </small>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <?php foreach ($instagramAccounts as $account): ?>
+                            <?php
+                            $isSelected = false;
+                            foreach ($selectedIntegrations as $sel) {
+                                if (($sel['platform'] ?? '') === 'instagram' && ($sel['integration_id'] ?? 0) === (int)$account['id']) {
+                                    $isSelected = true;
+                                    break;
+                                }
+                            }
+                            ?>
+                            <label style="display: flex; align-items: center; padding: 0.5rem; border: 1px solid #dee2e6; border-radius: 4px; cursor: pointer; transition: all 0.2s;" 
+                                   onmouseover="this.style.borderColor='#007bff'; this.style.backgroundColor='#f8f9ff';" 
+                                   onmouseout="this.style.borderColor='#dee2e6'; this.style.backgroundColor='';">
+                                <input type="checkbox" name="integrations[]" value="instagram_<?= $account['id'] ?>" style="margin-right: 0.5rem; cursor: pointer;" <?= $isSelected ? 'checked' : '' ?>>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 500;">
+                                        <?= htmlspecialchars($account['username'] ?? 'Аккаунт ' . $account['id']) ?>
+                                        <?php if (!empty($account['is_default'])): ?>
+                                            <span style="color: #28a745; font-size: 0.85em; margin-left: 0.5rem;">(по умолчанию)</span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
-            </label>
+            <?php endif; ?>
             
-            <label style="display: flex; align-items: center; padding: 0.75rem; border: 2px solid #dee2e6; border-radius: 6px; cursor: pointer; transition: all 0.2s;" 
-                   onmouseover="this.style.borderColor='#007bff'; this.style.backgroundColor='#f8f9ff';" 
-                   onmouseout="this.style.borderColor='#dee2e6'; this.style.backgroundColor='';">
-                <input type="checkbox" name="platforms[]" value="pinterest" style="margin-right: 0.5rem; cursor: pointer;" <?= in_array('pinterest', $selectedPlatforms, true) ? 'checked' : '' ?>>
-                <div style="flex: 1;">
-                    <div style="font-weight: 500; display: flex; align-items: center;">
+            <?php if (!empty($pinterestAccounts)): ?>
+                <div style="margin-bottom: 1rem; padding: 1rem; background: #fff; border: 1px solid #dee2e6; border-radius: 6px;">
+                    <div style="font-weight: 500; display: flex; align-items: center; margin-bottom: 0.75rem;">
                         <?= \App\Helpers\IconHelper::render('pinterest', 20, 'icon-inline') ?>
                         <span style="margin-left: 0.5rem;">Pinterest</span>
                     </div>
-                    <small style="display: block; color: #6c757d; margin-top: 0.25rem;">
-                        <?php if (!empty($pinterestAccounts)): ?>
-                            ✓ Подключено: <?= count($pinterestAccounts) ?> <?= count($pinterestAccounts) === 1 ? 'аккаунт' : (count($pinterestAccounts) < 5 ? 'аккаунта' : 'аккаунтов') ?>
-                            <?php if (count($pinterestAccounts) <= 3): ?>
-                                (<?= implode(', ', array_map(function($acc) {
-                                    return htmlspecialchars($acc['username'] ?? 'Аккаунт ' . $acc['id']);
-                                }, $pinterestAccounts)) ?>)
-                            <?php endif; ?>
-                        <?php else: ?>
-                            Не подключен
-                        <?php endif; ?>
-                    </small>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <?php foreach ($pinterestAccounts as $account): ?>
+                            <?php
+                            $isSelected = false;
+                            foreach ($selectedIntegrations as $sel) {
+                                if (($sel['platform'] ?? '') === 'pinterest' && ($sel['integration_id'] ?? 0) === (int)$account['id']) {
+                                    $isSelected = true;
+                                    break;
+                                }
+                            }
+                            ?>
+                            <label style="display: flex; align-items: center; padding: 0.5rem; border: 1px solid #dee2e6; border-radius: 4px; cursor: pointer; transition: all 0.2s;" 
+                                   onmouseover="this.style.borderColor='#007bff'; this.style.backgroundColor='#f8f9ff';" 
+                                   onmouseout="this.style.borderColor='#dee2e6'; this.style.backgroundColor='';">
+                                <input type="checkbox" name="integrations[]" value="pinterest_<?= $account['id'] ?>" style="margin-right: 0.5rem; cursor: pointer;" <?= $isSelected ? 'checked' : '' ?>>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 500;">
+                                        <?= htmlspecialchars($account['username'] ?? 'Аккаунт ' . $account['id']) ?>
+                                        <?php if (!empty($account['is_default'])): ?>
+                                            <span style="color: #28a745; font-size: 0.85em; margin-left: 0.5rem;">(по умолчанию)</span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
-            </label>
+            <?php endif; ?>
         </div>
-        <small style="display: block; margin-top: 0.5rem; color: #6c757d;">Выберите один или несколько каналов для публикации. Можно изменить позже при создании расписания.</small>
+        <small style="display: block; margin-top: 0.5rem; color: #6c757d;">Выберите конкретные каналы для публикации. Можно выбрать несколько каналов одной или разных платформ.</small>
     </div>
 
     <div class="form-group">
