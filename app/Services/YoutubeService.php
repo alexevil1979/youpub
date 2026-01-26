@@ -308,28 +308,6 @@ class YoutubeService extends Service
             error_log("YoutubeService::publishVideo: Using fallback description");
         }
         
-        // Сохраняем данные для отладки в сессии ПЕРЕД отправкой
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        $_SESSION['youtube_upload_debug'] = [
-            'title' => $title,
-            'description' => $description,
-            'tags' => $tags,
-            'file_path' => $video['file_path'] ?? 'N/A',
-            'file_name' => $video['file_name'] ?? 'N/A',
-            'video_id' => $video['id'] ?? 'N/A',
-            'schedule_id' => $scheduleId,
-            'metadata_received' => $metadata ? json_encode($metadata) : 'null',
-            'video_title_from_db' => $video['title'] ?? 'N/A',
-            'video_description_from_db' => $video['description'] ?? 'N/A',
-            'timestamp' => date('Y-m-d H:i:s'),
-        ];
-        // Сохраняем сессию явно
-        session_write_close();
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
         
         // Дополнительная проверка: если метаданные все еще пустые, это проблема
         if (empty($title) || strtolower($title) === 'unknown') {
@@ -664,16 +642,6 @@ class YoutubeService extends Service
             $data = json_decode($response, true);
             if (isset($data['id'])) {
                 error_log("YoutubeService::uploadVideoMultipart: Video uploaded successfully. Video ID: {$data['id']}");
-                // Сохраняем ответ YouTube в сессию для отладки
-                if (session_status() === PHP_SESSION_NONE) {
-                    session_start();
-                }
-                $_SESSION['youtube_api_response'] = [
-                    'video_id' => $data['id'],
-                    'snippet' => $data['snippet'] ?? null,
-                    'status' => $data['status'] ?? null,
-                    'full_response' => $data,
-                ];
                 return [
                     'success' => true,
                     'video_id' => $data['id'],
