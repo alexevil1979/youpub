@@ -274,7 +274,7 @@ $formatInterval = static function (int $seconds): string {
                     <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6; width: 30px;">
                         <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
                     </th>
-                    <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Группа</th>
+                    <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Название / Группа</th>
                     <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Платформа</th>
                     <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Тип</th>
                     <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Следующая публикация</th>

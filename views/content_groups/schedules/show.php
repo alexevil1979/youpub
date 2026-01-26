@@ -27,6 +27,12 @@ ob_start();
 <div class="info-card">
     <h2>Информация о расписании</h2>
     <div class="info-card-grid">
+        <?php if (!empty($schedule['name'])): ?>
+        <div style="grid-column: 1 / -1;">
+            <strong>Название:</strong><br>
+            <span style="font-size: 1.1rem; font-weight: 600;"><?= htmlspecialchars($schedule['name']) ?></span>
+        </div>
+        <?php endif; ?>
         <div>
             <strong>Группа:</strong><br>
             <?php if ($group): ?>
