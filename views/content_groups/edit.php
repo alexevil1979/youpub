@@ -112,17 +112,19 @@ document.addEventListener('DOMContentLoaded', function() {
             statusDiv.textContent = 'Добавление видео...';
             
             const csrfToken = <?= json_encode($csrfToken) ?>;
-            const formData = new FormData();
-            formData.append('csrf_token', csrfToken);
-            formData.append('video_ids', JSON.stringify(videoIds));
             
+            // Отправляем как JSON для правильной обработки массива
             fetch('/content-groups/<?= $group['id'] ?>/add-videos', {
                 method: 'POST',
                 headers: {
+                    'Content-Type': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest',
                     'X-CSRF-Token': csrfToken
                 },
-                body: formData
+                body: JSON.stringify({
+                    csrf_token: csrfToken,
+                    video_ids: videoIds
+                })
             })
             .then(response => response.json())
             .then(data => {
