@@ -292,6 +292,21 @@ class YoutubeService extends Service
         error_log("YoutubeService::publishVideo: Publishing with description: " . mb_substr($description, 0, 100));
         error_log("YoutubeService::publishVideo: Publishing with tags: " . mb_substr($tags, 0, 200));
         
+        // Сохраняем данные для отладки в сессии
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $_SESSION['youtube_upload_debug'] = [
+            'title' => $title,
+            'description' => $description,
+            'tags' => $tags,
+            'file_path' => $video['file_path'] ?? 'N/A',
+            'file_name' => $video['file_name'] ?? 'N/A',
+            'video_id' => $video['id'] ?? 'N/A',
+            'schedule_id' => $scheduleId,
+            'timestamp' => date('Y-m-d H:i:s'),
+        ];
+        
         // Дополнительная проверка: если метаданные все еще пустые, это проблема
         if (empty($title) || strtolower($title) === 'unknown') {
             error_log("YoutubeService::publishVideo: WARNING - Title is still empty/unknown after fallback!");
