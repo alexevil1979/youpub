@@ -65,7 +65,9 @@ $router->post('/schedules/bulk-delete', [SmartScheduleController::class, 'bulkDe
 // Интеграции
 $router->get('/integrations', [DashboardController::class, 'integrations'], [AuthMiddleware::class]);
 $router->get('/integrations/youtube', [DashboardController::class, 'youtubeConnect'], [AuthMiddleware::class]);
-$router->get('/integrations/youtube/callback', [DashboardController::class, 'youtubeCallback'], [AuthMiddleware::class]);
+// Callback не требует AuthMiddleware, так как сессия может быть потеряна при OAuth редиректе
+// user_id восстанавливается из state токена
+$router->get('/integrations/youtube/callback', [DashboardController::class, 'youtubeCallback']);
 $router->get('/integrations/youtube/disconnect', [DashboardController::class, 'youtubeDisconnect'], [AuthMiddleware::class]);
 $router->post('/integrations/youtube/set-default', [DashboardController::class, 'youtubeSetDefault'], [AuthMiddleware::class]);
 $router->post('/integrations/youtube/disconnect', [DashboardController::class, 'youtubeDisconnectAccount'], [AuthMiddleware::class]);
