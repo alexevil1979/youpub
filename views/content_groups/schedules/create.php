@@ -2,6 +2,26 @@
 $title = 'Создать расписание';
 ob_start();
 $selectedGroupId = isset($_GET['group_id']) ? (int)$_GET['group_id'] : 0;
+
+// Восстанавливаем данные формы из сессии, если есть
+$formData = $_SESSION['schedule_form_data'] ?? [];
+$restoreName = $formData['name'] ?? '';
+$restoreGroupId = $formData['content_group_id'] ?? $selectedGroupId;
+$restorePlatform = $formData['platform'] ?? '';
+$restoreScheduleType = $formData['schedule_type'] ?? 'fixed';
+$restorePublishAt = $formData['publish_at'] ?? '';
+$restoreIntervalMinutes = $formData['interval_minutes'] ?? '';
+$restoreBatchCount = $formData['batch_count'] ?? '';
+$restoreBatchWindowHours = $formData['batch_window_hours'] ?? '';
+$restoreRandomWindowStart = $formData['random_window_start'] ?? '';
+$restoreRandomWindowEnd = $formData['random_window_end'] ?? '';
+$restoreFixedTimeMode = $formData['fixed_time_mode'] ?? 'single';
+$restoreFixedStartDate = $formData['fixed_start_date'] ?? '';
+$restoreFixedEndDate = $formData['fixed_end_date'] ?? '';
+$restoreDailyTimePoints = $formData['daily_time_points'] ?? [];
+
+// Очищаем данные формы после использования
+unset($_SESSION['schedule_form_data']);
 ?>
 
 <h1>Создать расписание</h1>
@@ -25,7 +45,7 @@ $selectedGroupId = isset($_GET['group_id']) ? (int)$_GET['group_id'] : 0;
     
     <div class="form-group">
         <label for="name">Название расписания (опционально)</label>
-        <input type="text" id="name" name="name" placeholder="Будет сгенерировано автоматически" maxlength="255">
+        <input type="text" id="name" name="name" value="<?= htmlspecialchars($restoreName) ?>" placeholder="Будет сгенерировано автоматически" maxlength="255">
         <small>Если не указано, название будет сгенерировано автоматически на основе типа расписания, платформы и даты</small>
     </div>
     
@@ -34,7 +54,7 @@ $selectedGroupId = isset($_GET['group_id']) ? (int)$_GET['group_id'] : 0;
         <select id="content_group_id" name="content_group_id">
             <option value="">Без привязки к группе</option>
             <?php foreach ($groups as $group): ?>
-                <option value="<?= $group['id'] ?>" <?= ($selectedGroupId === (int)$group['id']) ? 'selected' : '' ?>>
+                <option value="<?= $group['id'] ?>" <?= ($restoreGroupId === (int)$group['id']) ? 'selected' : '' ?>>
                     <?= htmlspecialchars($group['name']) ?>
                 </option>
             <?php endforeach; ?>
@@ -46,11 +66,11 @@ $selectedGroupId = isset($_GET['group_id']) ? (int)$_GET['group_id'] : 0;
         <label for="platform">Платформа (опционально)</label>
         <select id="platform" name="platform">
             <option value="">Не указана (будут использованы платформы из группы)</option>
-            <option value="youtube">YouTube</option>
-            <option value="telegram">Telegram</option>
-            <option value="tiktok">TikTok</option>
-            <option value="instagram">Instagram</option>
-            <option value="pinterest">Pinterest</option>
+            <option value="youtube" <?= $restorePlatform === 'youtube' ? 'selected' : '' ?>>YouTube</option>
+            <option value="telegram" <?= $restorePlatform === 'telegram' ? 'selected' : '' ?>>Telegram</option>
+            <option value="tiktok" <?= $restorePlatform === 'tiktok' ? 'selected' : '' ?>>TikTok</option>
+            <option value="instagram" <?= $restorePlatform === 'instagram' ? 'selected' : '' ?>>Instagram</option>
+            <option value="pinterest" <?= $restorePlatform === 'pinterest' ? 'selected' : '' ?>>Pinterest</option>
         </select>
         <small>Если не указана, будут использованы платформы, выбранные в настройках группы</small>
     </div>
@@ -58,66 +78,75 @@ $selectedGroupId = isset($_GET['group_id']) ? (int)$_GET['group_id'] : 0;
     <div class="form-group">
         <label for="schedule_type">Тип расписания *</label>
         <select id="schedule_type" name="schedule_type" required onchange="toggleScheduleOptions()">
-            <option value="fixed">Фиксированное (каждый день в определенное время)</option>
-            <option value="interval">Интервальное (каждые N минут)</option>
-            <option value="batch">Пакетное (X видео за Y часов)</option>
-            <option value="random">Случайное (рандом в пределах окна)</option>
-            <option value="wave">Волновое (активные и тихие периоды)</option>
+            <option value="fixed" <?= $restoreScheduleType === 'fixed' ? 'selected' : '' ?>>Фиксированное (каждый день в определенное время)</option>
+            <option value="interval" <?= $restoreScheduleType === 'interval' ? 'selected' : '' ?>>Интервальное (каждые N минут)</option>
+            <option value="batch" <?= $restoreScheduleType === 'batch' ? 'selected' : '' ?>>Пакетное (X видео за Y часов)</option>
+            <option value="random" <?= $restoreScheduleType === 'random' ? 'selected' : '' ?>>Случайное (рандом в пределах окна)</option>
+            <option value="wave" <?= $restoreScheduleType === 'wave' ? 'selected' : '' ?>>Волновое (активные и тихие периоды)</option>
         </select>
     </div>
 
-    <div class="form-group" id="fixed_options">
+    <div class="form-group" id="fixed_options" <?= $restoreScheduleType !== 'fixed' ? 'style="display: none;"' : '' ?>>
         <label>Режим времени</label>
         <select id="fixed_time_mode" name="fixed_time_mode" onchange="toggleFixedTimeMode()">
-            <option value="single">Одна точка времени</option>
-            <option value="multiple">Несколько точек в день</option>
+            <option value="single" <?= $restoreFixedTimeMode === 'single' ? 'selected' : '' ?>>Одна точка времени</option>
+            <option value="multiple" <?= $restoreFixedTimeMode === 'multiple' ? 'selected' : '' ?>>Несколько точек в день</option>
         </select>
         
-        <div id="single_time_fixed" style="margin-top: 1rem;">
+        <div id="single_time_fixed" style="margin-top: 1rem; <?= $restoreFixedTimeMode === 'multiple' ? 'display: none;' : '' ?>">
             <label for="publish_at">Дата и время первой публикации *</label>
-            <input type="datetime-local" id="publish_at" name="publish_at" required>
+            <input type="datetime-local" id="publish_at" name="publish_at" value="<?= htmlspecialchars($restorePublishAt) ?>" required>
         </div>
         
-        <div id="multiple_times_fixed" style="display: none; margin-top: 1rem;">
+        <div id="multiple_times_fixed" style="margin-top: 1rem; <?= $restoreFixedTimeMode === 'single' ? 'display: none;' : '' ?>">
             <label>Точки времени в день *</label>
             <div id="fixed-time-points-container">
-                <div class="time-point-item">
-                    <input type="time" class="time-point-input" name="daily_time_points[]" placeholder="HH:MM" required>
-                    <button type="button" class="btn-remove-time" onclick="removeFixedTimePoint(this)" title="Удалить"><?= \App\Helpers\IconHelper::render('delete', 16) ?></button>
-                </div>
+                <?php if (!empty($restoreDailyTimePoints) && is_array($restoreDailyTimePoints)): ?>
+                    <?php foreach ($restoreDailyTimePoints as $timePoint): ?>
+                        <div class="time-point-item">
+                            <input type="time" class="time-point-input" name="daily_time_points[]" value="<?= htmlspecialchars($timePoint) ?>" placeholder="HH:MM" required>
+                            <button type="button" class="btn-remove-time" onclick="removeFixedTimePoint(this)" title="Удалить"><?= \App\Helpers\IconHelper::render('delete', 16) ?></button>
+                        </div>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div class="time-point-item">
+                        <input type="time" class="time-point-input" name="daily_time_points[]" placeholder="HH:MM" required>
+                        <button type="button" class="btn-remove-time" onclick="removeFixedTimePoint(this)" title="Удалить"><?= \App\Helpers\IconHelper::render('delete', 16) ?></button>
+                    </div>
+                <?php endif; ?>
             </div>
             <button type="button" class="btn btn-sm btn-secondary" onclick="addFixedTimePoint()" style="margin-top: 0.5rem;"><?= \App\Helpers\IconHelper::render('add', 16, 'icon-inline') ?> Добавить время</button>
             <div class="form-group" style="margin-top: 1rem;">
                 <label for="fixed_start_date">Начальная дата *</label>
-                <input type="date" id="fixed_start_date" name="fixed_start_date">
+                <input type="date" id="fixed_start_date" name="fixed_start_date" value="<?= htmlspecialchars($restoreFixedStartDate) ?>">
             </div>
             <div class="form-group">
                 <label for="fixed_end_date">Конечная дата (опционально)</label>
-                <input type="date" id="fixed_end_date" name="fixed_end_date">
+                <input type="date" id="fixed_end_date" name="fixed_end_date" value="<?= htmlspecialchars($restoreFixedEndDate) ?>">
             </div>
             <small>Укажите несколько временных точек для публикации в течение дня. Расписание будет создано для каждой точки на каждый день в указанном диапазоне.</small>
         </div>
     </div>
 
-    <div class="form-group" id="interval_options" style="display: none;">
+    <div class="form-group" id="interval_options" <?= $restoreScheduleType !== 'interval' ? 'style="display: none;"' : '' ?>>
         <label for="interval_minutes">Интервал (минуты) *</label>
-        <input type="number" id="interval_minutes" name="interval_minutes" min="1" placeholder="30">
+        <input type="number" id="interval_minutes" name="interval_minutes" min="1" value="<?= htmlspecialchars($restoreIntervalMinutes) ?>" placeholder="30">
         <small>Например: 30 (каждые 30 минут)</small>
     </div>
 
-    <div class="form-group" id="batch_options" style="display: none;">
+    <div class="form-group" id="batch_options" <?= $restoreScheduleType !== 'batch' ? 'style="display: none;"' : '' ?>>
         <label for="batch_count">Количество видео *</label>
-        <input type="number" id="batch_count" name="batch_count" min="1" placeholder="5">
+        <input type="number" id="batch_count" name="batch_count" min="1" value="<?= htmlspecialchars($restoreBatchCount) ?>" placeholder="5">
         <label for="batch_window_hours" style="margin-top: 0.5rem; display: block;">Окно (часы) *</label>
-        <input type="number" id="batch_window_hours" name="batch_window_hours" min="1" placeholder="2">
+        <input type="number" id="batch_window_hours" name="batch_window_hours" min="1" value="<?= htmlspecialchars($restoreBatchWindowHours) ?>" placeholder="2">
         <small>Например: 5 видео за 2 часа</small>
     </div>
 
-    <div class="form-group" id="random_options" style="display: none;">
+    <div class="form-group" id="random_options" <?= $restoreScheduleType !== 'random' ? 'style="display: none;"' : '' ?>>
         <label for="random_window_start">Начало окна *</label>
-        <input type="time" id="random_window_start" name="random_window_start">
+        <input type="time" id="random_window_start" name="random_window_start" value="<?= htmlspecialchars($restoreRandomWindowStart) ?>">
         <label for="random_window_end" style="margin-top: 0.5rem; display: block;">Конец окна *</label>
-        <input type="time" id="random_window_end" name="random_window_end">
+        <input type="time" id="random_window_end" name="random_window_end" value="<?= htmlspecialchars($restoreRandomWindowEnd) ?>">
         <small>Например: с 10:00 до 18:00</small>
     </div>
 
@@ -316,7 +345,18 @@ document.querySelector('.schedule-form').addEventListener('submit', function(e) 
 
 // Инициализация при загрузке
 document.addEventListener('DOMContentLoaded', function() {
+    // Восстанавливаем состояние формы при загрузке
     toggleScheduleOptions();
+    
+    // Если есть восстановленные данные, показываем соответствующие опции
+    <?php if (!empty($restoreScheduleType)): ?>
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleScheduleOptions();
+        <?php if ($restoreFixedTimeMode === 'multiple'): ?>
+        toggleFixedTimeMode();
+        <?php endif; ?>
+    });
+    <?php endif; ?>
     toggleFixedTimeMode();
 });
 </script>

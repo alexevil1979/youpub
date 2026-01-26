@@ -294,6 +294,8 @@ class SmartScheduleController extends Controller
     {
         try {
             if (!$this->validateCsrf()) {
+                // Сохраняем данные формы в сессии для восстановления
+                $_SESSION['schedule_form_data'] = $_POST;
                 $_SESSION['error'] = 'Invalid CSRF token';
                 header('Location: /content-groups/schedules/create');
                 exit;
@@ -302,6 +304,8 @@ class SmartScheduleController extends Controller
             $userId = $_SESSION['user_id'] ?? null;
             
             if (!$userId) {
+                // Сохраняем данные формы в сессии для восстановления
+                $_SESSION['schedule_form_data'] = $_POST;
                 $_SESSION['error'] = 'Необходима авторизация';
                 header('Location: /content-groups/schedules/create');
                 exit;
@@ -362,12 +366,8 @@ class SmartScheduleController extends Controller
             $videoIdLog = $data['video_id'] ?? null;
             error_log("SmartScheduleController::create: Data prepared - content_group_id: {$data['content_group_id']}, video_id: {$videoIdLog}, platform: {$data['platform']}, schedule_type: {$data['schedule_type']}");
 
-        // Валидация
-        if (empty($data['content_group_id']) && empty($data['video_id'])) {
-            $_SESSION['error'] = 'Необходимо указать группу или видео';
-            header('Location: /content-groups/schedules/create');
-            exit;
-        }
+        // Валидация - расписание может быть создано без группы и видео (будет использоваться группами через schedule_id)
+        // Убрана обязательность группы и видео
 
         // Обработка нескольких точек времени для fixed типа
         $dailyTimePoints = null;
@@ -385,6 +385,7 @@ class SmartScheduleController extends Controller
                 });
                 
                 if (empty($timePoints)) {
+                    $_SESSION['schedule_form_data'] = $_POST;
                     $_SESSION['error'] = 'Укажите хотя бы одну точку времени';
                     header('Location: /content-groups/schedules/create');
                     exit;
@@ -393,6 +394,7 @@ class SmartScheduleController extends Controller
                 // Валидация формата времени
                 foreach ($timePoints as $time) {
                     if (!preg_match('/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/', $time)) {
+                        $_SESSION['schedule_form_data'] = $_POST;
                         $_SESSION['error'] = 'Неверный формат времени. Используйте HH:MM';
                         header('Location: /content-groups/schedules/create');
                         exit;
@@ -404,6 +406,7 @@ class SmartScheduleController extends Controller
                 $dailyPointsEndDate = $this->getParam('fixed_end_date');
                 
                 if (empty($dailyPointsStartDate)) {
+                    $_SESSION['schedule_form_data'] = $_POST;
                     $_SESSION['error'] = 'Укажите начальную дату';
                     header('Location: /content-groups/schedules/create');
                     exit;
@@ -411,6 +414,7 @@ class SmartScheduleController extends Controller
             } else {
                 // Обычный режим одной точки времени
                 if (empty($data['publish_at'])) {
+                    $_SESSION['schedule_form_data'] = $_POST;
                     $_SESSION['error'] = 'Укажите дату и время публикации';
                     header('Location: /content-groups/schedules/create');
                     exit;
@@ -427,6 +431,7 @@ class SmartScheduleController extends Controller
             $endDate = $dailyPointsEndDate ? strtotime($dailyPointsEndDate . ' 23:59:59') : null;
             
             if ($startDate === false) {
+                $_SESSION['schedule_form_data'] = $_POST;
                 $_SESSION['error'] = 'Неверный формат начальной даты';
                 header('Location: /content-groups/schedules/create');
                 exit;
@@ -479,16 +484,20 @@ class SmartScheduleController extends Controller
                 $_SESSION['success'] = 'Умное расписание создано успешно';
             } catch (\Exception $e) {
                 error_log("SmartScheduleController::create: Error creating schedule - " . $e->getMessage());
+                $_SESSION['schedule_form_data'] = $_POST;
                 $_SESSION['error'] = 'Ошибка при создании расписания: ' . $e->getMessage();
                 header('Location: /content-groups/schedules/create');
                 exit;
             }
         }
         
-        header('Location: /schedules');
+        // Успешное создание - очищаем сохраненные данные формы
+        unset($_SESSION['schedule_form_data']);
+        header('Location: /content-groups/schedules');
         exit;
         } catch (\Exception $e) {
             error_log("SmartScheduleController::create: Exception - " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+            $_SESSION['schedule_form_data'] = $_POST;
             $_SESSION['error'] = 'Произошла ошибка при создании расписания.';
             header('Location: /content-groups/schedules/create');
             exit;
