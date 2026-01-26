@@ -297,7 +297,10 @@ class GroupController extends Controller
         }
 
         $userId = $_SESSION['user_id'];
-        $videoIds = $this->getParam('video_ids', []);
+        
+        // Поддержка как JSON, так и form-data
+        $requestData = $this->getRequestData();
+        $videoIds = $requestData['video_ids'] ?? $this->getParam('video_ids', []);
 
         if (empty($videoIds) || !is_array($videoIds)) {
             $this->error('Video IDs are required', 400);
