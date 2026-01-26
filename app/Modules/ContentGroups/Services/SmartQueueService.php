@@ -95,23 +95,39 @@ class SmartQueueService extends Service
 
         // Статус файла обновляется в транзакции при создании временного расписания
 
+        // Загружаем полные данные видео из БД
+        $videoRepo = new \App\Repositories\VideoRepository();
+        $video = $videoRepo->findById((int)$groupFile['video_id']);
+        if (!$video) {
+            error_log("SmartQueueService::processGroupSchedule: Video not found. Video ID: {$groupFile['video_id']}");
+            return ['success' => false, 'message' => 'Video not found'];
+        }
+
         // Применяем шаблон, если есть
         $templateId = $schedule['template_id'] ?? $group['template_id'] ?? null;
-        $video = [
-            'id' => $groupFile['video_id'],
-            'title' => $groupFile['title'] ?? '',
-            'description' => '',
-            'tags' => '',
-        ];
+        
+        // ВАЖНО: Проверяем video['title'] - если "unknown", используем file_name
+        $videoTitle = $video['title'] ?? '';
+        if (empty($videoTitle) || strtolower(trim($videoTitle)) === 'unknown') {
+            $videoTitle = $video['file_name'] ?? '';
+            error_log("SmartQueueService::processGroupSchedule: Video title was empty/unknown, using file_name: {$videoTitle}");
+        }
 
         $context = [
             'group_name' => $group['name'],
-            'index' => $groupFile['order_index'],
+            'index' => $groupFile['order_index'] ?? 0,
             'platform' => $schedule['platform'],
         ];
 
-        $templated = $this->templateService->applyTemplate($templateId, $video, $context);
+        $templated = $this->templateService->applyTemplate($templateId, [
+            'id' => $video['id'],
+            'title' => $videoTitle,
+            'description' => $video['description'] ?? '',
+            'tags' => $video['tags'] ?? '',
+        ], $context);
         error_log("SmartQueueService::processGroupSchedule: Template applied. Template ID: " . ($templateId ?? 'null'));
+        error_log("SmartQueueService::processGroupSchedule: Generated title: " . mb_substr($templated['title'] ?? 'N/A', 0, 100));
+        error_log("SmartQueueService::processGroupSchedule: Generated description: " . mb_substr($templated['description'] ?? 'N/A', 0, 100));
 
         // Очищаем ВСЕ зависшие расписания 'processing' для этого видео (старше 2 минут)
         // 2 минуты достаточно для публикации, если дольше - значит зависло
@@ -199,6 +215,20 @@ class SmartQueueService extends Service
             $this->db->rollBack();
             error_log("SmartQueueService::processGroupSchedule: Transaction failed - " . $e->getMessage());
             return ['success' => false, 'message' => 'Failed to create temporary schedule: ' . $e->getMessage()];
+        }
+
+        // ВАЖНО: Обновляем метаданные видео ПЕРЕД публикацией (аналогично publishGroupFileNow)
+        error_log("SmartQueueService::processGroupSchedule: Updating video metadata before publication");
+        error_log("SmartQueueService::processGroupSchedule: Template data - title: " . mb_substr($templated['title'] ?? 'N/A', 0, 100));
+        error_log("SmartQueueService::processGroupSchedule: Template data - description: " . mb_substr($templated['description'] ?? 'N/A', 0, 100));
+        error_log("SmartQueueService::processGroupSchedule: Template data - tags: " . mb_substr($templated['tags'] ?? 'N/A', 0, 200));
+        
+        try {
+            $this->updateVideoMetadata($tempScheduleId, $templated);
+            error_log("SmartQueueService::processGroupSchedule: Video metadata updated successfully");
+        } catch (\Exception $e) {
+            error_log("SmartQueueService::processGroupSchedule: Error updating metadata: " . $e->getMessage());
+            // Продолжаем публикацию, даже если обновление метаданных не удалось
         }
 
         // Публикуем
