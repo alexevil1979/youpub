@@ -345,19 +345,10 @@ document.querySelector('.schedule-form').addEventListener('submit', function(e) 
 
 // Инициализация при загрузке
 document.addEventListener('DOMContentLoaded', function() {
-    // Восстанавливаем состояние формы при загрузке
     toggleScheduleOptions();
-    
-    // Если есть восстановленные данные, показываем соответствующие опции
-    <?php if (!empty($restoreScheduleType)): ?>
-    document.addEventListener('DOMContentLoaded', function() {
-        toggleScheduleOptions();
-        <?php if ($restoreFixedTimeMode === 'multiple'): ?>
-        toggleFixedTimeMode();
-        <?php endif; ?>
-    });
-    <?php endif; ?>
+    <?php if ($restoreFixedTimeMode === 'multiple'): ?>
     toggleFixedTimeMode();
+    <?php endif; ?>
 });
 </script>
 
