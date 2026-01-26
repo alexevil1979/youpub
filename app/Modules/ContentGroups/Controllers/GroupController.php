@@ -52,6 +52,38 @@ class GroupController extends Controller
         $templates = $this->templateService->getUserTemplates($userId, true);
         $csrfToken = (new \Core\Auth())->generateCsrfToken();
         
+        // Получаем доступные интеграции для отображения статуса
+        $youtubeAccount = null;
+        $telegramAccount = null;
+        $tiktokAccount = null;
+        $instagramAccount = null;
+        $pinterestAccount = null;
+        try {
+            $youtubeAccount = (new \App\Repositories\YoutubeIntegrationRepository())->findDefaultByUserId($userId);
+        } catch (\Throwable $e) {
+            $youtubeAccount = null;
+        }
+        try {
+            $telegramAccount = (new \App\Repositories\TelegramIntegrationRepository())->findDefaultByUserId($userId);
+        } catch (\Throwable $e) {
+            $telegramAccount = null;
+        }
+        try {
+            $tiktokAccount = (new \App\Repositories\TiktokIntegrationRepository())->findDefaultByUserId($userId);
+        } catch (\Throwable $e) {
+            $tiktokAccount = null;
+        }
+        try {
+            $instagramAccount = (new \App\Repositories\InstagramIntegrationRepository())->findDefaultByUserId($userId);
+        } catch (\Throwable $e) {
+            $instagramAccount = null;
+        }
+        try {
+            $pinterestAccount = (new \App\Repositories\PinterestIntegrationRepository())->findDefaultByUserId($userId);
+        } catch (\Throwable $e) {
+            $pinterestAccount = null;
+        }
+        
         include __DIR__ . '/../../../../views/content_groups/create.php';
     }
 
@@ -67,11 +99,27 @@ class GroupController extends Controller
         }
 
         $userId = $_SESSION['user_id'];
+        
+        // Получаем выбранные платформы
+        $platforms = $this->getParam('platforms', []);
+        if (!is_array($platforms)) {
+            $platforms = [];
+        }
+        // Фильтруем только допустимые платформы
+        $allowedPlatforms = ['youtube', 'telegram', 'tiktok', 'instagram', 'pinterest'];
+        $platforms = array_filter($platforms, fn($p) => in_array($p, $allowedPlatforms, true));
+        
+        $settings = [];
+        if (!empty($platforms)) {
+            $settings['platforms'] = array_values($platforms);
+        }
+        
         $data = [
             'name' => $this->getParam('name', ''),
             'description' => $this->getParam('description', ''),
             'template_id' => $this->getParam('template_id') ? (int)$this->getParam('template_id') : null,
             'status' => $this->getParam('status', 'active'),
+            'settings' => !empty($settings) ? $settings : null,
         ];
 
         $result = $this->groupService->createGroup($userId, $data);
