@@ -39,7 +39,7 @@ ob_start();
         <select id="schedule_id" name="schedule_id">
             <option value="">Без расписания</option>
             <?php foreach ($schedules as $schedule): ?>
-                <option value="<?= $schedule['id'] ?>" <?= ($group['schedule_id'] == $schedule['id']) ? 'selected' : '' ?>>
+                <option value="<?= $schedule['id'] ?>" <?= (isset($group['schedule_id']) && $group['schedule_id'] == $schedule['id']) ? 'selected' : '' ?>>
                     <?= htmlspecialchars($schedule['schedule_type'] ?? 'fixed') ?> - 
                     <?= htmlspecialchars($schedule['platform'] ?? 'youtube') ?> - 
                     <?= $schedule['publish_at'] ? date('d.m.Y H:i', strtotime($schedule['publish_at'])) : 'не указано' ?>
