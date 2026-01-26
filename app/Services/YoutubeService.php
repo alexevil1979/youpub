@@ -600,53 +600,91 @@ class YoutubeService extends Service
         $url = 'https://www.googleapis.com/upload/youtube/v3/videos?uploadType=multipart&part=snippet,status';
         
         error_log("YoutubeService::uploadVideoMultipart: Uploading to YouTube. Total size: {$totalSize} bytes");
+        error_log("YoutubeService::uploadVideoMultipart: Metadata JSON: " . $metadataJson);
+        error_log("YoutubeService::uploadVideoMultipart: Title in metadata: " . ($videoData['snippet']['title'] ?? 'N/A'));
+        error_log("YoutubeService::uploadVideoMultipart: Description in metadata: " . mb_substr($videoData['snippet']['description'] ?? 'N/A', 0, 100));
 
         $ch = curl_init($url);
         
-        // Используем CURLFile для загрузки файла
-        $cfile = new \CURLFile($videoPath, 'video/*', basename($videoPath));
+        // ВАЖНО: Для multipart/related нужно формировать данные вручную
+        // CURLFile не работает правильно с multipart/related для YouTube API
+        $boundary = uniqid('boundary_');
+        $delimiter = '-------------' . $boundary;
         
-        $postFields = [
-            'metadata' => $metadataJson,
-            'video' => $cfile
-        ];
+        // Формируем multipart данные вручную
+        $body = '';
+        $body .= '--' . $delimiter . "\r\n";
+        $body .= 'Content-Type: application/json; charset=UTF-8' . "\r\n";
+        $body .= 'Content-Disposition: form-data; name="metadata"' . "\r\n\r\n";
+        $body .= $metadataJson . "\r\n";
+        $body .= '--' . $delimiter . "\r\n";
+        $body .= 'Content-Type: video/*' . "\r\n";
+        $body .= 'Content-Disposition: form-data; name="video"; filename="' . basename($videoPath) . '"' . "\r\n\r\n";
+        
+        // Читаем файл
+        $fileContent = file_get_contents($videoPath);
+        if ($fileContent === false) {
+            fclose($fileHandle);
+            error_log("YoutubeService::uploadVideoMultipart: Failed to read file: {$videoPath}");
+            return ['success' => false, 'message' => 'Failed to read video file'];
+        }
+        
+        $body .= $fileContent . "\r\n";
+        $body .= '--' . $delimiter . '--';
 
         curl_setopt_array($ch, [
             CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $postFields,
+            CURLOPT_POSTFIELDS => $body,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HTTPHEADER => [
                 'Authorization: Bearer ' . $accessToken,
+                'Content-Type: multipart/related; boundary=' . $delimiter,
+                'Content-Length: ' . strlen($body),
             ],
             CURLOPT_TIMEOUT => 600, // 10 минут для больших файлов
         ]);
+        
+        fclose($fileHandle);
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlError = curl_error($ch);
+        $curlInfo = curl_getinfo($ch);
         curl_close($ch);
-        fclose($fileHandle);
 
         if ($curlError) {
             error_log("YoutubeService::uploadVideoMultipart: cURL error: {$curlError}");
             return ['success' => false, 'message' => 'cURL error: ' . $curlError];
         }
 
+        error_log("YoutubeService::uploadVideoMultipart: HTTP Code: {$httpCode}");
+        error_log("YoutubeService::uploadVideoMultipart: Response (first 1000 chars): " . substr($response, 0, 1000));
+
         if ($httpCode === 200) {
             $data = json_decode($response, true);
             if (isset($data['id'])) {
                 error_log("YoutubeService::uploadVideoMultipart: Video uploaded successfully. Video ID: {$data['id']}");
+                // Сохраняем ответ YouTube в сессию для отладки
+                if (session_status() === PHP_SESSION_NONE) {
+                    session_start();
+                }
+                $_SESSION['youtube_api_response'] = [
+                    'video_id' => $data['id'],
+                    'snippet' => $data['snippet'] ?? null,
+                    'status' => $data['status'] ?? null,
+                    'full_response' => $data,
+                ];
                 return [
                     'success' => true,
                     'video_id' => $data['id'],
                 ];
             } else {
-                error_log("YoutubeService::uploadVideoMultipart: Response missing video ID. Response: " . substr($response, 0, 500));
-                return ['success' => false, 'message' => 'Response missing video ID'];
+                error_log("YoutubeService::uploadVideoMultipart: Response missing video ID. Full response: " . substr($response, 0, 2000));
+                return ['success' => false, 'message' => 'Response missing video ID. Response: ' . substr($response, 0, 500)];
             }
         } else {
-            error_log("YoutubeService::uploadVideoMultipart: Upload failed. HTTP Code: {$httpCode}, Response: " . substr($response, 0, 500));
-            return ['success' => false, 'message' => 'Failed to upload video to YouTube. HTTP Code: ' . $httpCode];
+            error_log("YoutubeService::uploadVideoMultipart: Upload failed. HTTP Code: {$httpCode}, Response: " . substr($response, 0, 2000));
+            return ['success' => false, 'message' => 'Failed to upload video to YouTube. HTTP Code: ' . $httpCode . '. Response: ' . substr($response, 0, 500)];
         }
     }
 

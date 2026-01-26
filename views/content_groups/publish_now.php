@@ -173,6 +173,33 @@ ob_start();
         </details>
     </div>
     <?php 
+    // Показываем ответ от YouTube API
+    if (isset($_SESSION['youtube_api_response'])): 
+    ?>
+    <div style="margin-top: 1rem; padding: 1rem; background: #d4edda; border: 2px solid #28a745; border-radius: 4px;">
+        <h4 style="margin-top: 0; color: #155724;">📥 Ответ от YouTube API</h4>
+        <div style="margin-top: 0.75rem;">
+            <strong>Video ID:</strong> <?= htmlspecialchars($_SESSION['youtube_api_response']['video_id'] ?? 'N/A') ?><br>
+            <?php if (isset($_SESSION['youtube_api_response']['snippet'])): ?>
+            <strong>Title в ответе:</strong> 
+            <span style="color: <?= (empty($_SESSION['youtube_api_response']['snippet']['title']) || strtolower($_SESSION['youtube_api_response']['snippet']['title']) === 'unknown') ? '#dc3545' : '#28a745' ?>; font-weight: bold;">
+                <?= htmlspecialchars($_SESSION['youtube_api_response']['snippet']['title'] ?? 'N/A') ?>
+            </span><br>
+            <strong>Description в ответе:</strong> 
+            <div style="padding: 0.5rem; background: white; border-radius: 4px; margin-top: 0.25rem; white-space: pre-wrap; word-break: break-word; max-height: 150px; overflow-y: auto;">
+                <?= htmlspecialchars($_SESSION['youtube_api_response']['snippet']['description'] ?? 'N/A') ?>
+            </div>
+            <?php endif; ?>
+        </div>
+        <details style="margin-top: 1rem;">
+            <summary style="cursor: pointer; color: #007bff; font-weight: bold;">📋 Полный ответ от YouTube API</summary>
+            <pre style="margin-top: 0.5rem; padding: 0.75rem; background: #f1f3f5; border-radius: 4px; overflow-x: auto; font-size: 0.85em;"><?= htmlspecialchars(json_encode($_SESSION['youtube_api_response'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?></pre>
+        </details>
+    </div>
+    <?php 
+    unset($_SESSION['youtube_api_response']);
+    endif;
+    
     // Очищаем после показа (чтобы не показывать старые данные)
     unset($_SESSION['youtube_upload_debug']);
     endif; 
