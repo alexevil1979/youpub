@@ -265,6 +265,45 @@ class GroupController extends Controller
             }
         }
         
+        // Сохраняем информацию о расписании для передачи в представление
+        $scheduleInfo = null;
+        if (isset($schedule) && $schedule) {
+            $scheduleInfo = [
+                'id' => $schedule['id'],
+                'name' => $schedule['name'] ?? null,
+                'schedule_type' => $schedule['schedule_type'] ?? 'fixed',
+                'platform' => $schedule['platform'] ?? 'youtube',
+                'publish_at' => $schedule['publish_at'] ?? null,
+                'interval_minutes' => $schedule['interval_minutes'] ?? null,
+                'batch_count' => $schedule['batch_count'] ?? null,
+                'batch_window_hours' => $schedule['batch_window_hours'] ?? null,
+                'random_window_start' => $schedule['random_window_start'] ?? null,
+                'random_window_end' => $schedule['random_window_end'] ?? null,
+                'status' => $schedule['status'] ?? 'pending',
+            ];
+        }
+        
+        // Формируем план отправки (список файлов с датами публикации)
+        $publicationPlan = [];
+        if ($group['status'] === 'active' && !empty($files) && !empty($nextPublishInfo)) {
+            // Сортируем файлы по дате публикации
+            $filesWithDates = [];
+            foreach ($files as $file) {
+                if (isset($nextPublishInfo[$file['id']])) {
+                    $filesWithDates[] = [
+                        'file' => $file,
+                        'publish_info' => $nextPublishInfo[$file['id']],
+                        'publish_timestamp' => strtotime($nextPublishInfo[$file['id']]['date'])
+                    ];
+                }
+            }
+            
+            // Сортируем по времени публикации
+            usort($filesWithDates, fn($a, $b) => $a['publish_timestamp'] <=> $b['publish_timestamp']);
+            
+            $publicationPlan = $filesWithDates;
+        }
+        
         $templates = $this->templateService->getUserTemplates($userId, true);
         
         // Получаем выбранные интеграции из settings группы и загружаем информацию о каналах
