@@ -189,26 +189,25 @@ class GroupController extends Controller
         $videoIds = array_unique(array_map(static fn($file) => (int)($file['video_id'] ?? 0), $files));
         $filePublications = $publicationRepo->findLatestSuccessfulByVideoIds($videoIds);
         
+        // Получаем расписание группы (нужно для отображения информации о расписании)
+        $scheduleRepo = new \App\Repositories\ScheduleRepository();
+        $schedule = null;
+        if (!empty($group['schedule_id'])) {
+            $schedule = $scheduleRepo->findById($group['schedule_id']);
+        }
+        
+        // Если расписание не найдено через schedule_id, ищем через content_group_id (старая логика)
+        if (!$schedule) {
+            $schedules = $scheduleRepo->findByGroupId($id);
+            if (!empty($schedules)) {
+                $schedule = $schedules[0];
+            }
+        }
+        
         // Получаем следующую дату публикации для каждого файла (только если группа активна)
         $nextPublishDates = [];
         $nextPublishInfo = []; // Дополнительная информация о следующей публикации
-        if ($group['status'] === 'active' && !empty($files)) {
-            $scheduleRepo = new \App\Repositories\ScheduleRepository();
-            
-            // Получаем расписание группы через schedule_id
-            $schedule = null;
-            if (!empty($group['schedule_id'])) {
-                $schedule = $scheduleRepo->findById($group['schedule_id']);
-            }
-            
-            // Если расписание не найдено через schedule_id, ищем через content_group_id (старая логика)
-            if (!$schedule) {
-                $schedules = $scheduleRepo->findByGroupId($id);
-                if (!empty($schedules)) {
-                    $schedule = $schedules[0];
-                }
-            }
-            
+        if ($group['status'] === 'active' && !empty($files) && $schedule) {
             if ($schedule) {
                 $scheduleType = $schedule['schedule_type'] ?? 'fixed';
                 $platform = $schedule['platform'] ?? 'youtube';
