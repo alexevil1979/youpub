@@ -585,8 +585,8 @@ function showTelegramForm() {
 }
 
 .accounts-list {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
     margin-top: 1rem;
 }
@@ -1079,6 +1079,10 @@ function showTelegramForm() {
     
     .account-title {
         width: 100%;
+    }
+    
+    .accounts-list {
+        grid-template-columns: 1fr;
     }
 }
 </style>
