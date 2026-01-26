@@ -35,12 +35,16 @@ ob_start();
     </div>
 
     <div class="form-group">
-        <label for="platform">Платформа *</label>
-        <select id="platform" name="platform" required>
+        <label for="platform">Платформа (опционально)</label>
+        <select id="platform" name="platform">
+            <option value="" <?= (empty($schedule['platform'])) ? 'selected' : '' ?>>Не указана (будут использованы платформы из группы)</option>
             <option value="youtube" <?= (isset($schedule['platform']) && $schedule['platform'] === 'youtube') ? 'selected' : '' ?>>YouTube</option>
             <option value="telegram" <?= (isset($schedule['platform']) && $schedule['platform'] === 'telegram') ? 'selected' : '' ?>>Telegram</option>
-            <option value="both" <?= (isset($schedule['platform']) && $schedule['platform'] === 'both') ? 'selected' : '' ?>>YouTube + Telegram</option>
+            <option value="tiktok" <?= (isset($schedule['platform']) && $schedule['platform'] === 'tiktok') ? 'selected' : '' ?>>TikTok</option>
+            <option value="instagram" <?= (isset($schedule['platform']) && $schedule['platform'] === 'instagram') ? 'selected' : '' ?>>Instagram</option>
+            <option value="pinterest" <?= (isset($schedule['platform']) && $schedule['platform'] === 'pinterest') ? 'selected' : '' ?>>Pinterest</option>
         </select>
+        <small>Если не указана, будут использованы платформы, выбранные в настройках группы</small>
     </div>
 
     <div class="form-group">

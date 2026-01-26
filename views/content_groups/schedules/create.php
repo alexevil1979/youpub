@@ -37,12 +37,16 @@ $selectedGroupId = isset($_GET['group_id']) ? (int)$_GET['group_id'] : 0;
     </div>
 
     <div class="form-group">
-        <label for="platform">Платформа *</label>
-        <select id="platform" name="platform" required>
+        <label for="platform">Платформа (опционально)</label>
+        <select id="platform" name="platform">
+            <option value="">Не указана (будут использованы платформы из группы)</option>
             <option value="youtube">YouTube</option>
             <option value="telegram">Telegram</option>
-            <option value="both">YouTube + Telegram</option>
+            <option value="tiktok">TikTok</option>
+            <option value="instagram">Instagram</option>
+            <option value="pinterest">Pinterest</option>
         </select>
+        <small>Если не указана, будут использованы платформы, выбранные в настройках группы</small>
     </div>
 
     <div class="form-group">
