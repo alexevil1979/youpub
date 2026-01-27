@@ -171,7 +171,10 @@ class TemplateController extends Controller
             
             error_log("TemplateController::showCreateShorts: Generating CSRF token");
             $csrfToken = (new \Core\Auth())->generateCsrfToken();
-            error_log("TemplateController::showCreateShorts: CSRF token generated");
+            error_log("TemplateController::showCreateShorts: CSRF token generated: " . substr($csrfToken, 0, 10) . "...");
+            
+            // Переменные для view (режим создания, не редактирования)
+            $template = null; // Явно устанавливаем null для режима создания
             
             $viewPath = __DIR__ . '/../../../../views/content_groups/templates/create_v2.php';
             error_log("TemplateController::showCreateShorts: View path: {$viewPath}");
@@ -181,30 +184,33 @@ class TemplateController extends Controller
                 throw new \Exception("View file not found: {$viewPath}");
             }
             
-            error_log("TemplateController::showCreateShorts: Starting output buffer");
-            ob_start();
-            
-            error_log("TemplateController::showCreateShorts: Including view file");
+            // View файл сам управляет буферизацией (ob_start на строке 91)
+            // Переменные $csrfToken и $template должны быть доступны в view
+            error_log("TemplateController::showCreateShorts: Including view file (csrfToken: " . (isset($csrfToken) ? 'yes' : 'no') . ", template: " . (isset($template) ? 'yes' : 'no') . ")");
             try {
+                // View файл сам начинает буфер, обрабатывает контент и включает layout
                 include $viewPath;
-                // View файл сам управляет буфером и включает layout через ob_get_clean()
-                // Если view файл не завершил выполнение (не вызвал exit), получаем содержимое
+                // View файл должен вызвать exit после включения layout
+                // Если мы дошли сюда, значит view не вызвал exit - это может быть проблемой
+                error_log("TemplateController::showCreateShorts: WARNING - View file did not exit, checking buffer level: " . ob_get_level());
                 if (ob_get_level() > 0) {
                     $remaining = ob_get_clean();
                     if (!empty($remaining)) {
+                        error_log("TemplateController::showCreateShorts: Outputting remaining buffer content");
                         echo $remaining;
                     }
                 }
+                error_log("TemplateController::showCreateShorts: View file included successfully");
             } catch (\Throwable $viewError) {
-                // Очищаем буфер при ошибке в view
+                // Очищаем все буферы при ошибке в view
                 while (ob_get_level() > 0) {
                     ob_end_clean();
                 }
-                error_log("TemplateController::showCreateShorts: View error - " . $viewError->getMessage() . " in " . $viewError->getFile() . ":" . $viewError->getLine());
+                error_log("TemplateController::showCreateShorts: View error - " . $viewError->getMessage());
+                error_log("TemplateController::showCreateShorts: Error file: " . $viewError->getFile() . ":" . $viewError->getLine());
+                error_log("TemplateController::showCreateShorts: Stack trace - " . $viewError->getTraceAsString());
                 throw $viewError;
             }
-            
-            error_log("TemplateController::showCreateShorts: View file included successfully");
             
         } catch (\Exception $e) {
             error_log("TemplateController::showCreateShorts: Exception - " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
