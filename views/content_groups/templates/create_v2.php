@@ -5,15 +5,21 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 try {
-    $isEdit = isset($template) && is_array($template);
+    // Проверяем, что $template определен (может быть null для режима создания)
+    $isEdit = isset($template) && $template !== null && is_array($template);
     $pageTitle = $isEdit ? 'Редактировать шаблон Shorts' : 'Создать шаблон Shorts (улучшенный)';
     $title = $pageTitle;
     $formAction = $isEdit ? '/content-groups/templates/' . ($template['id'] ?? '') . '/update' : '/content-groups/templates/create-shorts';
     
     // Проверяем, что $csrfToken определен (должен быть передан из контроллера)
-    if (!isset($csrfToken)) {
+    if (!isset($csrfToken) || empty($csrfToken)) {
         error_log("Templates create_v2 view: csrfToken not set, generating new one");
-        $csrfToken = (new \Core\Auth())->generateCsrfToken();
+        try {
+            $csrfToken = (new \Core\Auth())->generateCsrfToken();
+        } catch (\Throwable $csrfError) {
+            error_log("Templates create_v2 view: Error generating CSRF token: " . $csrfError->getMessage());
+            throw new \RuntimeException("Failed to generate CSRF token: " . $csrfError->getMessage());
+        }
     }
 } catch (\Throwable $e) {
     error_log("Templates create_v2 view: Error at start: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
@@ -31,20 +37,21 @@ $decodeJson = static function ($value): array {
     return is_array($decoded) ? $decoded : [];
 };
 
-$nameValue = $isEdit ? ($template['name'] ?? '') : '';
-$descriptionValue = $isEdit ? ($template['description'] ?? '') : '';
-$hookTypeValue = $isEdit ? ($template['hook_type'] ?? '') : '';
-$focusPoints = $isEdit ? $decodeJson($template['focus_points'] ?? '') : [];
-$titleVariants = $isEdit ? $decodeJson($template['title_variants'] ?? '') : [];
-$descriptionVariants = $isEdit ? $decodeJson($template['description_variants'] ?? '') : [];
-$emojiGroups = $isEdit ? $decodeJson($template['emoji_groups'] ?? '') : [];
-$baseTagsValue = $isEdit ? ($template['base_tags'] ?? '') : 'неон, голос, вокал, атмосфера, музыка';
-$tagVariants = $isEdit ? $decodeJson($template['tag_variants'] ?? '') : [];
-$questions = $isEdit ? $decodeJson($template['questions'] ?? '') : [];
-$pinnedComments = $isEdit ? $decodeJson($template['pinned_comments'] ?? '') : [];
-$ctaTypes = $isEdit ? $decodeJson($template['cta_types'] ?? '') : [];
-$enableAbTesting = $isEdit ? !empty($template['enable_ab_testing']) : true;
-$isActive = $isEdit ? !empty($template['is_active']) : true;
+// Безопасное получение значений из $template (может быть null)
+$nameValue = $isEdit && isset($template['name']) ? (string)$template['name'] : '';
+$descriptionValue = $isEdit && isset($template['description']) ? (string)$template['description'] : '';
+$hookTypeValue = $isEdit && isset($template['hook_type']) ? (string)$template['hook_type'] : '';
+$focusPoints = $isEdit && isset($template['focus_points']) ? $decodeJson($template['focus_points']) : [];
+$titleVariants = $isEdit && isset($template['title_variants']) ? $decodeJson($template['title_variants']) : [];
+$descriptionVariants = $isEdit && isset($template['description_variants']) ? $decodeJson($template['description_variants']) : [];
+$emojiGroups = $isEdit && isset($template['emoji_groups']) ? $decodeJson($template['emoji_groups']) : [];
+$baseTagsValue = $isEdit && isset($template['base_tags']) ? (string)$template['base_tags'] : 'неон, голос, вокал, атмосфера, музыка';
+$tagVariants = $isEdit && isset($template['tag_variants']) ? $decodeJson($template['tag_variants']) : [];
+$questions = $isEdit && isset($template['questions']) ? $decodeJson($template['questions']) : [];
+$pinnedComments = $isEdit && isset($template['pinned_comments']) ? $decodeJson($template['pinned_comments']) : [];
+$ctaTypes = $isEdit && isset($template['cta_types']) ? $decodeJson($template['cta_types']) : [];
+$enableAbTesting = $isEdit && isset($template['enable_ab_testing']) ? !empty($template['enable_ab_testing']) : true;
+$isActive = $isEdit && isset($template['is_active']) ? !empty($template['is_active']) : true;
 
 $descriptionItems = [];
 foreach ($descriptionVariants as $type => $variants) {
