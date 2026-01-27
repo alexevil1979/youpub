@@ -1900,8 +1900,11 @@ class AutoShortsGenerator
      */
     private function analyzeIntent(string $idea): array
     {
-        $language = $this->detectLanguage($idea);
-        $idea = mb_strtolower($idea);
+        $language      = $this->detectLanguage($idea);
+        $originalIdea  = $idea;
+        // Нормализованный текст идеи используем и в генерации, и в анализе
+        $normalizedIdea = $this->normalizeIdeaText($originalIdea);
+        $ideaForSearch  = mb_strtolower($normalizedIdea);
 
         // Определение типа контента
         $contentType = 'vocal'; // дефолт
@@ -1911,12 +1914,14 @@ class AutoShortsGenerator
         foreach ($contentTypes as $type => $keywords) {
             $weight = 0;
             foreach ($keywords as $keyword) {
-                if (strpos($idea, $keyword) !== false) {
-                    $weight += 1;
+                $keyword = trim($keyword);
+                if ($keyword !== '' && strpos($ideaForSearch, $keyword) !== false) {
+                    $entBonus = mb_stripos($originalIdea, $keyword) !== false ? 1 : 0;
+                    $weight += 1 + $entBonus;
                 }
             }
             if ($weight > $maxWeight) {
-                $maxWeight = $weight;
+                $maxWeight  = $weight;
                 $contentType = $type;
             }
         }
@@ -1929,13 +1934,14 @@ class AutoShortsGenerator
         foreach ($moods as $moodType => $keywords) {
             $weight = 0;
             foreach ($keywords as $keyword) {
-                if (strpos($idea, $keyword) !== false) {
-                    $weight += 1;
+                $keyword = trim($keyword);
+                if ($keyword !== '' && strpos($ideaForSearch, $keyword) !== false) {
+                    $weight++;
                 }
             }
             if ($weight > $maxWeight) {
                 $maxWeight = $weight;
-                $mood = $moodType;
+                $mood      = $moodType;
             }
         }
 
@@ -1947,22 +1953,27 @@ class AutoShortsGenerator
         foreach ($visuals as $focus => $keywords) {
             $weight = 0;
             foreach ($keywords as $keyword) {
-                if (strpos($idea, $keyword) !== false) {
-                    $weight += 1;
+                $keyword = trim($keyword);
+                if ($keyword !== '' && strpos($ideaForSearch, $keyword) !== false) {
+                    $weight++;
                 }
             }
             if ($weight > $maxWeight) {
-                $maxWeight = $weight;
+                $maxWeight   = $weight;
                 $visualFocus = $focus;
             }
         }
 
         return [
             'content_type' => $contentType,
-            'mood' => $mood,
+            'mood'         => $mood,
             'visual_focus' => $visualFocus,
-            'language' => $language,
-            'platform' => 'shorts'
+            'language'     => $language,
+            'platform'     => 'shorts',
+            // нормализованный текст идеи, который можно вставлять в заголовок/описание
+            'idea'         => $normalizedIdea,
+            // исходный текст идеи
+            'raw_idea'     => trim($originalIdea),
         ];
     }
 
@@ -2162,9 +2173,12 @@ class AutoShortsGenerator
             $angle = $angles[array_rand($angles)]; // Случайный угол
             error_log("AutoShortsGenerator::generateContent: Selected angle: {$angle}");
 
+            // Нормализованный текст идеи для использования в заголовке/описании
+            $ideaText = $this->normalizeIdeaText($intent['idea'] ?? ($intent['raw_idea'] ?? ''));
+
             // Генерация названия
             error_log("AutoShortsGenerator::generateContent: Generating title...");
-            $title = $this->generateTitle($intent, $angle);
+            $title = $this->generateTitle($intent, $angle, $ideaText);
             error_log("AutoShortsGenerator::generateContent: Title generated: '{$title}'");
             
             // Фильтрация русских слов из английских результатов
@@ -2176,7 +2190,7 @@ class AutoShortsGenerator
 
             // Генерация описания
             error_log("AutoShortsGenerator::generateContent: Generating description...");
-            $description = $this->generateDescription($intent);
+            $description = $this->generateDescription($intent, $ideaText);
             error_log("AutoShortsGenerator::generateContent: Description generated: '{$description}'");
             
             // Фильтрация русских слов из английских результатов
@@ -2206,6 +2220,32 @@ class AutoShortsGenerator
                 }
                 $tags = $filteredTags;
                 error_log("AutoShortsGenerator::generateContent: Tags after Russian filter: " . json_encode($tags));
+            }
+
+            // Добавляем ключевые слова из идеи в теги (чтобы усилить связь с контентом)
+            if (!empty($ideaText)) {
+                $extraTags = [];
+                $words = preg_split('/\s+/u', mb_strtolower($ideaText));
+                foreach ($words as $word) {
+                    $word = trim($word, "#@ \t\n\r\0\x0B.,!?\"'`()[]{}");
+                    if ($word === '' || mb_strlen($word) < 3) {
+                        continue;
+                    }
+                    $exists = false;
+                    foreach ($tags as $t) {
+                        if (mb_strtolower($t) === $word) {
+                            $exists = true;
+                            break;
+                        }
+                    }
+                    if (!$exists) {
+                        $extraTags[] = $word;
+                    }
+                }
+                if (!empty($extraTags)) {
+                    // Добавляем не больше трёх ключевых слов, чтобы не засорять теги
+                    $tags = array_merge($tags, array_slice($extraTags, 0, 3));
+                }
             }
 
             // Генерация закрепленного комментария
@@ -2242,7 +2282,7 @@ class AutoShortsGenerator
     /**
      * Генерация уникального названия
      */
-    private function generateTitle(array $intent, string $angle): string
+    private function generateTitle(array $intent, string $angle, string $ideaText = ''): string
     {
         try {
             $contentType = $intent['content_type'] ?? 'vocal';
@@ -2272,11 +2312,15 @@ class AutoShortsGenerator
             error_log("AutoShortsGenerator::generateTitle: Content type: {$contentType}, available templates: " . count($templates));
 
             // Замены для шаблонов
+            $ideaReplacement = $ideaText !== '' ? $ideaText : ($intent['idea'] ?? ($intent['raw_idea'] ?? ''));
+            $ideaReplacement = $this->normalizeIdeaText((string)$ideaReplacement);
+
             $replacements = [
                 '{content}' => $this->getContentWord($contentType, $language),
                 '{emotion}' => $this->getEmotionWord($intent['mood'] ?? 'calm', $language),
-                '{visual}' => $this->getVisualWord($intent['visual_focus'] ?? 'neon', $language),
-                '{angle}' => $angle
+                '{visual}'  => $this->getScalarVisualWord($intent['visual_focus'] ?? 'neon', $language),
+                '{angle}'   => $angle,
+                '{idea}'    => $ideaReplacement,
             ];
 
             error_log("AutoShortsGenerator::generateTitle: Replacements: " . json_encode($replacements));
@@ -2289,11 +2333,30 @@ class AutoShortsGenerator
             $title = str_replace(array_keys($replacements), array_values($replacements), $template);
             error_log("AutoShortsGenerator::generateTitle: After replacements: '{$title}'");
 
+            // Если есть осмысленная идея и она ещё не встречается в заголовке — добавим её в начало
+            if ($ideaReplacement !== '') {
+                $baseTitle = trim($title);
+                if ($baseTitle === '') {
+                    $title = $ideaReplacement;
+                } elseif (mb_stripos($baseTitle, $ideaReplacement) === false) {
+                    $candidate = $ideaReplacement . ' – ' . $baseTitle;
+                    if (mb_strlen($candidate) <= 80) {
+                        $title = $candidate;
+                    } else {
+                        // Если слишком длинно, оставляем базовый заголовок и обрезаем при необходимости
+                        $title = $baseTitle;
+                    }
+                } else {
+                    $title = $baseTitle;
+                }
+            }
+
             // Ограничиваем длину
             if (mb_strlen($title) > 80) {
                 $title = mb_substr($title, 0, 77) . '...';
             }
 
+            $title = trim($title);
             error_log("AutoShortsGenerator::generateTitle: Final title: '{$title}'");
             return $language === 'en' ? ucfirst($title) : ucfirst($title);
 
@@ -2306,7 +2369,7 @@ class AutoShortsGenerator
     /**
      * Генерация описания
      */
-    private function generateDescription(array $intent): string
+    private function generateDescription(array $intent, string $ideaText = ''): string
     {
         try {
             $language = $intent['language'] ?? 'ru';
@@ -2338,18 +2401,33 @@ class AutoShortsGenerator
             $template = $templates[array_rand($templates)];
             error_log("AutoShortsGenerator::generateDescription: Selected template: '{$template}'");
 
+            $ideaReplacement = $ideaText !== '' ? $ideaText : ($intent['idea'] ?? ($intent['raw_idea'] ?? ''));
+            $ideaReplacement = $this->normalizeIdeaText((string)$ideaReplacement);
+
             $replacements = [
-                '{emotion}' => $this->getEmotionWord($intent['mood'] ?? 'calm', $language),
-                '{content}' => $this->getContentWord($intent['content_type'] ?? 'vocal', $language),
-                '{visual}' => $this->getVisualWord($intent['visual_focus'] ?? 'neon', $language),
-                '{question}' => $this->getQuestionWord($intent['content_type'] ?? 'vocal', $language),
+                '{emotion}'      => $this->getEmotionWord($intent['mood'] ?? 'calm', $language),
+                '{content}'      => $this->getContentWord($intent['content_type'] ?? 'vocal', $language),
+                '{visual}'       => $this->getVisualWord($intent['visual_focus'] ?? 'neon', $language),
+                '{question}'     => $this->getQuestionWord($intent['content_type'] ?? 'vocal', $language),
                 '{emotion_emoji}' => $this->getRandomEmoji($intent['mood'] ?? 'calm', 1),
-                '{cta_emoji}' => ['▶️', '👆', '💬', '❤️'][array_rand(['▶️', '👆', '💬', '❤️'])]
+                '{cta_emoji}'    => ['▶️', '👆', '💬', '❤️'][array_rand(['▶️', '👆', '💬', '❤️'])],
+                '{idea}'         => $ideaReplacement,
             ];
 
             error_log("AutoShortsGenerator::generateDescription: Replacements: " . json_encode($replacements));
 
             $result = str_replace(array_keys($replacements), array_values($replacements), $template);
+
+            // Если есть осмысленная идея и она не упомянута в описании — добавим её в начало
+            if ($ideaReplacement !== '' && mb_stripos($result, $ideaReplacement) === false) {
+                $result = $ideaReplacement . '. ' . ltrim($result);
+            }
+
+            // Ограничим длину описания до разумного предела
+            if (mb_strlen($result) > 200) {
+                $result = mb_substr($result, 0, 197) . '...';
+            }
+
             error_log("AutoShortsGenerator::generateDescription: Final description: '{$result}'");
 
             return $result;
