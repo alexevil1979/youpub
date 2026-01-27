@@ -32,14 +32,26 @@ class TemplateService extends Service
                 ];
             }
 
+            // Безопасная функция для trim с проверкой типа
+            $safeTrim = function($value): ?string {
+                if ($value === null) {
+                    return null;
+                }
+                if (is_array($value)) {
+                    error_log('TemplateService::createTemplate: Warning - trim() called on array, converting to empty string');
+                    return '';
+                }
+                return trim((string)$value);
+            };
+            
             $templateId = $this->templateRepo->create([
                 'user_id' => $userId,
-                'name' => trim($data['name'] ?? ''),
-                'description' => !empty($data['description']) ? trim($data['description']) : null,
+                'name' => $safeTrim($data['name'] ?? ''),
+                'description' => !empty($data['description']) ? $safeTrim($data['description']) : null,
                 // Старые поля для обратной совместимости
-                'title_template' => !empty($data['title_template']) ? trim($data['title_template']) : null,
-                'description_template' => !empty($data['description_template']) ? trim($data['description_template']) : null,
-                'tags_template' => !empty($data['tags_template']) ? trim($data['tags_template']) : null,
+                'title_template' => !empty($data['title_template']) ? $safeTrim($data['title_template']) : null,
+                'description_template' => !empty($data['description_template']) ? $safeTrim($data['description_template']) : null,
+                'tags_template' => !empty($data['tags_template']) ? $safeTrim($data['tags_template']) : null,
                 'emoji_list' => !empty($data['emoji_list']) && is_array($data['emoji_list']) ? json_encode($data['emoji_list'], JSON_UNESCAPED_UNICODE) : null,
                 'variants' => !empty($data['variants']) && is_array($data['variants']) ? json_encode($data['variants'], JSON_UNESCAPED_UNICODE) : null,
                 // Новые поля для Shorts
@@ -48,7 +60,7 @@ class TemplateService extends Service
                 'title_variants' => !empty($data['title_variants']) && is_array($data['title_variants']) ? json_encode($data['title_variants'], JSON_UNESCAPED_UNICODE) : null,
                 'description_variants' => !empty($data['description_variants']) && is_array($data['description_variants']) ? json_encode($data['description_variants'], JSON_UNESCAPED_UNICODE) : null,
                 'emoji_groups' => !empty($data['emoji_groups']) && is_array($data['emoji_groups']) ? json_encode($data['emoji_groups'], JSON_UNESCAPED_UNICODE) : null,
-                'base_tags' => !empty($data['base_tags']) ? trim($data['base_tags']) : null,
+                'base_tags' => !empty($data['base_tags']) ? $safeTrim($data['base_tags']) : null,
                 'tag_variants' => !empty($data['tag_variants']) && is_array($data['tag_variants']) ? json_encode($data['tag_variants'], JSON_UNESCAPED_UNICODE) : null,
                 'questions' => !empty($data['questions']) && is_array($data['questions']) ? json_encode($data['questions'], JSON_UNESCAPED_UNICODE) : null,
                 'pinned_comments' => !empty($data['pinned_comments']) && is_array($data['pinned_comments']) ? json_encode($data['pinned_comments'], JSON_UNESCAPED_UNICODE) : null,
@@ -69,8 +81,10 @@ class TemplateService extends Service
                 'data' => ['id' => $templateId],
                 'message' => 'Шаблон успешно создан'
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             error_log('Error in createTemplate: ' . $e->getMessage());
+            error_log('Error in createTemplate: Stack trace: ' . $e->getTraceAsString());
+            error_log('Error in createTemplate: File: ' . $e->getFile() . ':' . $e->getLine());
             return [
                 'success' => false,
                 'message' => 'Ошибка при создании шаблона: ' . $e->getMessage()
