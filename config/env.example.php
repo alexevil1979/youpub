@@ -60,9 +60,15 @@ return [
     // Часовой пояс
     'TIMEZONE' => 'Europe/Samara', // Часовой пояс для PHP и MySQL (UTC+4)
     
-    // Лимиты
-    'RATE_LIMIT_REQUESTS' => 100,
-    'RATE_LIMIT_WINDOW' => 3600, // 1 час
+    // Лимиты Rate Limiting
+    'RATE_LIMIT_REQUESTS' => 100,        // Общий лимит запросов
+    'RATE_LIMIT_WINDOW' => 3600,         // Окно времени в секундах (1 час)
+    'RATE_LIMIT_API_REQUESTS' => 200,    // Лимит для API endpoints
+    'RATE_LIMIT_API_WINDOW' => 3600,     // Окно для API (1 час)
+    'RATE_LIMIT_AUTH_REQUESTS' => 10,    // Лимит для авторизации (более строгий)
+    'RATE_LIMIT_AUTH_WINDOW' => 600,     // Окно для авторизации (10 минут)
+    'RATE_LIMIT_UPLOAD_REQUESTS' => 20,  // Лимит для загрузки файлов
+    'RATE_LIMIT_UPLOAD_WINDOW' => 3600,  // Окно для загрузки (1 час)
     
     // Email (опционально)
     'SMTP_HOST' => '',

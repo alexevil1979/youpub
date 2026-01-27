@@ -11,8 +11,26 @@ use App\Modules\ContentGroups\Controllers\AutoShortsController;
 use App\Modules\ContentGroups\Controllers\SmartScheduleController;
 use App\Controllers\SearchController;
 use App\Middlewares\AuthMiddleware;
+use App\Middlewares\RateLimitingMiddleware;
 
 /** @var Router $router */
+
+// Загружаем конфигурацию
+$config = require __DIR__ . '/../config/env.php';
+
+// Rate limiting для авторизации (более строгий)
+$authRateLimit = new RateLimitingMiddleware(
+    $config['RATE_LIMIT_AUTH_REQUESTS'] ?? 10,
+    $config['RATE_LIMIT_AUTH_WINDOW'] ?? 600,
+    'web_auth'
+);
+
+// Rate limiting для загрузки файлов
+$uploadRateLimit = new RateLimitingMiddleware(
+    $config['RATE_LIMIT_UPLOAD_REQUESTS'] ?? 20,
+    $config['RATE_LIMIT_UPLOAD_WINDOW'] ?? 3600,
+    'web_upload'
+);
 
 // Публичные маршруты
 $router->get('/', function() {
@@ -25,9 +43,9 @@ $router->get('/', function() {
 });
 
 $router->get('/login', [AuthController::class, 'showLogin']);
-$router->post('/login', [AuthController::class, 'login']);
+$router->post('/login', [AuthController::class, 'login'], [$authRateLimit]);
 $router->get('/register', [AuthController::class, 'showRegister']);
-$router->post('/register', [AuthController::class, 'register']);
+$router->post('/register', [AuthController::class, 'register'], [$authRateLimit]);
 $router->get('/logout', [AuthController::class, 'logout']);
 $router->post('/logout', [AuthController::class, 'logout']);
 
@@ -38,8 +56,8 @@ $router->get('/profile', [DashboardController::class, 'profile'], [AuthMiddlewar
 // Видео
 $router->get('/videos', [VideoController::class, 'index'], [AuthMiddleware::class]);
 $router->get('/videos/upload', [VideoController::class, 'showUpload'], [AuthMiddleware::class]);
-$router->post('/videos/upload', [VideoController::class, 'upload'], [AuthMiddleware::class]);
-$router->post('/videos/upload-multiple', [VideoController::class, 'uploadMultiple'], [AuthMiddleware::class]);
+$router->post('/videos/upload', [VideoController::class, 'upload'], [AuthMiddleware::class, $uploadRateLimit]);
+$router->post('/videos/upload-multiple', [VideoController::class, 'uploadMultiple'], [AuthMiddleware::class, $uploadRateLimit]);
 $router->get('/videos/{id}', [VideoController::class, 'show'], [AuthMiddleware::class]);
 $router->get('/videos/{id}/edit', [VideoController::class, 'showEdit'], [AuthMiddleware::class]);
 $router->post('/videos/{id}/edit', [VideoController::class, 'update'], [AuthMiddleware::class]);
