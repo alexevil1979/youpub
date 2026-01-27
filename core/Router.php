@@ -66,7 +66,8 @@ class Router
         foreach ($this->routes as $route) {
             $params = [];
             if ($route['method'] === $method && $this->matchPath($route['path'], $path, $params)) {
-                // Выполнить middleware
+                // Выполнить middleware ПЕРЕД проверкой CSRF
+                // Это важно, так как AuthMiddleware инициализирует сессию
                 foreach ($route['middlewares'] as $middleware) {
                     if (is_string($middleware)) {
                         $middleware = new $middleware();
@@ -76,7 +77,13 @@ class Router
                     }
                 }
 
+                // Проверка CSRF после middleware (сессия уже инициализирована)
                 if ($this->isStateChangingMethod($method) && !$this->isApiRequest($path)) {
+                    // Убеждаемся, что сессия инициализирована
+                    if (session_status() === PHP_SESSION_NONE) {
+                        session_start();
+                    }
+                    
                     if (!$this->validateCsrfToken()) {
                         $this->sendCsrfError();
                         return;
