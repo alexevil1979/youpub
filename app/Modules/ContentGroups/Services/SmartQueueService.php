@@ -136,7 +136,7 @@ class SmartQueueService extends Service
             return ['success' => false, 'message' => 'Video not found'];
         }
 
-        // Проверяем тип автогенерации: 0 = шаблон, 1 = имя файла, 2 = название группы
+        // Проверяем тип автогенерации: 0 = шаблон, 1 = имя файла, 2 = название группы, 3 = описание группы
         $autoGenType = (int)($group['use_auto_generation'] ?? 0);
         
         // ВАЖНО: Проверяем video['title'] - если "unknown", используем file_name
@@ -169,6 +169,15 @@ class SmartQueueService extends Service
                 error_log("SmartQueueService::processGroupSchedule: Auto-generation from group name enabled");
                 $idea = trim($group['name'] ?? '');
                 error_log("SmartQueueService::processGroupSchedule: Using group name as idea: '{$idea}'");
+            } elseif ($autoGenType === 3) {
+                // Автогенерация на основе описания группы
+                error_log("SmartQueueService::processGroupSchedule: Auto-generation from group description enabled");
+                $idea = trim($group['description'] ?? '');
+                // Ограничиваем длину описания (берем первые 100 символов для идеи)
+                if (mb_strlen($idea) > 100) {
+                    $idea = mb_substr($idea, 0, 97) . '...';
+                }
+                error_log("SmartQueueService::processGroupSchedule: Using group description as idea: '{$idea}'");
             }
             
             if (empty($idea) || strlen($idea) < 3) {
@@ -637,7 +646,7 @@ class SmartQueueService extends Service
             
             // Генерируем оформление один раз для всех интеграций (если не было сохранено)
             if (!$templated) {
-                // Проверяем тип автогенерации: 0 = шаблон, 1 = имя файла, 2 = название группы
+                // Проверяем тип автогенерации: 0 = шаблон, 1 = имя файла, 2 = название группы, 3 = описание группы
                 $autoGenType = (int)($group['use_auto_generation'] ?? 0);
                 
                 // ВАЖНО: Проверяем video['title'] - если "unknown", используем file_name
@@ -661,6 +670,15 @@ class SmartQueueService extends Service
                         error_log("SmartQueueService::publishGroupFileNow: Auto-generation from group name enabled");
                         $idea = trim($group['name'] ?? '');
                         error_log("SmartQueueService::publishGroupFileNow: Using group name as idea: '{$idea}'");
+                    } elseif ($autoGenType === 3) {
+                        // Автогенерация на основе описания группы
+                        error_log("SmartQueueService::publishGroupFileNow: Auto-generation from group description enabled");
+                        $idea = trim($group['description'] ?? '');
+                        // Ограничиваем длину описания (берем первые 100 символов для идеи)
+                        if (mb_strlen($idea) > 100) {
+                            $idea = mb_substr($idea, 0, 97) . '...';
+                        }
+                        error_log("SmartQueueService::publishGroupFileNow: Using group description as idea: '{$idea}'");
                     }
                     
                     if (empty($idea) || strlen($idea) < 3) {

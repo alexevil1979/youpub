@@ -33,6 +33,10 @@ ob_start();
                 <input type="radio" name="use_auto_generation" value="2" style="margin-right: 0.5rem;">
                 <span>🏷️ Автогенерация на основе названия группы</span>
             </label>
+            <label style="display: flex; align-items: center; cursor: pointer;">
+                <input type="radio" name="use_auto_generation" value="3" style="margin-right: 0.5rem;">
+                <span>📄 Автогенерация на основе описания группы</span>
+            </label>
         </div>
         <small>Выберите способ автоматического оформления контента для публикаций из этой группы</small>
     </div>
