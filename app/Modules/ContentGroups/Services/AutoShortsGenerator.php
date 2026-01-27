@@ -2247,9 +2247,27 @@ class AutoShortsGenerator
         try {
             $contentType = $intent['content_type'] ?? 'vocal';
             $language = $intent['language'] ?? 'ru';
-            $templates = $language === 'en'
-                ? (self::TITLE_TEMPLATES_EN[$contentType] ?? self::TITLE_TEMPLATES_EN['vocal'])
-                : (self::TITLE_TEMPLATES[$contentType] ?? self::TITLE_TEMPLATES['vocal']);
+            
+            // Получаем шаблоны для типа контента
+            if ($language === 'en') {
+                $templates = self::TITLE_TEMPLATES_EN[$contentType] ?? null;
+                if (!$templates || empty($templates)) {
+                    $templates = self::TITLE_TEMPLATES_EN['vocal'] ?? ['This {content} is so {emotion}'];
+                }
+            } else {
+                $templates = self::TITLE_TEMPLATES[$contentType] ?? null;
+                if (!$templates || empty($templates)) {
+                    $templates = self::TITLE_TEMPLATES['vocal'] ?? ['Этот {content} просто {emotion}'];
+                }
+            }
+
+            // Проверяем, что шаблоны не пустые
+            if (empty($templates) || !is_array($templates)) {
+                error_log("AutoShortsGenerator::generateTitle: No templates found for content_type: {$contentType}, language: {$language}, using fallback");
+                $templates = $language === 'en' 
+                    ? ['This {content} is so {emotion}']
+                    : ['Этот {content} просто {emotion}'];
+            }
 
             error_log("AutoShortsGenerator::generateTitle: Content type: {$contentType}, available templates: " . count($templates));
 
@@ -2293,9 +2311,27 @@ class AutoShortsGenerator
         try {
             $language = $intent['language'] ?? 'ru';
             $descType = ['question', 'emotional', 'mysterious'][array_rand(['question', 'emotional', 'mysterious'])];
-            $templates = $language === 'en'
-                ? (self::DESCRIPTION_TEMPLATES_EN[$descType] ?? self::DESCRIPTION_TEMPLATES_EN['question'])
-                : self::DESCRIPTION_TEMPLATES[$descType];
+            
+            // Получаем шаблоны для типа описания
+            if ($language === 'en') {
+                $templates = self::DESCRIPTION_TEMPLATES_EN[$descType] ?? null;
+                if (!$templates || empty($templates)) {
+                    $templates = self::DESCRIPTION_TEMPLATES_EN['question'] ?? ['Watch this video! 🎬'];
+                }
+            } else {
+                $templates = self::DESCRIPTION_TEMPLATES[$descType] ?? null;
+                if (!$templates || empty($templates)) {
+                    $templates = self::DESCRIPTION_TEMPLATES['question'] ?? ['Посмотрите это видео! 🎬'];
+                }
+            }
+
+            // Проверяем, что шаблоны не пустые
+            if (empty($templates) || !is_array($templates)) {
+                error_log("AutoShortsGenerator::generateDescription: No templates found for desc_type: {$descType}, language: {$language}, using fallback");
+                $templates = $language === 'en' 
+                    ? ['Watch this video! 🎬']
+                    : ['Посмотрите это видео! 🎬'];
+            }
 
             error_log("AutoShortsGenerator::generateDescription: Desc type: {$descType}, available templates: " . count($templates));
 
@@ -2343,9 +2379,28 @@ class AutoShortsGenerator
     private function generateTags(array $intent): array
     {
         $language = $intent['language'] ?? 'ru';
-        $baseTags = $language === 'en'
-            ? (self::TAG_SETS_EN[$intent['content_type']] ?? self::TAG_SETS_EN['vocal'])
-            : (self::TAG_SETS[$intent['content_type']] ?? self::TAG_SETS['vocal']);
+        $contentType = $intent['content_type'] ?? 'vocal';
+        
+        // Получаем теги для типа контента
+        if ($language === 'en') {
+            $baseTags = self::TAG_SETS_EN[$contentType] ?? null;
+            if (!$baseTags || empty($baseTags)) {
+                $baseTags = self::TAG_SETS_EN['vocal'] ?? ['#Shorts', '#Content'];
+            }
+        } else {
+            $baseTags = self::TAG_SETS[$contentType] ?? null;
+            if (!$baseTags || empty($baseTags)) {
+                $baseTags = self::TAG_SETS['vocal'] ?? ['#Shorts', '#Контент'];
+            }
+        }
+        
+        // Проверяем, что теги не пустые
+        if (empty($baseTags) || !is_array($baseTags)) {
+            error_log("AutoShortsGenerator::generateTags: No tags found for content_type: {$contentType}, language: {$language}, using fallback");
+            $baseTags = $language === 'en' 
+                ? ['#Shorts', '#Content']
+                : ['#Shorts', '#Контент'];
+        }
 
         // Добавляем mood-специфичные теги
         $moodTags = $language === 'en'
@@ -2375,9 +2430,29 @@ class AutoShortsGenerator
     private function generatePinnedComment(array $intent): string
     {
         $language = $intent['language'] ?? 'ru';
-        $questions = $language === 'en'
-            ? (self::ENGAGEMENT_QUESTIONS_EN[$intent['content_type']] ?? self::ENGAGEMENT_QUESTIONS_EN['vocal'])
-            : (self::ENGAGEMENT_QUESTIONS[$intent['content_type']] ?? self::ENGAGEMENT_QUESTIONS['vocal']);
+        $contentType = $intent['content_type'] ?? 'vocal';
+        
+        // Получаем вопросы для типа контента
+        if ($language === 'en') {
+            $questions = self::ENGAGEMENT_QUESTIONS_EN[$contentType] ?? null;
+            if (!$questions || empty($questions)) {
+                $questions = self::ENGAGEMENT_QUESTIONS_EN['vocal'] ?? ['Want more like this?'];
+            }
+        } else {
+            $questions = self::ENGAGEMENT_QUESTIONS[$contentType] ?? null;
+            if (!$questions || empty($questions)) {
+                $questions = self::ENGAGEMENT_QUESTIONS['vocal'] ?? ['Хочешь ещё такого?'];
+            }
+        }
+        
+        // Проверяем, что вопросы не пустые
+        if (empty($questions) || !is_array($questions)) {
+            error_log("AutoShortsGenerator::generatePinnedComment: No questions found for content_type: {$contentType}, language: {$language}, using fallback");
+            $questions = $language === 'en' 
+                ? ['Want more like this?']
+                : ['Хочешь ещё такого?'];
+        }
+        
         return $questions[array_rand($questions)];
     }
 

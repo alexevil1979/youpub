@@ -943,14 +943,16 @@ class TemplateController extends Controller
                     $allTitles[] = $content['title'];
                 }
 
-                // Собираем уникальные описания
+                // Собираем уникальные описания по настроению
                 if (!empty($content['description'])) {
                     $mood = $intent['mood'] ?? 'calm';
-                    if (!isset($descriptionVariants[$mood])) {
-                        $descriptionVariants[$mood] = [];
+                    // Маппим mood к ключам description_variants (emotional, atmosphere, question)
+                    $descKey = $moodToDescriptionKey[$mood] ?? 'atmosphere';
+                    if (!isset($descriptionVariants[$descKey])) {
+                        $descriptionVariants[$descKey] = [];
                     }
-                    if (!in_array($content['description'], $descriptionVariants[$mood])) {
-                        $descriptionVariants[$mood][] = $content['description'];
+                    if (!in_array($content['description'], $descriptionVariants[$descKey])) {
+                        $descriptionVariants[$descKey][] = $content['description'];
                     }
                 }
 
@@ -970,9 +972,28 @@ class TemplateController extends Controller
                     if (!isset($emojiGroups[$emojiKey])) {
                         $emojiGroups[$emojiKey] = [];
                     }
-                    $emojiList = array_filter(explode(',', $content['emoji']));
+                    // emoji может быть строкой (символы подряд) или массивом
+                    if (is_array($content['emoji'])) {
+                        $emojiList = $content['emoji'];
+                    } else {
+                        // Разбиваем строку на отдельные emoji символы (могут быть без разделителей)
+                        $emojiString = trim($content['emoji']);
+                        // Сначала пробуем разбить по запятым (если есть)
+                        if (strpos($emojiString, ',') !== false) {
+                            $emojiList = array_filter(array_map('trim', explode(',', $emojiString)));
+                        } else {
+                            // Если запятых нет, разбиваем по символам (каждый emoji - отдельный символ)
+                            // Используем preg_split для правильной обработки UTF-8 emoji
+                            $emojiList = preg_split('//u', $emojiString, -1, PREG_SPLIT_NO_EMPTY);
+                            $emojiList = array_filter($emojiList, function($char) {
+                                // Фильтруем только emoji и пробелы (удаляем пробелы)
+                                return trim($char) !== '';
+                            });
+                        }
+                    }
                     foreach ($emojiList as $emoji) {
-                        if (!in_array($emoji, $emojiGroups[$emojiKey])) {
+                        $emoji = trim($emoji);
+                        if (!empty($emoji) && !in_array($emoji, $emojiGroups[$emojiKey])) {
                             $emojiGroups[$emojiKey][] = $emoji;
                         }
                     }
@@ -1025,11 +1046,30 @@ class TemplateController extends Controller
             echo json_encode($suggestion);
             exit;
 
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             error_log('TemplateController::suggestContent: Exception caught: ' . $e->getMessage());
             error_log('TemplateController::suggestContent: Stack trace: ' . $e->getTraceAsString());
+            error_log('TemplateController::suggestContent: File: ' . $e->getFile() . ':' . $e->getLine());
             header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'Ошибка генерации контента.']);
+            echo json_encode([
+                'success' => false, 
+                'message' => 'Ошибка генерации контента: ' . $e->getMessage(),
+                'error_details' => [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString()
+                ]
+            ]);
+            exit;
+        } catch (\Throwable $e) {
+            error_log('TemplateController::suggestContent: Throwable caught: ' . $e->getMessage());
+            error_log('TemplateController::suggestContent: Stack trace: ' . $e->getTraceAsString());
+            error_log('TemplateController::suggestContent: File: ' . $e->getFile() . ':' . $e->getLine());
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false, 
+                'message' => 'Критическая ошибка генерации контента: ' . $e->getMessage()
+            ]);
             exit;
         }
     }
