@@ -246,8 +246,11 @@ class TemplateService extends Service
             // Добавляем emoji из соответствующей группы с полной рандомизацией
             $emojiGroups = !empty($template['emoji_groups']) ? json_decode($template['emoji_groups'], true) : [];
             // Используем нормализованный тип для поиска emoji
-            if (isset($emojiGroups[$normalizedHookType])) {
-                $emojiList = array_filter(array_map('trim', explode(',', $emojiGroups[$normalizedHookType])));
+            $emojiFound = false;
+            if (isset($emojiGroups[$normalizedHookType]) && !empty($emojiGroups[$normalizedHookType])) {
+                $emojiList = is_array($emojiGroups[$normalizedHookType]) 
+                    ? $emojiGroups[$normalizedHookType] 
+                    : array_filter(array_map('trim', explode(',', $emojiGroups[$normalizedHookType])));
                 if (!empty($emojiList)) {
                     // Полная рандомизация emoji
                     shuffle($emojiList);
@@ -256,6 +259,27 @@ class TemplateService extends Service
                     $selectedEmojis = array_slice($emojiList, 0, $emojiCount);
                     if (!empty($selectedEmojis)) {
                         $selectedVariant .= ' ' . implode(' ', $selectedEmojis);
+                        $emojiFound = true;
+                    }
+                }
+            }
+            
+            // Если emoji не найдены для основного типа, пробуем fallback типы
+            if (!$emojiFound && !empty($emojiGroups)) {
+                foreach (['emotional', 'atmosphere', 'question'] as $emojiType) {
+                    if (isset($emojiGroups[$emojiType]) && !empty($emojiGroups[$emojiType])) {
+                        $emojiList = is_array($emojiGroups[$emojiType]) 
+                            ? $emojiGroups[$emojiType] 
+                            : array_filter(array_map('trim', explode(',', $emojiGroups[$emojiType])));
+                        if (!empty($emojiList)) {
+                            shuffle($emojiList);
+                            $emojiCount = min(mt_rand(1, 2), count($emojiList));
+                            $selectedEmojis = array_slice($emojiList, 0, $emojiCount);
+                            if (!empty($selectedEmojis)) {
+                                $selectedVariant .= ' ' . implode(' ', $selectedEmojis);
+                                break;
+                            }
+                        }
                     }
                 }
             }
