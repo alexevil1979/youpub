@@ -19,6 +19,14 @@ ob_start();
     </div>
 
     <div class="form-group">
+        <label>
+            <input type="checkbox" id="use_auto_generation" name="use_auto_generation" value="1">
+            🚀 Использовать автогенерацию контента на основе имени файла
+        </label>
+        <small>Если включено, контент будет автоматически генерироваться из имени файла (например: She_s_SO_FLEXIBLE.mp4 → "She s SO FLEXIBLE"). Шаблон будет игнорироваться.</small>
+    </div>
+
+    <div class="form-group" id="template_group">
         <label for="template_id">Шаблон оформления (опционально)</label>
         <select id="template_id" name="template_id">
             <option value="">Без шаблона</option>

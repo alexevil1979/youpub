@@ -142,6 +142,7 @@ class GroupController extends Controller
             'name' => $this->getParam('name', ''),
             'description' => $this->getParam('description', ''),
             'template_id' => $this->getParam('template_id') ? (int)$this->getParam('template_id') : null,
+            'use_auto_generation' => (int)($this->getParam('use_auto_generation', '0') === '1'),
             'schedule_id' => $scheduleId,
             'status' => $this->getParam('status', 'active'),
             'settings' => !empty($settings) ? $settings : null,
@@ -731,6 +732,7 @@ class GroupController extends Controller
             'name' => $this->getParam('name', ''),
             'description' => $this->getParam('description', ''),
             'template_id' => $this->getParam('template_id') ? (int)$this->getParam('template_id') : null,
+            'use_auto_generation' => (int)($this->getParam('use_auto_generation', '0') === '1'),
             'schedule_id' => $scheduleId, // Всегда передаем, даже если null
             'status' => $this->getParam('status', 'active'),
             'settings' => !empty($currentSettings) ? $currentSettings : null,

@@ -78,6 +78,9 @@ class GroupService extends Service
             if (isset($data['template_id'])) {
                 $updateData['template_id'] = $data['template_id'];
             }
+            if (isset($data['use_auto_generation'])) {
+                $updateData['use_auto_generation'] = $data['use_auto_generation'];
+            }
             // Обрабатываем schedule_id - всегда добавляем в updateData если передан, даже если null
             // Используем array_key_exists чтобы различать отсутствие ключа и null значение
             if (array_key_exists('schedule_id', $data)) {

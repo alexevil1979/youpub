@@ -136,8 +136,8 @@ class SmartQueueService extends Service
             return ['success' => false, 'message' => 'Video not found'];
         }
 
-        // Применяем шаблон из группы
-        $templateId = $group['template_id'] ?? null;
+        // Проверяем, используется ли автогенерация вместо шаблона
+        $useAutoGeneration = !empty($group['use_auto_generation']);
         
         // ВАЖНО: Проверяем video['title'] - если "unknown", используем file_name
         $videoTitle = $video['title'] ?? '';
@@ -155,15 +155,59 @@ class SmartQueueService extends Service
             'platform' => $firstPlatform,
         ];
 
-        $templated = $this->templateService->applyTemplate($templateId, [
-            'id' => $video['id'],
-            'title' => $videoTitle,
-            'description' => $video['description'] ?? '',
-            'tags' => $video['tags'] ?? '',
-        ], $context);
-        error_log("SmartQueueService::processGroupSchedule: Template applied. Template ID: " . ($templateId ?? 'null'));
-        error_log("SmartQueueService::processGroupSchedule: Generated title: " . mb_substr($templated['title'] ?? 'N/A', 0, 100));
-        error_log("SmartQueueService::processGroupSchedule: Generated description: " . mb_substr($templated['description'] ?? 'N/A', 0, 100));
+        // Если включена автогенерация, используем AutoShortsGenerator
+        if ($useAutoGeneration) {
+            error_log("SmartQueueService::processGroupSchedule: Auto-generation enabled, generating content from file name");
+            
+            // Извлекаем идею из имени файла
+            $idea = $this->extractIdeaFromFileName($video['file_name'] ?? $videoTitle);
+            error_log("SmartQueueService::processGroupSchedule: Extracted idea from file name: '{$idea}'");
+            
+            if (empty($idea) || strlen($idea) < 3) {
+                error_log("SmartQueueService::processGroupSchedule: Idea too short or empty, falling back to template");
+                $useAutoGeneration = false; // Fallback to template
+            } else {
+                // Генерируем контент используя AutoShortsGenerator
+                $autoGenerator = new \App\Modules\ContentGroups\Services\AutoShortsGenerator();
+                $variants = $autoGenerator->generateMultipleVariants($idea, 1);
+                
+                if (!empty($variants) && isset($variants[0])) {
+                    $generated = $variants[0];
+                    $content = $generated['content'] ?? [];
+                    
+                    $templated = [
+                        'title' => $content['title'] ?? $videoTitle,
+                        'description' => $content['description'] ?? '',
+                        'tags' => !empty($content['tags']) && is_array($content['tags']) 
+                            ? implode(', ', $content['tags']) 
+                            : ($content['tags'] ?? ''),
+                        'question' => '',
+                        'pinned_comment' => $content['pinned_comment'] ?? '',
+                        'hook_type' => $generated['intent']['content_type'] ?? 'emotional',
+                    ];
+                    
+                    error_log("SmartQueueService::processGroupSchedule: Auto-generated title: " . mb_substr($templated['title'] ?? 'N/A', 0, 100));
+                    error_log("SmartQueueService::processGroupSchedule: Auto-generated description: " . mb_substr($templated['description'] ?? 'N/A', 0, 100));
+                } else {
+                    error_log("SmartQueueService::processGroupSchedule: Auto-generation failed, falling back to template");
+                    $useAutoGeneration = false; // Fallback to template
+                }
+            }
+        }
+        
+        // Если автогенерация не использовалась или не удалась, применяем шаблон
+        if (!$useAutoGeneration) {
+            $templateId = $group['template_id'] ?? null;
+            $templated = $this->templateService->applyTemplate($templateId, [
+                'id' => $video['id'],
+                'title' => $videoTitle,
+                'description' => $video['description'] ?? '',
+                'tags' => $video['tags'] ?? '',
+            ], $context);
+            error_log("SmartQueueService::processGroupSchedule: Template applied. Template ID: " . ($templateId ?? 'null'));
+            error_log("SmartQueueService::processGroupSchedule: Generated title: " . mb_substr($templated['title'] ?? 'N/A', 0, 100));
+            error_log("SmartQueueService::processGroupSchedule: Generated description: " . mb_substr($templated['description'] ?? 'N/A', 0, 100));
+        }
 
         // Очищаем ВСЕ зависшие расписания 'processing' для этого видео (старше 2 минут)
         // 2 минуты достаточно для публикации, если дольше - значит зависло
@@ -585,14 +629,9 @@ class SmartQueueService extends Service
             
             // Генерируем оформление один раз для всех интеграций (если не было сохранено)
             if (!$templated) {
-                // Используем первую платформу для контекста шаблона
-                $firstPlatform = !empty($selectedIntegrations) ? $selectedIntegrations[0]['platform'] : 'youtube';
-            $context = [
-                'group_name' => $group['name'] ?? '',
-                'index' => $groupFile['order_index'] ?? 0,
-                    'platform' => $firstPlatform,
-                ];
-
+                // Проверяем, используется ли автогенерация вместо шаблона
+                $useAutoGeneration = !empty($group['use_auto_generation']);
+                
                 // ВАЖНО: Проверяем video['title'] - если "unknown", используем file_name
                 $videoTitle = $video['title'] ?? '';
                 if (empty($videoTitle) || strtolower(trim($videoTitle)) === 'unknown') {
@@ -600,14 +639,65 @@ class SmartQueueService extends Service
                     error_log("SmartQueueService::publishGroupFileNow: Video title was empty/unknown, using file_name: {$videoTitle}");
                 }
 
-            $templated = $this->templateService->applyTemplate($templateId, [
-                'id' => $video['id'],
-                    'title' => $videoTitle,
-                'description' => $video['description'] ?? '',
-                'tags' => $video['tags'] ?? '',
-            ], $context);
-                error_log("SmartQueueService::publishGroupFileNow: Generated new template (no saved preview found)");
-                error_log("SmartQueueService::publishGroupFileNow: Generated title: " . ($templated['title'] ?? 'N/A'));
+                // Если включена автогенерация, используем AutoShortsGenerator
+                if ($useAutoGeneration) {
+                    error_log("SmartQueueService::publishGroupFileNow: Auto-generation enabled, generating content from file name");
+                    
+                    // Извлекаем идею из имени файла
+                    $idea = $this->extractIdeaFromFileName($video['file_name'] ?? $videoTitle);
+                    error_log("SmartQueueService::publishGroupFileNow: Extracted idea from file name: '{$idea}'");
+                    
+                    if (empty($idea) || strlen($idea) < 3) {
+                        error_log("SmartQueueService::publishGroupFileNow: Idea too short or empty, falling back to template");
+                        $useAutoGeneration = false; // Fallback to template
+                    } else {
+                        // Генерируем контент используя AutoShortsGenerator
+                        $autoGenerator = new \App\Modules\ContentGroups\Services\AutoShortsGenerator();
+                        $variants = $autoGenerator->generateMultipleVariants($idea, 1);
+                        
+                        if (!empty($variants) && isset($variants[0])) {
+                            $generated = $variants[0];
+                            $content = $generated['content'] ?? [];
+                            
+                            $templated = [
+                                'title' => $content['title'] ?? $videoTitle,
+                                'description' => $content['description'] ?? '',
+                                'tags' => !empty($content['tags']) && is_array($content['tags']) 
+                                    ? implode(', ', $content['tags']) 
+                                    : ($content['tags'] ?? ''),
+                                'question' => '',
+                                'pinned_comment' => $content['pinned_comment'] ?? '',
+                                'hook_type' => $generated['intent']['content_type'] ?? 'emotional',
+                            ];
+                            
+                            error_log("SmartQueueService::publishGroupFileNow: Auto-generated title: " . ($templated['title'] ?? 'N/A'));
+                            error_log("SmartQueueService::publishGroupFileNow: Auto-generated description: " . mb_substr($templated['description'] ?? 'N/A', 0, 100));
+                        } else {
+                            error_log("SmartQueueService::publishGroupFileNow: Auto-generation failed, falling back to template");
+                            $useAutoGeneration = false; // Fallback to template
+                        }
+                    }
+                }
+                
+                // Если автогенерация не использовалась или не удалась, применяем шаблон
+                if (!$useAutoGeneration) {
+                    // Используем первую платформу для контекста шаблона
+                    $firstPlatform = !empty($selectedIntegrations) ? $selectedIntegrations[0]['platform'] : 'youtube';
+                    $context = [
+                        'group_name' => $group['name'] ?? '',
+                        'index' => $groupFile['order_index'] ?? 0,
+                        'platform' => $firstPlatform,
+                    ];
+
+                    $templated = $this->templateService->applyTemplate($templateId, [
+                        'id' => $video['id'],
+                        'title' => $videoTitle,
+                        'description' => $video['description'] ?? '',
+                        'tags' => $video['tags'] ?? '',
+                    ], $context);
+                    error_log("SmartQueueService::publishGroupFileNow: Generated new template (no saved preview found)");
+                    error_log("SmartQueueService::publishGroupFileNow: Generated title: " . ($templated['title'] ?? 'N/A'));
+                }
             }
 
             // Проверяем наличие колонок integration_id и integration_type в таблице schedules
@@ -1113,6 +1203,36 @@ class SmartQueueService extends Service
     /**
      * Обновить метаданные видео перед публикацией
      */
+    /**
+     * Извлекает идею из имени файла для автогенерации
+     * Пример: She_s_SO_FLEXIBLE.mp4 -> "She s SO FLEXIBLE"
+     */
+    private function extractIdeaFromFileName(string $fileName): string
+    {
+        if (empty($fileName)) {
+            return '';
+        }
+
+        // Убираем расширение файла
+        $nameWithoutExt = pathinfo($fileName, PATHINFO_FILENAME);
+        
+        // Заменяем подчеркивания и дефисы на пробелы
+        $idea = str_replace(['_', '-'], ' ', $nameWithoutExt);
+        
+        // Убираем множественные пробелы
+        $idea = preg_replace('/\s+/', ' ', $idea);
+        
+        // Обрезаем пробелы по краям
+        $idea = trim($idea);
+        
+        // Ограничиваем длину (максимум 100 символов)
+        if (mb_strlen($idea) > 100) {
+            $idea = mb_substr($idea, 0, 97) . '...';
+        }
+        
+        return $idea;
+    }
+
     private function updateVideoMetadata(int $scheduleId, array $templated): void
     {
         try {
