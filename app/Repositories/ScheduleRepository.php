@@ -148,8 +148,14 @@ class ScheduleRepository extends Repository
                 (cg2.id IS NOT NULL)
             )
             AND (
-                -- Для pending расписаний: время наступило или null
-                (s.status = 'pending' AND (s.publish_at <= NOW() OR s.publish_at IS NULL))
+                -- Для pending расписаний: 
+                --   * для фиксированных (fixed) учитываем время publish_at
+                --   * для интервальных/пакетных/случайных/волновых доверяем ScheduleEngineService::isScheduleReady
+                (s.status = 'pending' AND (
+                    s.schedule_type IN ('interval','batch','random','wave')
+                    OR s.publish_at <= NOW()
+                    OR s.publish_at IS NULL
+                ))
                 OR
                 -- Для published расписаний: проверяем наличие неопубликованных видео
                 (s.status = 'published' AND EXISTS (

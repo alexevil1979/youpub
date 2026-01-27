@@ -121,7 +121,15 @@ class ScheduleEngineService extends Service
         }
 
         $now = time();
-        $publishAt = strtotime($schedule['publish_at']);
+        // Для интервальных расписаний поле publish_at используется как "следующее время публикации".
+        // Если оно задано и ещё не наступило — публиковать рано.
+        if (!empty($schedule['publish_at'])) {
+            $publishAt = strtotime($schedule['publish_at']);
+            if ($publishAt > $now) {
+                return false;
+            }
+        }
+
         $interval = $schedule['interval_minutes'] * 60;
 
         // Проверяем, прошло ли достаточно времени с последней публикации
