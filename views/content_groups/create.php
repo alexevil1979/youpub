@@ -19,11 +19,22 @@ ob_start();
     </div>
 
     <div class="form-group">
-        <label>
-            <input type="checkbox" id="use_auto_generation" name="use_auto_generation" value="1">
-            🚀 Использовать автогенерацию контента на основе имени файла
-        </label>
-        <small>Если включено, контент будет автоматически генерироваться из имени файла (например: She_s_SO_FLEXIBLE.mp4 → "She s SO FLEXIBLE"). Шаблон будет игнорироваться.</small>
+        <label>Способ оформления контента *</label>
+        <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem;">
+            <label style="display: flex; align-items: center; cursor: pointer;">
+                <input type="radio" name="use_auto_generation" value="0" checked style="margin-right: 0.5rem;">
+                <span>📝 Использовать шаблон (если выбран)</span>
+            </label>
+            <label style="display: flex; align-items: center; cursor: pointer;">
+                <input type="radio" name="use_auto_generation" value="1" style="margin-right: 0.5rem;">
+                <span>📁 Автогенерация на основе имени файла (например: She_s_SO_FLEXIBLE.mp4 → "She s SO FLEXIBLE")</span>
+            </label>
+            <label style="display: flex; align-items: center; cursor: pointer;">
+                <input type="radio" name="use_auto_generation" value="2" style="margin-right: 0.5rem;">
+                <span>🏷️ Автогенерация на основе названия группы</span>
+            </label>
+        </div>
+        <small>Выберите способ автоматического оформления контента для публикаций из этой группы</small>
     </div>
 
     <div class="form-group" id="template_group">
@@ -224,12 +235,14 @@ ob_start();
 <script>
 // Переключение видимости шаблона при изменении автогенерации
 document.addEventListener('DOMContentLoaded', function() {
-    const autoGenCheckbox = document.getElementById('use_auto_generation');
+    const autoGenRadios = document.querySelectorAll('input[name="use_auto_generation"]');
     const templateGroup = document.getElementById('template_group');
     
-    if (autoGenCheckbox && templateGroup) {
-        autoGenCheckbox.addEventListener('change', function() {
-            templateGroup.style.display = this.checked ? 'none' : 'block';
+    if (autoGenRadios.length > 0 && templateGroup) {
+        autoGenRadios.forEach(function(radio) {
+            radio.addEventListener('change', function() {
+                templateGroup.style.display = this.value === '0' ? 'block' : 'none';
+            });
         });
     }
 });
