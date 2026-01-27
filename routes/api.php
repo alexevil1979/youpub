@@ -6,6 +6,7 @@ use App\Controllers\Api\VideoApiController;
 use App\Controllers\Api\ScheduleApiController;
 use App\Controllers\Api\StatsApiController;
 use App\Middlewares\ApiAuthMiddleware;
+use App\Controllers\Api\DebugApiController;
 use App\Middlewares\RateLimitingMiddleware;
 
 /** @var Router $router */
@@ -55,3 +56,7 @@ $router->get('/api/stats/export', [StatsApiController::class, 'export'], [ApiAut
 
 // Глобальный поиск
 $router->get('/api/search', [\App\Controllers\SearchController::class, 'search'], [ApiAuthMiddleware::class, $apiRateLimit]);
+
+// Админские debug-эндпоинты (только для admin через ApiAuthMiddleware + проверка в контроллере)
+$router->get('/api/debug/db-snapshot', [DebugApiController::class, 'dbSnapshot'], [ApiAuthMiddleware::class, $apiRateLimit]);
+$router->get('/api/debug/worker-log', [DebugApiController::class, 'workerLog'], [ApiAuthMiddleware::class, $apiRateLimit]);
