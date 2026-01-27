@@ -250,15 +250,22 @@ class TemplateController extends Controller
      */
     public function create(): void
     {
+        // Убеждаемся, что сессия инициализирована в начале метода
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
         try {
             $uri = $_SERVER['REQUEST_URI'] ?? '';
             if (strpos($uri, '/content-groups/templates/create-shorts') === false) {
-                if (session_status() === PHP_SESSION_NONE) {
-                    session_start();
-                }
                 $_SESSION['error'] = 'Создание шаблонов старого формата отключено. Используйте Shorts форму.';
                 header('Location: /content-groups/templates/create-shorts');
                 exit;
+            }
+
+            // Убеждаемся, что сессия инициализирована
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
             }
 
             if (!$this->validateCsrf()) {
@@ -283,6 +290,10 @@ class TemplateController extends Controller
                 $videoIdea = trim($this->getParam('video_idea', ''));
 
                 if (empty($videoIdea)) {
+                    // Убеждаемся, что сессия инициализирована
+                    if (session_status() === PHP_SESSION_NONE) {
+                        session_start();
+                    }
                     $_SESSION['error'] = 'Необходимо указать базовую идею видео для автогенерации';
                     header('Location: /content-groups/templates/create-shorts');
                     exit;
@@ -298,10 +309,20 @@ class TemplateController extends Controller
                     error_log('TemplateController::create: Generation error: ' . $genError->getMessage());
                     error_log('TemplateController::create: Stack trace: ' . $genError->getTraceAsString());
                     error_log('TemplateController::create: File: ' . $genError->getFile() . ':' . $genError->getLine());
-                    throw $genError;
+                    // Убеждаемся, что сессия инициализирована перед сохранением ошибки
+                    if (session_status() === PHP_SESSION_NONE) {
+                        session_start();
+                    }
+                    $_SESSION['error'] = 'Ошибка генерации контента: ' . htmlspecialchars($genError->getMessage());
+                    header('Location: /content-groups/templates/create-shorts');
+                    exit;
                 }
 
                 if (empty($variants)) {
+                    // Убеждаемся, что сессия инициализирована
+                    if (session_status() === PHP_SESSION_NONE) {
+                        session_start();
+                    }
                     $_SESSION['error'] = 'Не удалось сгенерировать варианты контента. Попробуйте другую идею.';
                     header('Location: /content-groups/templates/create-shorts');
                     exit;
@@ -610,15 +631,29 @@ class TemplateController extends Controller
             $result = $this->templateService->createTemplate($userId, $data);
 
             if ($result['success']) {
+                // Убеждаемся, что сессия инициализирована перед сохранением сообщения
+                if (session_status() === PHP_SESSION_NONE) {
+                    session_start();
+                }
                 $_SESSION['success'] = $result['message'] ?? 'Шаблон успешно создан';
                 header('Location: /content-groups/templates');
             } else {
+                // Убеждаемся, что сессия инициализирована перед сохранением сообщения
+                if (session_status() === PHP_SESSION_NONE) {
+                    session_start();
+                }
                 $_SESSION['error'] = $result['message'] ?? 'Ошибка при создании шаблона';
                 header('Location: /content-groups/templates/create-shorts');
             }
-        } catch (\Exception $e) {
-            error_log('Error creating template: ' . $e->getMessage());
-            $_SESSION['error'] = 'Произошла ошибка при сохранении шаблона.';
+        } catch (\Throwable $e) {
+            // Убеждаемся, что сессия инициализирована перед сохранением сообщения
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+            error_log('TemplateController::create: Error creating template: ' . $e->getMessage());
+            error_log('TemplateController::create: Stack trace: ' . $e->getTraceAsString());
+            error_log('TemplateController::create: File: ' . $e->getFile() . ':' . $e->getLine());
+            $_SESSION['error'] = 'Произошла ошибка при сохранении шаблона: ' . htmlspecialchars($e->getMessage());
             header('Location: /content-groups/templates/create-shorts');
         }
         exit;
