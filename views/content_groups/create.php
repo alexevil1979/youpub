@@ -221,6 +221,20 @@ ob_start();
     </div>
 </form>
 
+<script>
+// Переключение видимости шаблона при изменении автогенерации
+document.addEventListener('DOMContentLoaded', function() {
+    const autoGenCheckbox = document.getElementById('use_auto_generation');
+    const templateGroup = document.getElementById('template_group');
+    
+    if (autoGenCheckbox && templateGroup) {
+        autoGenCheckbox.addEventListener('change', function() {
+            templateGroup.style.display = this.checked ? 'none' : 'block';
+        });
+    }
+});
+</script>
+
 <?php
 $content = ob_get_clean();
 include __DIR__ . '/../layout.php';
