@@ -7,20 +7,22 @@
 return [
     // Приложение
     'APP_NAME' => 'YouPub',
-    'APP_URL' => 'https://you.1tlt.ru',
+    'APP_URL' => 'https://your-domain.example.com',
     'APP_ENV' => 'production', // development, production
-    'APP_DEBUG' => false,
+    'APP_DEBUG' => false,      // Никогда не включайте в production
     
     // База данных
     'DB_HOST' => '127.0.0.1', // Используйте 127.0.0.1 вместо localhost для TCP/IP
     'DB_NAME' => 'youpub',
     'DB_USER' => 'youpub_user',
-    'DB_PASS' => 'qweasd333123',
+    'DB_PASS' => 'CHANGE_ME_DB_PASSWORD', // Замените на пароль БД в локальной конфигурации env.php
     'DB_CHARSET' => 'utf8mb4',
     
     // Безопасность
-    'SECRET_KEY' => 'CHANGE_THIS_TO_RANDOM_STRING_32_CHARS_MIN',
-    'JWT_SECRET' => 'CHANGE_THIS_TO_RANDOM_STRING_32_CHARS_MIN',
+    // ОБЯЗАТЕЛЬНО сгенерируйте случайные строки длиной 32+ символов
+    // с использованием криптографически стойкого генератора (например, random_bytes)
+    'SECRET_KEY' => 'CHANGE_THIS_TO_RANDOM_RANDOM_STRING_32_CHARS_MIN',
+    'JWT_SECRET' => 'CHANGE_THIS_TO_RANDOM_RANDOM_STRING_32_CHARS_MIN',
     'SESSION_LIFETIME' => 86400, // 24 часа
     'TRUSTED_PROXIES' => [], // список доверенных прокси IP
     
@@ -75,5 +77,8 @@ return [
     'SMTP_PORT' => 587,
     'SMTP_USER' => '',
     'SMTP_PASS' => '',
-    'SMTP_FROM' => 'noreply@you.1tlt.ru',
+    'SMTP_FROM' => 'noreply@your-domain.example.com',
+
+    // Debug API (по умолчанию отключён; включайте ТОЛЬКО в защищённой среде)
+    'ENABLE_DEBUG_API' => false,
 ];

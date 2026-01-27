@@ -361,9 +361,10 @@ function publishVideo() {
         
         if (data && data.success) {
             showStatus('Видео успешно опубликовано!', false);
-            // Перезагружаем страницу через 2 секунды, чтобы увидеть обновленный статус
+            // Через 2 секунды переходим обратно на страницу группы,
+            // где уже будут обновлённые статусы и информация о публикации
             setTimeout(() => {
-                window.location.reload();
+                window.location.href = '/content-groups/<?= (int)$group['id'] ?>';
             }, 2000);
         } else {
             const errorMsg = data && data.message ? data.message : 'Не удалось опубликовать видео';

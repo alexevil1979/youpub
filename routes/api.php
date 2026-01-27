@@ -6,6 +6,7 @@ use App\Controllers\Api\VideoApiController;
 use App\Controllers\Api\ScheduleApiController;
 use App\Controllers\Api\StatsApiController;
 use App\Middlewares\ApiAuthMiddleware;
+use App\Middlewares\AdminMiddleware;
 use App\Controllers\Api\DebugApiController;
 use App\Middlewares\RateLimitingMiddleware;
 
@@ -57,6 +58,17 @@ $router->get('/api/stats/export', [StatsApiController::class, 'export'], [ApiAut
 // Глобальный поиск
 $router->get('/api/search', [\App\Controllers\SearchController::class, 'search'], [ApiAuthMiddleware::class, $apiRateLimit]);
 
-// Debug-эндпоинты (СЕЙЧАС БЕЗ АВТОРИЗАЦИИ! использовать только в защищённой среде)
-$router->get('/api/debug/db-snapshot', [DebugApiController::class, 'dbSnapshot']);
-$router->get('/api/debug/worker-log', [DebugApiController::class, 'workerLog']);
+// Debug-эндпоинты
+// По умолчанию отключены и доступны только администраторам при включённом флаге ENABLE_DEBUG_API
+if (!empty($config['ENABLE_DEBUG_API'])) {
+    $router->get(
+        '/api/debug/db-snapshot',
+        [DebugApiController::class, 'dbSnapshot'],
+        [ApiAuthMiddleware::class, AdminMiddleware::class, $apiRateLimit]
+    );
+    $router->get(
+        '/api/debug/worker-log',
+        [DebugApiController::class, 'workerLog'],
+        [ApiAuthMiddleware::class, AdminMiddleware::class, $apiRateLimit]
+    );
+}

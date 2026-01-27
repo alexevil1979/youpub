@@ -68,9 +68,11 @@ abstract class Repository
         }
 
         if ($limit !== null) {
-            $sql .= " LIMIT " . (int)$limit;
+            $limit = max(0, (int)$limit);
+            $sql .= " LIMIT " . $limit;
             if ($offset !== null) {
-                $sql .= " OFFSET " . (int)$offset;
+                $offset = max(0, (int)$offset);
+                $sql .= " OFFSET " . $offset;
             }
         }
 

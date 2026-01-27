@@ -192,8 +192,12 @@ class SmartQueueService extends Service
                     $generated = $variants[0];
                     $content = $generated['content'] ?? [];
                     
+                    $autoTitle = $content['title'] ?? $videoTitle;
+                    // Анти-дубликатор заголовков внутри группы
+                    $autoTitle = $this->makeTitleUniqueWithinGroup($autoTitle, (int)$group['id'], (int)$video['id']);
+
                     $templated = [
-                        'title' => $content['title'] ?? $videoTitle,
+                        'title' => $autoTitle,
                         'description' => $content['description'] ?? '',
                         'tags' => !empty($content['tags']) && is_array($content['tags']) 
                             ? implode(', ', $content['tags']) 
@@ -221,6 +225,9 @@ class SmartQueueService extends Service
                 'description' => $video['description'] ?? '',
                 'tags' => $video['tags'] ?? '',
             ], $context);
+            if (!empty($templated['title'] ?? null)) {
+                $templated['title'] = $this->makeTitleUniqueWithinGroup($templated['title'], (int)$group['id'], (int)$video['id']);
+            }
             error_log("SmartQueueService::processGroupSchedule: Template applied. Template ID: " . ($templateId ?? 'null'));
             error_log("SmartQueueService::processGroupSchedule: Generated title: " . mb_substr($templated['title'] ?? 'N/A', 0, 100));
             error_log("SmartQueueService::processGroupSchedule: Generated description: " . mb_substr($templated['description'] ?? 'N/A', 0, 100));
@@ -693,8 +700,11 @@ class SmartQueueService extends Service
                             $generated = $variants[0];
                             $content = $generated['content'] ?? [];
                             
+                            $autoTitle = $content['title'] ?? $videoTitle;
+                            $autoTitle = $this->makeTitleUniqueWithinGroup($autoTitle, (int)$groupId, (int)$video['id']);
+
                             $templated = [
-                                'title' => $content['title'] ?? $videoTitle,
+                                'title' => $autoTitle,
                                 'description' => $content['description'] ?? '',
                                 'tags' => !empty($content['tags']) && is_array($content['tags']) 
                                     ? implode(', ', $content['tags']) 
@@ -729,6 +739,9 @@ class SmartQueueService extends Service
                         'description' => $video['description'] ?? '',
                         'tags' => $video['tags'] ?? '',
                     ], $context);
+                    if (!empty($templated['title'] ?? null)) {
+                        $templated['title'] = $this->makeTitleUniqueWithinGroup($templated['title'], (int)$groupId, (int)$video['id']);
+                    }
                     error_log("SmartQueueService::publishGroupFileNow: Generated new template (no saved preview found)");
                     error_log("SmartQueueService::publishGroupFileNow: Generated title: " . ($templated['title'] ?? 'N/A'));
                 }
@@ -1298,27 +1311,7 @@ class SmartQueueService extends Service
 
             if (!empty($updateData)) {
                 $videoRepo->update($schedule['video_id'], $updateData);
-                error_log("SmartQueueService::updateVideoMetadata: Updated video ID {$schedule['video_id']} with template data. Fields: " . implode(', ', array_keys($updateData)));
-                
-                // ВАЖНО: Принудительно обновляем кэш/соединение, чтобы изменения были видны сразу
-                // Используем прямой SQL запрос для гарантии обновления
-                $db = \Core\Database::getInstance();
-                foreach ($updateData as $field => $value) {
-                    $stmt = $db->prepare("UPDATE videos SET {$field} = ? WHERE id = ?");
-                    $stmt->execute([$value, $schedule['video_id']]);
-                }
-                
-                // Проверяем, что данные действительно обновились
-                $updatedVideo = $videoRepo->findById($schedule['video_id']);
-                error_log("SmartQueueService::updateVideoMetadata: Verified update - title: " . mb_substr($updatedVideo['title'] ?? 'N/A', 0, 100));
-                error_log("SmartQueueService::updateVideoMetadata: Verified update - description: " . mb_substr($updatedVideo['description'] ?? 'N/A', 0, 100));
-                
-                if (empty($updatedVideo['title']) || strtolower($updatedVideo['title']) === 'unknown') {
-                    error_log("SmartQueueService::updateVideoMetadata: ERROR - Title is still empty/unknown after update!");
-                }
-                if (empty($updatedVideo['description'])) {
-                    error_log("SmartQueueService::updateVideoMetadata: ERROR - Description is still empty after update!");
-                }
+                error_log("SmartQueueService::updateVideoMetadata: Updated video ID {$schedule['video_id']} with template data via repository. Fields: " . implode(', ', array_keys($updateData)));
             } else {
                 error_log("SmartQueueService::updateVideoMetadata: No data to update for video ID {$schedule['video_id']}");
                 error_log("SmartQueueService::updateVideoMetadata: Templated data - title: " . ($templated['title'] ?? 'N/A') . ", description: " . (empty($templated['description']) ? 'empty' : mb_substr($templated['description'], 0, 50)));
@@ -1365,6 +1358,60 @@ class SmartQueueService extends Service
         if (count($errorCount) >= $maxErrors) {
             $this->groupRepo->update($groupId, ['status' => 'paused']);
             error_log("Group {$groupId} paused due to {$maxErrors} errors");
+        }
+    }
+
+    /**
+     * Обеспечивает уникальность заголовка внутри группы (по уже существующим видео в группе).
+     */
+    private function makeTitleUniqueWithinGroup(string $title, int $groupId, int $videoId): string
+    {
+        $base = trim($title);
+        if ($base === '') {
+            return $title;
+        }
+
+        $normalizedBase = mb_strtolower($base);
+
+        try {
+            $db = \Core\Database::getInstance();
+            $stmt = $db->prepare("
+                SELECT LOWER(TRIM(v.title)) AS t
+                FROM content_group_files cgf
+                JOIN videos v ON v.id = cgf.video_id
+                WHERE cgf.group_id = ?
+                  AND v.id <> ?
+                  AND v.title IS NOT NULL
+            ");
+            $stmt->execute([$groupId, $videoId]);
+            $used = [];
+            while ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) {
+                if (!empty($row['t'])) {
+                    $used[$row['t']] = true;
+                }
+            }
+
+            // Если такого заголовка ещё нет — оставляем как есть
+            if (empty($used[$normalizedBase])) {
+                return $title;
+            }
+
+            // Пробуем добавить суффикс, чтобы получить уникальный вариант
+            $suffix = 2;
+            $candidateTitle = $title . ' #' . $suffix;
+            $normalizedCandidate = mb_strtolower(trim($candidateTitle));
+
+            while (isset($used[$normalizedCandidate]) && $suffix < 50) {
+                $suffix++;
+                $candidateTitle = $title . ' #' . $suffix;
+                $normalizedCandidate = mb_strtolower(trim($candidateTitle));
+            }
+
+            return $candidateTitle;
+        } catch (\Throwable $e) {
+            // В случае ошибки не ломаем публикацию, просто возвращаем исходный заголовок
+            error_log('SmartQueueService::makeTitleUniqueWithinGroup error: ' . $e->getMessage());
+            return $title;
         }
     }
 }

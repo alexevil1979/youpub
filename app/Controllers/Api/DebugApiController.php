@@ -8,8 +8,8 @@ use Core\Database;
 /**
  * Debug API для отладки: дампы БД и логи воркеров.
  *
- * ВАЖНО: сейчас эндпоинты доступны без авторизации.
- * Использовать только в защищённой среде!
+ * ВАЖНО: эндпоинты должны быть включены только в защищённой среде
+ * через конфигурацию ENABLE_DEBUG_API и доступны только администратору.
  */
 class DebugApiController extends Controller
 {
@@ -20,6 +20,9 @@ class DebugApiController extends Controller
      */
     public function dbSnapshot(): void
     {
+        // Дополнительная защита: доступ только администратору
+        $this->requireAdmin();
+
         try {
             $tablesParam = (string)$this->getParam('tables', 'schedules,content_groups,content_group_files,publications,videos');
             $limitParam  = (int)$this->getParam('limit', 200);
@@ -65,6 +68,9 @@ class DebugApiController extends Controller
      */
     public function workerLog(): void
     {
+        // Дополнительная защита: доступ только администратору
+        $this->requireAdmin();
+
         try {
             $type = (string)$this->getParam('type', 'smart_publish');
             $date = (string)$this->getParam('date', date('Y-m-d'));

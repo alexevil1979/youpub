@@ -106,7 +106,7 @@ class ScheduleRepository extends Repository
      */
     public function findDueForPublishing(int $limit = 50, bool $excludeGroups = false): array
     {
-        $limit = max(1, $limit);
+        $limit = max(1, (int)$limit);
         $groupFilter = $excludeGroups ? "AND content_group_id IS NULL" : "";
         $sql = "
             SELECT * FROM {$this->table}
@@ -114,10 +114,11 @@ class ScheduleRepository extends Repository
             AND publish_at <= NOW()
             {$groupFilter}
             ORDER BY publish_at ASC
-            LIMIT {$limit}
+            LIMIT :limit
         ";
 
         $stmt = $this->db->prepare($sql);
+        $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll();
     }

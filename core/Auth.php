@@ -312,7 +312,8 @@ class Auth
                 array_unshift($candidates, $realIp);
             }
             foreach ($candidates as $candidate) {
-                if (filter_var($candidate, FILTER_VALIDATE_IP)) {
+                // При использовании прокси доверяем только публичным IP‑адресам
+                if (filter_var($candidate, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
                     return $candidate;
                 }
             }

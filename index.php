@@ -151,14 +151,19 @@ try {
     // Вывод ошибки (в production лучше показывать общее сообщение)
     http_response_code(500);
     $debug = false;
+    $debugOutputAllowed = false;
     try {
         if (file_exists(__DIR__ . '/config/env.php')) {
             $config = require __DIR__ . '/config/env.php';
             $debug = $config['APP_DEBUG'] ?? false;
+            $env = $config['APP_ENV'] ?? 'production';
+            // Подробный вывод стека ошибок разрешён только вне production
+            $debugOutputAllowed = $debug && $env !== 'production';
         }
     } catch (\Throwable $configError) {
         writeLog("Failed to load config for debug: " . $configError->getMessage());
         $debug = false;
+        $debugOutputAllowed = false;
     }
     
     // Проверяем, это AJAX запрос или обычный?
@@ -166,7 +171,7 @@ try {
     
     if ($isAjax || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false)) {
         // AJAX запрос - возвращаем JSON
-        if ($debug) {
+        if ($debugOutputAllowed) {
             echo json_encode([
                 'error' => 'Internal Server Error',
                 'message' => $e->getMessage(),
@@ -194,7 +199,7 @@ try {
         <body>
             <div class="error">
                 <h1>Ошибка сервера</h1>
-                <?php if ($debug): ?>
+                <?php if ($debugOutputAllowed): ?>
                     <p><strong>Сообщение:</strong> <?= htmlspecialchars($e->getMessage()) ?></p>
                     <p><strong>Файл:</strong> <?= htmlspecialchars($e->getFile()) ?></p>
                     <p><strong>Строка:</strong> <?= $e->getLine() ?></p>

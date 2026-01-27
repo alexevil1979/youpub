@@ -63,15 +63,21 @@ class Database
                     $minutes = (abs($offset) % 3600) / 60;
                     $sign = $offset >= 0 ? '+' : '-';
                     $offsetStr = sprintf('%s%02d:%02d', $sign, $hours, $minutes);
+                    $stmt = self::$instance->prepare('SET time_zone = ?');
                     if (preg_match('/^[+-]\d{2}:\d{2}$/', $offsetStr) === 1) {
-                        self::$instance->exec("SET time_zone = '{$offsetStr}'");
+                        $stmt->execute([$offsetStr]);
                     } else {
-                        self::$instance->exec("SET time_zone = '+00:00'");
+                        $stmt->execute(['+00:00']);
                     }
                 } catch (\Exception $e) {
                     error_log("Failed to set MySQL timezone: " . $e->getMessage());
                     // Используем UTC по умолчанию
-                    self::$instance->exec("SET time_zone = '+00:00'");
+                    try {
+                        $stmt = self::$instance->prepare('SET time_zone = ?');
+                        $stmt->execute(['+00:00']);
+                    } catch (\Exception $inner) {
+                        error_log("Failed to fallback MySQL timezone to UTC: " . $inner->getMessage());
+                    }
                 }
             } catch (PDOException $e) {
                 error_log('Database connection failed: ' . $e->getMessage());

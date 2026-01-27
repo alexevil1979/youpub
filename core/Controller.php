@@ -53,16 +53,80 @@ abstract class Controller
      */
     protected function getRequestData(): array
     {
-        $data = json_decode(file_get_contents('php://input'), true);
+        $raw = file_get_contents('php://input');
+        if ($raw === false || $raw === '') {
+            return [];
+        }
+        $data = json_decode($raw, true);
         return $data ?: [];
     }
 
     /**
-     * Получить параметр из GET/POST
+     * Получить параметр из GET/POST (безопасный, но универсальный доступ).
+     * Для нового кода предпочитайте getStringParam()/getIntParam()/getArrayParam().
      */
     protected function getParam(string $key, $default = null)
     {
-        return $_GET[$key] ?? $_POST[$key] ?? $default;
+        if (array_key_exists($key, $_GET)) {
+            return $_GET[$key];
+        }
+        if (array_key_exists($key, $_POST)) {
+            return $_POST[$key];
+        }
+        return $default;
+    }
+
+    /**
+     * Получить строковый параметр с базовой санитизацией
+     */
+    protected function getStringParam(string $key, ?string $default = null): ?string
+    {
+        $value = $this->getParam($key, $default);
+        if ($value === null) {
+            return null;
+        }
+        if (is_array($value)) {
+            return $default;
+        }
+        $value = trim((string)$value);
+        return $value === '' ? $default : $value;
+    }
+
+    /**
+     * Получить целочисленный параметр с приведением типов и ограничением диапазона
+     */
+    protected function getIntParam(string $key, ?int $default = null, ?int $min = null, ?int $max = null): ?int
+    {
+        $value = $this->getParam($key, $default);
+        if ($value === null || $value === '') {
+            return $default;
+        }
+        if (is_array($value)) {
+            return $default;
+        }
+        if (!is_numeric($value)) {
+            return $default;
+        }
+        $int = (int)$value;
+        if ($min !== null && $int < $min) {
+            $int = $min;
+        }
+        if ($max !== null && $int > $max) {
+            $int = $max;
+        }
+        return $int;
+    }
+
+    /**
+     * Получить массивный параметр
+     */
+    protected function getArrayParam(string $key, array $default = []): array
+    {
+        $value = $this->getParam($key, $default);
+        if (!is_array($value)) {
+            return $default;
+        }
+        return $value;
     }
 
     /**
