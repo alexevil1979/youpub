@@ -269,6 +269,7 @@ ob_start();
             title="Опубликовать сейчас"
             aria-label="Опубликовать сейчас">
         <?= \App\Helpers\IconHelper::render('publish', 16, 'icon-inline') ?>
+        Опубликовать сейчас
     </button>
     <?php if (!$canPublish): ?>
         <span style="margin-left: 0.75rem; color: #e74c3c; font-size: 0.9rem;">Этот файл нельзя опубликовать сейчас</span>
@@ -312,7 +313,7 @@ function publishVideo() {
     if (btn) {
         btn.disabled = true;
         btn.style.opacity = '0.6';
-        btn.innerHTML = 'Публикация...';
+        btn.innerHTML = '<?= \App\Helpers\IconHelper::render('publish', 16, 'icon-inline') ?> Публикация...';
     }
     
     if (statusDiv) {

@@ -267,22 +267,88 @@ class TemplateService extends Service
             error_log("TemplateService::applyTemplate: No description variants found for hook_type '{$hookType}' (normalized: '{$normalizedHookType}')");
             if (!empty($descriptionVariants)) {
                 error_log("TemplateService::applyTemplate: Available description variant keys: " . implode(', ', array_keys($descriptionVariants)));
+                
+                // Пробуем использовать fallback типы, если основной тип не найден
+                $fallbackTypes = ['emotional', 'atmosphere', 'question'];
+                $foundFallback = false;
+                
+                foreach ($fallbackTypes as $fallbackType) {
+                    if (isset($descriptionVariants[$fallbackType]) && !empty($descriptionVariants[$fallbackType])) {
+                        $hookVariants = $descriptionVariants[$fallbackType];
+                        if (is_array($hookVariants) && !empty($hookVariants)) {
+                            shuffle($hookVariants);
+                            $selectedVariant = $hookVariants[mt_rand(0, count($hookVariants) - 1)];
+                            
+                            // Добавляем emoji из соответствующей группы
+                            $emojiGroups = !empty($template['emoji_groups']) ? json_decode($template['emoji_groups'], true) : [];
+                            // Пробуем найти emoji для fallback типа, если нет - пробуем другие типы
+                            $emojiFound = false;
+                            if (isset($emojiGroups[$fallbackType]) && !empty($emojiGroups[$fallbackType])) {
+                                $emojiList = is_array($emojiGroups[$fallbackType]) 
+                                    ? $emojiGroups[$fallbackType] 
+                                    : array_filter(array_map('trim', explode(',', $emojiGroups[$fallbackType])));
+                                if (!empty($emojiList)) {
+                                    shuffle($emojiList);
+                                    $emojiCount = min(mt_rand(1, 2), count($emojiList));
+                                    $selectedEmojis = array_slice($emojiList, 0, $emojiCount);
+                                    if (!empty($selectedEmojis)) {
+                                        $selectedVariant .= ' ' . implode(' ', $selectedEmojis);
+                                        $emojiFound = true;
+                                    }
+                                }
+                            }
+                            
+                            // Если emoji не найдены для fallback типа, пробуем другие типы
+                            if (!$emojiFound && !empty($emojiGroups)) {
+                                foreach (['emotional', 'atmosphere', 'question'] as $emojiType) {
+                                    if (isset($emojiGroups[$emojiType]) && !empty($emojiGroups[$emojiType])) {
+                                        $emojiList = is_array($emojiGroups[$emojiType]) 
+                                            ? $emojiGroups[$emojiType] 
+                                            : array_filter(array_map('trim', explode(',', $emojiGroups[$emojiType])));
+                                        if (!empty($emojiList)) {
+                                            shuffle($emojiList);
+                                            $emojiCount = min(mt_rand(1, 2), count($emojiList));
+                                            $selectedEmojis = array_slice($emojiList, 0, $emojiCount);
+                                            if (!empty($selectedEmojis)) {
+                                                $selectedVariant .= ' ' . implode(' ', $selectedEmojis);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            $result['description'] = $this->processTemplate($selectedVariant, $vars, $video['description'] ?? '');
+                            $descriptionGenerated = !empty($result['description']);
+                            error_log("TemplateService::applyTemplate: Using fallback type '{$fallbackType}' for description, length: " . mb_strlen($result['description']));
+                            $foundFallback = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (!$foundFallback) {
+                    error_log("TemplateService::applyTemplate: No fallback types found, using old approach");
+                }
             }
-            // Обратная совместимость: старый подход
-            $emojiList = !empty($template['emoji_list']) ? json_decode($template['emoji_list'], true) : ['🎬'];
+            
+            // Если все еще не сгенерировано, используем старый подход
+            if (!$descriptionGenerated) {
+                $emojiList = !empty($template['emoji_list']) ? json_decode($template['emoji_list'], true) : ['🎬'];
 
-            // Гарантируем, что emojiList является массивом
-            if (!is_array($emojiList) || empty($emojiList)) {
-                $emojiList = ['🎬'];
+                // Гарантируем, что emojiList является массивом
+                if (!is_array($emojiList) || empty($emojiList)) {
+                    $emojiList = ['🎬'];
+                }
+
+                // Полная рандомизация emoji для старого подхода
+                shuffle($emojiList);
+                $vars['random_emoji'] = $emojiList[mt_rand(0, count($emojiList) - 1)];
+                $descriptionTemplate = $template['description_template'] ?? '';
+                $result['description'] = $this->processTemplate($descriptionTemplate, $vars, $video['description'] ?? '');
+                $descriptionGenerated = !empty($result['description']);
+                error_log("TemplateService::applyTemplate: Generated description from template, template length: " . mb_strlen($descriptionTemplate) . ", result length: " . mb_strlen($result['description']));
             }
-
-            // Полная рандомизация emoji для старого подхода
-            shuffle($emojiList);
-            $vars['random_emoji'] = $emojiList[mt_rand(0, count($emojiList) - 1)];
-            $descriptionTemplate = $template['description_template'] ?? '';
-            $result['description'] = $this->processTemplate($descriptionTemplate, $vars, $video['description'] ?? '');
-            $descriptionGenerated = !empty($result['description']);
-            error_log("TemplateService::applyTemplate: Generated description from template, template length: " . mb_strlen($descriptionTemplate) . ", result length: " . mb_strlen($result['description']));
         }
 
         // Fallback: если описание не сгенерировано, используем исходное или дефолтное
@@ -330,58 +396,8 @@ class TemplateService extends Service
         $finalTags = array_unique(array_filter($finalTags));
         $result['tags'] = implode(', ', $finalTags);
 
-        // Добавляем хештеги в название и ограничиваем длину до 100 символов
-        // ВАЖНО: хештеги добавляются ДО фильтрации русских слов, чтобы потом пересобрать их из отфильтрованных тегов
-        if (!empty($finalTags)) {
-            // Извлекаем хештеги из тегов (убираем # если есть, затем добавляем обратно)
-            $hashtags = [];
-            foreach ($finalTags as $tag) {
-                $tag = trim($tag);
-                if (empty($tag)) continue;
-                // Убираем # если есть, затем добавляем обратно для единообразия
-                $tag = ltrim($tag, '#');
-                if (!empty($tag)) {
-                    $hashtags[] = '#' . $tag;
-                }
-            }
-            
-            // Берем первые 3-5 хештегов, чтобы не перегружать название
-            $hashtags = array_slice($hashtags, 0, min(5, count($hashtags)));
-            
-            if (!empty($hashtags)) {
-                $hashtagsString = ' ' . implode(' ', $hashtags);
-                $titleWithHashtags = $result['title'] . $hashtagsString;
-                
-                // Ограничиваем длину до 100 символов
-                if (mb_strlen($titleWithHashtags) > 100) {
-                    // Сначала пробуем убрать часть хештегов
-                    $availableLength = 100 - mb_strlen($result['title']) - 1; // -1 для пробела
-                    if ($availableLength > 0) {
-                        $shortenedHashtags = [];
-                        $currentLength = 0;
-                        foreach ($hashtags as $hashtag) {
-                            $hashtagLength = mb_strlen($hashtag) + 1; // +1 для пробела
-                            if ($currentLength + $hashtagLength <= $availableLength) {
-                                $shortenedHashtags[] = $hashtag;
-                                $currentLength += $hashtagLength;
-                            } else {
-                                break;
-                            }
-                        }
-                        if (!empty($shortenedHashtags)) {
-                            $result['title'] = $result['title'] . ' ' . implode(' ', $shortenedHashtags);
-                        }
-                    }
-                    
-                    // Если все еще длиннее 100 символов, обрезаем название
-                    if (mb_strlen($result['title']) > 100) {
-                        $result['title'] = mb_substr($result['title'], 0, 97) . '...';
-                    }
-                } else {
-                    $result['title'] = $titleWithHashtags;
-                }
-            }
-        }
+        // НЕ добавляем хештеги в название - они должны быть только в описании и тегах
+        // Название должно быть чистым и читаемым
         
         // Финальная проверка длины названия (на случай, если хештеги не были добавлены)
         if (mb_strlen($result['title']) > 100) {
@@ -405,8 +421,50 @@ class TemplateService extends Service
         if (empty($descriptionTrimmed)) {
             // Определяем язык названия для выбора правильного fallback
             $titleLang = $this->detectLanguage($result['title'] ?? '');
-            $result['description'] = $titleLang === 'en' ? 'Watch this video! 🎬' : 'Посмотрите это видео! 🎬';
-            error_log("TemplateService::applyTemplate: Final fallback applied - description was empty, using " . ($titleLang === 'en' ? 'English' : 'Russian') . " fallback");
+            
+            // Пробуем использовать варианты описаний из других типов, если они есть
+            if (!empty($descriptionVariants)) {
+                $fallbackDescriptions = [];
+                foreach (['emotional', 'atmosphere', 'question'] as $fallbackType) {
+                    if (isset($descriptionVariants[$fallbackType]) && is_array($descriptionVariants[$fallbackType])) {
+                        $fallbackDescriptions = array_merge($fallbackDescriptions, $descriptionVariants[$fallbackType]);
+                    }
+                }
+                
+                if (!empty($fallbackDescriptions)) {
+                    shuffle($fallbackDescriptions);
+                    $selectedFallback = $fallbackDescriptions[mt_rand(0, count($fallbackDescriptions) - 1)];
+                    $result['description'] = $this->processTemplate($selectedFallback, $vars, $video['description'] ?? '');
+                    
+                    // Добавляем emoji если есть
+                    $emojiGroups = !empty($template['emoji_groups']) ? json_decode($template['emoji_groups'], true) : [];
+                    if (!empty($emojiGroups)) {
+                        foreach (['emotional', 'atmosphere', 'question'] as $emojiType) {
+                            if (isset($emojiGroups[$emojiType]) && !empty($emojiGroups[$emojiType])) {
+                                $emojiList = is_array($emojiGroups[$emojiType]) 
+                                    ? $emojiGroups[$emojiType] 
+                                    : array_filter(array_map('trim', explode(',', $emojiGroups[$emojiType])));
+                                if (!empty($emojiList)) {
+                                    shuffle($emojiList);
+                                    $selectedEmoji = $emojiList[mt_rand(0, count($emojiList) - 1)];
+                                    $result['description'] .= ' ' . $selectedEmoji;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (!empty(trim($result['description']))) {
+                        error_log("TemplateService::applyTemplate: Final fallback applied - using description from other types");
+                    }
+                }
+            }
+            
+            // Если все еще пустое, используем простой fallback
+            if (empty(trim($result['description']))) {
+                $result['description'] = $titleLang === 'en' ? 'Watch this video! 🎬' : 'Посмотрите это видео! 🎬';
+                error_log("TemplateService::applyTemplate: Final fallback applied - description was empty, using " . ($titleLang === 'en' ? 'English' : 'Russian') . " fallback");
+            }
         }
 
         // ФИНАЛЬНАЯ ПРОВЕРКА: название всегда должно быть заполнено и не быть "unknown"
@@ -472,66 +530,11 @@ class TemplateService extends Service
                     }
                 }
                 $result['tags'] = implode(', ', $filteredTags);
-                
-                // Если после фильтрации тегов название содержит хештеги, нужно пересобрать их
-                // Пересобираем хештеги для названия из отфильтрованных тегов
-                if (!empty($filteredTags)) {
-                    $hashtags = [];
-                    foreach ($filteredTags as $tag) {
-                        $tag = trim($tag);
-                        if (empty($tag)) continue;
-                        $tag = ltrim($tag, '#');
-                        if (!empty($tag)) {
-                            $hashtags[] = '#' . $tag;
-                        }
-                    }
-                    $hashtags = array_slice($hashtags, 0, min(5, count($hashtags)));
-                    
-                    if (!empty($hashtags)) {
-                        // Убираем старые хештеги из названия (если есть)
-                        $titleWithoutHashtags = preg_replace('/\s+#[^\s]+(?:\s+#[^\s]+)*\s*$/', '', $result['title']);
-                        $titleWithoutHashtags = trim($titleWithoutHashtags);
-                        
-                        $hashtagsString = ' ' . implode(' ', $hashtags);
-                        $titleWithHashtags = $titleWithoutHashtags . $hashtagsString;
-                        
-                        // Ограничиваем длину до 100 символов
-                        if (mb_strlen($titleWithHashtags) > 100) {
-                            $availableLength = 100 - mb_strlen($titleWithoutHashtags) - 1;
-                            if ($availableLength > 0) {
-                                $shortenedHashtags = [];
-                                $currentLength = 0;
-                                foreach ($hashtags as $hashtag) {
-                                    $hashtagLength = mb_strlen($hashtag) + 1;
-                                    if ($currentLength + $hashtagLength <= $availableLength) {
-                                        $shortenedHashtags[] = $hashtag;
-                                        $currentLength += $hashtagLength;
-                                    } else {
-                                        break;
-                                    }
-                                }
-                                if (!empty($shortenedHashtags)) {
-                                    $result['title'] = $titleWithoutHashtags . ' ' . implode(' ', $shortenedHashtags);
-                                } else {
-                                    $result['title'] = $titleWithoutHashtags;
-                                }
-                            } else {
-                                $result['title'] = $titleWithoutHashtags;
-                            }
-                            
-                            if (mb_strlen($result['title']) > 100) {
-                                $result['title'] = mb_substr($result['title'], 0, 97) . '...';
-                            }
-                        } else {
-                            $result['title'] = $titleWithHashtags;
-                        }
-                    } else {
-                        // Если после фильтрации не осталось хештегов, убираем их из названия
-                        $result['title'] = preg_replace('/\s+#[^\s]+(?:\s+#[^\s]+)*\s*$/', '', $result['title']);
-                        $result['title'] = trim($result['title']);
-                    }
-                }
             }
+            
+            // Убираем хештеги из названия (они не должны быть там)
+            $result['title'] = preg_replace('/\s+#[^\s]+(?:\s+#[^\s]+)*\s*$/', '', $result['title']);
+            $result['title'] = trim($result['title']);
             
             error_log("TemplateService::applyTemplate: Filtered Russian words from description and tags (title is English)");
         }
