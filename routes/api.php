@@ -57,6 +57,6 @@ $router->get('/api/stats/export', [StatsApiController::class, 'export'], [ApiAut
 // Глобальный поиск
 $router->get('/api/search', [\App\Controllers\SearchController::class, 'search'], [ApiAuthMiddleware::class, $apiRateLimit]);
 
-// Админские debug-эндпоинты (только для admin через ApiAuthMiddleware + проверка в контроллере)
-$router->get('/api/debug/db-snapshot', [DebugApiController::class, 'dbSnapshot'], [ApiAuthMiddleware::class, $apiRateLimit]);
-$router->get('/api/debug/worker-log', [DebugApiController::class, 'workerLog'], [ApiAuthMiddleware::class, $apiRateLimit]);
+// Debug-эндпоинты (СЕЙЧАС БЕЗ АВТОРИЗАЦИИ! использовать только в защищённой среде)
+$router->get('/api/debug/db-snapshot', [DebugApiController::class, 'dbSnapshot']);
+$router->get('/api/debug/worker-log', [DebugApiController::class, 'workerLog']);

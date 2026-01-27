@@ -6,9 +6,10 @@ use Core\Controller;
 use Core\Database;
 
 /**
- * Админский API для отладки: дампы БД и логи воркеров.
+ * Debug API для отладки: дампы БД и логи воркеров.
  *
- * Все методы требуют роли admin.
+ * ВАЖНО: сейчас эндпоинты доступны без авторизации.
+ * Использовать только в защищённой среде!
  */
 class DebugApiController extends Controller
 {
@@ -19,9 +20,6 @@ class DebugApiController extends Controller
      */
     public function dbSnapshot(): void
     {
-        // Только администратор
-        $this->requireAdmin();
-
         try {
             $tablesParam = (string)$this->getParam('tables', 'schedules,content_groups,content_group_files,publications,videos');
             $limitParam  = (int)$this->getParam('limit', 200);
@@ -67,9 +65,6 @@ class DebugApiController extends Controller
      */
     public function workerLog(): void
     {
-        // Только администратор
-        $this->requireAdmin();
-
         try {
             $type = (string)$this->getParam('type', 'smart_publish');
             $date = (string)$this->getParam('date', date('Y-m-d'));
