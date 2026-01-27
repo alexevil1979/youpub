@@ -604,13 +604,35 @@ class TemplateController extends Controller
             error_log("  base_tags: " . ($baseTags ?: "empty"));
             error_log("  tag_variants: " . (is_array($tagVariants) ? count($tagVariants) . " items" : "not array"));
             
+            // Безопасная функция для trim с проверкой типа
+            $safeTrim = function($value): ?string {
+                if ($value === null) {
+                    return null;
+                }
+                if (is_array($value)) {
+                    error_log('TemplateController::create: Warning - trim() called on array, converting to empty string');
+                    return '';
+                }
+                return trim((string)$value);
+            };
+            
+            // Безопасное получение строковых параметров
+            $getStringParam = function($key, $default = '') use ($safeTrim) {
+                $value = $this->getParam($key, $default);
+                if (is_array($value)) {
+                    error_log("TemplateController::create: Warning - getParam('{$key}') returned array, using default");
+                    return $default;
+                }
+                return $safeTrim($value);
+            };
+            
             $data = [
-                'name' => $this->getParam('name', ''),
-                'description' => $this->getParam('description', ''),
+                'name' => $getStringParam('name', ''),
+                'description' => !empty($this->getParam('description', '')) ? $getStringParam('description', '') : null,
                 // Старые поля для обратной совместимости
-                'title_template' => $this->getParam('title_template', ''),
-                'description_template' => $this->getParam('description_template', ''),
-                'tags_template' => $this->getParam('tags_template', ''),
+                'title_template' => !empty($this->getParam('title_template', '')) ? $getStringParam('title_template', '') : null,
+                'description_template' => !empty($this->getParam('description_template', '')) ? $getStringParam('description_template', '') : null,
+                'tags_template' => !empty($this->getParam('tags_template', '')) ? $getStringParam('tags_template', '') : null,
                 'emoji_list' => $emojiArray,
                 'variants' => !empty($variants) ? $variants : null,
                 // Новые поля для Shorts
@@ -619,8 +641,8 @@ class TemplateController extends Controller
                 'title_variants' => !empty($titleVariants) ? array_values($titleVariants) : null, // array_values для переиндексации
                 'description_variants' => !empty($descriptionVariants) ? $descriptionVariants : null,
                 'emoji_groups' => !empty($emojiGroups) ? $emojiGroups : null,
-                'base_tags' => $this->getParam('base_tags', ''),
-                'tag_variants' => is_array($tagVariants) ? array_filter(array_map('trim', $tagVariants), function($v) { return !empty($v); }) : [],
+                'base_tags' => !empty($baseTags) ? (is_string($baseTags) ? trim($baseTags) : '') : null,
+                'tag_variants' => is_array($tagVariants) ? array_filter(array_map(function($v) { return is_string($v) ? trim($v) : ''; }, $tagVariants), function($v) { return !empty($v); }) : [],
                 'questions' => $questions,
                 'pinned_comments' => $pinnedComments,
                 'cta_types' => $this->getParam('cta_types', []),
@@ -818,14 +840,36 @@ class TemplateController extends Controller
             error_log("  base_tags: " . ($baseTags ?: "empty"));
             error_log("  tag_variants: " . (is_array($tagVariants) ? count($tagVariants) . " items" : "not array"));
             
+            // Безопасная функция для trim с проверкой типа
+            $safeTrim = function($value): ?string {
+                if ($value === null) {
+                    return null;
+                }
+                if (is_array($value)) {
+                    error_log('TemplateController::update: Warning - trim() called on array, converting to empty string');
+                    return '';
+                }
+                return trim((string)$value);
+            };
+            
+            // Безопасное получение строковых параметров
+            $getStringParam = function($key, $default = '') use ($safeTrim) {
+                $value = $this->getParam($key, $default);
+                if (is_array($value)) {
+                    error_log("TemplateController::update: Warning - getParam('{$key}') returned array, using default");
+                    return $default;
+                }
+                return $safeTrim($value);
+            };
+            
             // Обрабатываем данные так же, как в createTemplate - кодируем массивы в JSON
             $data = [
-                'name' => trim($this->getParam('name', '')),
-                'description' => !empty($this->getParam('description', '')) ? trim($this->getParam('description', '')) : null,
+                'name' => $getStringParam('name', ''),
+                'description' => !empty($this->getParam('description', '')) ? $getStringParam('description', '') : null,
                 // Старые поля для обратной совместимости
-                'title_template' => !empty($this->getParam('title_template', '')) ? trim($this->getParam('title_template', '')) : null,
-                'description_template' => !empty($this->getParam('description_template', '')) ? trim($this->getParam('description_template', '')) : null,
-                'tags_template' => !empty($this->getParam('tags_template', '')) ? trim($this->getParam('tags_template', '')) : null,
+                'title_template' => !empty($this->getParam('title_template', '')) ? $getStringParam('title_template', '') : null,
+                'description_template' => !empty($this->getParam('description_template', '')) ? $getStringParam('description_template', '') : null,
+                'tags_template' => !empty($this->getParam('tags_template', '')) ? $getStringParam('tags_template', '') : null,
                 'emoji_list' => !empty($emojiArray) && is_array($emojiArray) ? json_encode($emojiArray, JSON_UNESCAPED_UNICODE) : null,
                 'variants' => !empty($variants) && is_array($variants) ? json_encode($variants, JSON_UNESCAPED_UNICODE) : null,
                 // Новые поля для Shorts - кодируем массивы в JSON
@@ -834,7 +878,7 @@ class TemplateController extends Controller
                 'title_variants' => !empty($titleVariants) && is_array($titleVariants) ? json_encode(array_values($titleVariants), JSON_UNESCAPED_UNICODE) : null,
                 'description_variants' => !empty($descriptionVariants) && is_array($descriptionVariants) ? json_encode($descriptionVariants, JSON_UNESCAPED_UNICODE) : null,
                 'emoji_groups' => !empty($emojiGroups) && is_array($emojiGroups) ? json_encode($emojiGroups, JSON_UNESCAPED_UNICODE) : null,
-                'base_tags' => !empty($baseTags) ? trim($baseTags) : null,
+                'base_tags' => !empty($baseTags) ? (is_string($baseTags) ? trim($baseTags) : '') : null,
                 'tag_variants' => !empty($tagVariants) && is_array($tagVariants) ? json_encode($tagVariants, JSON_UNESCAPED_UNICODE) : null,
                 'questions' => !empty($questions) && is_array($questions) ? json_encode($questions, JSON_UNESCAPED_UNICODE) : null,
                 'pinned_comments' => !empty($pinnedComments) && is_array($pinnedComments) ? json_encode($pinnedComments, JSON_UNESCAPED_UNICODE) : null,
@@ -847,9 +891,15 @@ class TemplateController extends Controller
 
             $_SESSION['success'] = 'Шаблон успешно обновлен';
             header('Location: /content-groups/templates');
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             error_log('Error updating template: ' . $e->getMessage());
-            $_SESSION['error'] = 'Произошла ошибка при обновлении шаблона.';
+            error_log('Error updating template: Stack trace: ' . $e->getTraceAsString());
+            error_log('Error updating template: File: ' . $e->getFile() . ':' . $e->getLine());
+            // Убеждаемся, что сессия инициализирована
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+            $_SESSION['error'] = 'Произошла ошибка при обновлении шаблона: ' . htmlspecialchars($e->getMessage());
             header('Location: /content-groups/templates/' . $id . '/edit');
         }
         exit;
