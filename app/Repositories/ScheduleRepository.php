@@ -182,17 +182,46 @@ class ScheduleRepository extends Repository
      */
     public function cleanupStuckProcessing(int $minutes = 10): int
     {
-        $sql = "
+        // Для расписаний, связанных с группами контента, мы не хотим
+        // окончательно помечать их как 'failed', так как это "долгоживущие"
+        // интервальные / пакетные / групповые расписания.
+        // Вместо этого возвращаем их в 'pending', чтобы воркер мог
+        // продолжить работу после таймаута.
+        //
+        // Для обычных одиночных расписаний (без content_group_id и без использования
+        // через schedule_id в content_groups) оставляем прежнюю логику: 'failed'.
+
+        // 1) Сначала помечаем как 'pending' все зависшие групповые расписания
+        $sqlGroups = "
+            UPDATE {$this->table}
+            SET status = 'pending',
+                error_message = CONCAT('Processing timeout (', ?, ' minutes)')
+            WHERE status = 'processing'
+              AND created_at < DATE_SUB(NOW(), INTERVAL ? MINUTE)
+              AND (
+                    content_group_id IS NOT NULL
+                    OR id IN (SELECT schedule_id FROM content_groups WHERE schedule_id IS NOT NULL)
+              )
+        ";
+        $stmtGroups = $this->db->prepare($sqlGroups);
+        $stmtGroups->execute([$minutes, $minutes]);
+        $groupsUpdated = $stmtGroups->rowCount();
+
+        // 2) Остальные зависшие расписания помечаем как 'failed'
+        $sqlSingle = "
             UPDATE {$this->table}
             SET status = 'failed',
                 error_message = CONCAT('Processing timeout (', ?, ' minutes)')
             WHERE status = 'processing'
-            AND created_at < DATE_SUB(NOW(), INTERVAL ? MINUTE)
+              AND created_at < DATE_SUB(NOW(), INTERVAL ? MINUTE)
+              AND content_group_id IS NULL
+              AND id NOT IN (SELECT schedule_id FROM content_groups WHERE schedule_id IS NOT NULL)
         ";
-        
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([$minutes, $minutes]);
-        return $stmt->rowCount();
+        $stmtSingle = $this->db->prepare($sqlSingle);
+        $stmtSingle->execute([$minutes, $minutes]);
+        $singleUpdated = $stmtSingle->rowCount();
+
+        return $groupsUpdated + $singleUpdated;
     }
 
     /**
