@@ -100,6 +100,14 @@ $formatEmojiGroup = static function ($value, string $fallback): string {
     return $fallback;
 };
 
+// Начинаем буферизацию вывода перед HTML
+// Убеждаемся, что нет активного буфера (если есть - это ошибка)
+if (ob_get_level() > 0) {
+    error_log("Templates create_v2 view: WARNING - Output buffer already active (level: " . ob_get_level() . "), cleaning");
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+}
 ob_start();
 ?>
 
@@ -1247,17 +1255,20 @@ document.addEventListener('input', function(e) {
 
 <?php
 try {
-    // Проверяем, что буфер активен
+    // Проверяем, что буфер активен (должен быть начат на строке 91)
     $bufferLevel = ob_get_level();
-    if ($bufferLevel === 0) {
-        error_log("Templates create_v2 view: WARNING - No active output buffer, starting one");
-        ob_start();
-    }
+    error_log("Templates create_v2 view: Buffer level before ob_get_clean: {$bufferLevel}");
     
-    $content = ob_get_clean();
-    if ($content === false) {
-        error_log("Templates create_v2 view: Failed to get buffer content (buffer level was: {$bufferLevel})");
-        $content = '<div class="alert alert-error">Ошибка при загрузке содержимого</div>';
+    if ($bufferLevel === 0) {
+        error_log("Templates create_v2 view: ERROR - No active output buffer! This should not happen.");
+        // В критической ситуации создаем минимальный контент
+        $content = '<div class="alert alert-error">Ошибка: буфер вывода не был инициализирован</div>';
+    } else {
+        $content = ob_get_clean();
+        if ($content === false || $content === '') {
+            error_log("Templates create_v2 view: WARNING - ob_get_clean returned false or empty (buffer level was: {$bufferLevel})");
+            $content = '<div class="alert alert-error">Ошибка при загрузке содержимого</div>';
+        }
     }
     
     // Убеждаемся, что переменные для layout определены
@@ -1265,19 +1276,27 @@ try {
         $title = 'Создать шаблон Shorts';
     }
     
+    // Убеждаемся, что сессия доступна для layout
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    
     $layoutPath = __DIR__ . '/../../layout.php';
     if (!file_exists($layoutPath)) {
         error_log("Templates create_v2 view: Layout file not found: {$layoutPath}");
         error_log("Templates create_v2 view: Current directory: " . __DIR__);
-        error_log("Templates create_v2 view: Layout should be at: " . realpath($layoutPath));
+        error_log("Templates create_v2 view: Absolute layout path: " . realpath($layoutPath));
+        error_log("Templates create_v2 view: File exists check: " . (file_exists($layoutPath) ? 'yes' : 'no'));
         http_response_code(500);
         echo "Layout file not found. Please check server logs.";
         exit;
     }
     
+    error_log("Templates create_v2 view: Including layout from: {$layoutPath}");
     // Включаем layout - он должен вывести $content
     include $layoutPath;
     // После включения layout завершаем выполнение
+    error_log("Templates create_v2 view: Layout included successfully, exiting");
     exit;
 } catch (\Throwable $e) {
     error_log("Templates create_v2 view: Fatal error: " . $e->getMessage());
@@ -1286,7 +1305,7 @@ try {
     
     // Очищаем все буферы
     while (ob_get_level() > 0) {
-        ob_end_clean();
+        @ob_end_clean();
     }
     
     http_response_code(500);
