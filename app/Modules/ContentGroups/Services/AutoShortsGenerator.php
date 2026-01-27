@@ -1640,7 +1640,7 @@ class AutoShortsGenerator
             'Want more like this?'
         ],
         'dance' => [
-            'How's the dance?',
+            'How\'s the dance?',
             'Did the moves hook you?',
             'Want more like this?',
             'Who did it BEST?'
@@ -1652,25 +1652,25 @@ class AutoShortsGenerator
             'Who did it BEST?'
         ],
         'cooking' => [
-            'How's the recipe?',
+            'How\'s the recipe?',
             'Does it look good?',
             'Want more like this?',
             'Who did it BEST?'
         ],
         'fitness' => [
-            'How's the workout?',
+            'How\'s the workout?',
             'Did it motivate you?',
             'Want more like this?',
             'Who did it BEST?'
         ],
         'beauty' => [
-            'How's the look?',
+            'How\'s the look?',
             'Does it look amazing?',
             'Want more like this?',
             'Who did it BEST?'
         ],
         'gaming' => [
-            'How's the game?',
+            'How\'s the game?',
             'Did it hook you?',
             'Want more like this?',
             'Who did it BEST?'
@@ -1682,13 +1682,13 @@ class AutoShortsGenerator
             'Who did it BEST?'
         ],
         'travel' => [
-            'How's the trip?',
+            'How\'s the trip?',
             'Do you want to go there?',
             'Want more like this?',
             'Who did it BEST?'
         ],
         'diy' => [
-            'How's the craft?',
+            'How\'s the craft?',
             'Do you want to try this?',
             'Want more like this?',
             'Who did it BEST?'
@@ -1742,19 +1742,19 @@ class AutoShortsGenerator
             'Who did it BEST?'
         ],
         'vlog' => [
-            'How's the day?',
+            'How\'s the day?',
             'Do you relate?',
             'Want more like this?',
             'Who did it BEST?'
         ],
         'fashion' => [
-            'How's the style?',
+            'How\'s the style?',
             'Do you like the outfit?',
             'Want more like this?',
             'Who did it BEST?'
         ],
         'tech' => [
-            'How's the gadget?',
+            'How\'s the gadget?',
             'Do you want this?',
             'Want more like this?',
             'Who did it BEST?'
