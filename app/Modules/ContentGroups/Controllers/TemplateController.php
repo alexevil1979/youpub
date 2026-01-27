@@ -181,8 +181,29 @@ class TemplateController extends Controller
                 throw new \Exception("View file not found: {$viewPath}");
             }
             
+            error_log("TemplateController::showCreateShorts: Starting output buffer");
+            ob_start();
+            
             error_log("TemplateController::showCreateShorts: Including view file");
-            include $viewPath;
+            try {
+                include $viewPath;
+                // View файл сам управляет буфером и включает layout через ob_get_clean()
+                // Если view файл не завершил выполнение (не вызвал exit), получаем содержимое
+                if (ob_get_level() > 0) {
+                    $remaining = ob_get_clean();
+                    if (!empty($remaining)) {
+                        echo $remaining;
+                    }
+                }
+            } catch (\Throwable $viewError) {
+                // Очищаем буфер при ошибке в view
+                while (ob_get_level() > 0) {
+                    ob_end_clean();
+                }
+                error_log("TemplateController::showCreateShorts: View error - " . $viewError->getMessage() . " in " . $viewError->getFile() . ":" . $viewError->getLine());
+                throw $viewError;
+            }
+            
             error_log("TemplateController::showCreateShorts: View file included successfully");
             
         } catch (\Exception $e) {
