@@ -35,9 +35,15 @@ class Auth
         ini_set('session.cookie_secure', $secure ? '1' : '0');
         ini_set('session.cookie_samesite', 'Strict');
 
+        // Получаем время жизни сессии из конфига (минимум 2 часа = 7200 секунд)
+        $sessionLifetime = max(7200, (int)($this->config['SESSION_LIFETIME'] ?? 7200));
+        
+        // Устанавливаем время жизни сессии PHP
+        ini_set('session.gc_maxlifetime', $sessionLifetime);
+        
         $cookieParams = session_get_cookie_params();
         session_set_cookie_params([
-            'lifetime' => 0,
+            'lifetime' => $sessionLifetime, // Время жизни cookie (2+ часа)
             'path' => $cookieParams['path'] ?? '/',
             'domain' => $cookieParams['domain'] ?? '',
             'secure' => $secure,
@@ -106,7 +112,8 @@ class Auth
         $this->startSession();
         session_regenerate_id(true);
         $sessionId = bin2hex(random_bytes(32));
-        $lifetime = (int)($this->config['SESSION_LIFETIME'] ?? 3600);
+        // Минимум 2 часа (7200 секунд) для времени жизни сессии
+        $lifetime = max(7200, (int)($this->config['SESSION_LIFETIME'] ?? 7200));
         $expiresAt = date('Y-m-d H:i:s', time() + $lifetime);
         $clientIp = $this->getClientIp();
         $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
@@ -206,6 +213,20 @@ class Auth
                     if (!empty($session['user_agent']) && $session['user_agent'] !== $userAgent) {
                         error_log("Auth::check: User-Agent mismatch");
                         return false;
+                    }
+                    
+                    // Автопродление сессии при активности (если осталось меньше 30 минут)
+                    $expiresAt = strtotime($session['expires_at']);
+                    $timeLeft = $expiresAt - time();
+                    $sessionLifetime = max(7200, (int)($this->config['SESSION_LIFETIME'] ?? 7200));
+                    $minTimeLeft = $sessionLifetime * 0.25; // 25% от времени жизни (например, 30 минут из 2 часов)
+                    
+                    if ($timeLeft < $minTimeLeft) {
+                        // Продлеваем сессию
+                        $newExpiresAt = date('Y-m-d H:i:s', time() + $sessionLifetime);
+                        $updateStmt = $this->db->prepare("UPDATE sessions SET expires_at = ? WHERE id = ?");
+                        $updateStmt->execute([$newExpiresAt, $_SESSION['session_id']]);
+                        error_log("Auth::check: Session extended until {$newExpiresAt}");
                     }
                 }
             } catch (\Exception $e) {
