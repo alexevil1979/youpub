@@ -5,7 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $title ?? 'YouPub' ?> - Автоматическая публикация видео</title>
     <?php
-    $csrfToken = (new \Core\Auth())->generateCsrfToken();
+    // Убеждаемся, что сессия инициализирована
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    try {
+        $csrfToken = (new \Core\Auth())->generateCsrfToken();
+    } catch (\Throwable $e) {
+        error_log("Layout: Error generating CSRF token: " . $e->getMessage());
+        $csrfToken = '';
+    }
     ?>
     <meta name="csrf-token" content="<?= htmlspecialchars($csrfToken, ENT_QUOTES) ?>">
     <link rel="stylesheet" href="/assets/css/style.css">
@@ -47,11 +56,16 @@
     <main class="container">
         <?php if (isset($_SESSION['user_id'])): ?>
             <?php
-            // Генерируем хлебные крошки, если они не переданы явно
-            if (!isset($breadcrumbs)) {
-                $breadcrumbs = \Core\Breadcrumbs::generateFromUrl();
+            try {
+                // Генерируем хлебные крошки, если они не переданы явно
+                if (!isset($breadcrumbs)) {
+                    $breadcrumbs = \Core\Breadcrumbs::generateFromUrl();
+                }
+                echo \Core\Breadcrumbs::render($breadcrumbs ?? null);
+            } catch (\Throwable $breadcrumbError) {
+                error_log("Layout: Error generating breadcrumbs: " . $breadcrumbError->getMessage());
+                // Продолжаем без хлебных крошек
             }
-            echo \Core\Breadcrumbs::render($breadcrumbs ?? null);
             ?>
         <?php endif; ?>
 

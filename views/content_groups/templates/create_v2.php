@@ -1262,7 +1262,7 @@ document.addEventListener('input', function(e) {
 
 <?php
 try {
-    // Проверяем, что буфер активен (должен быть начат на строке 91)
+    // Проверяем, что буфер активен (должен быть начат на строке 118)
     $bufferLevel = ob_get_level();
     error_log("Templates create_v2 view: Buffer level before ob_get_clean: {$bufferLevel}");
     

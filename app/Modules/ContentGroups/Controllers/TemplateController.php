@@ -184,7 +184,7 @@ class TemplateController extends Controller
                 throw new \Exception("View file not found: {$viewPath}");
             }
             
-            // View файл сам управляет буферизацией (ob_start на строке 91)
+            // View файл сам управляет буферизацией (ob_start на строке 118)
             // Переменные $csrfToken и $template должны быть доступны в view
             error_log("TemplateController::showCreateShorts: Including view file (csrfToken: " . (isset($csrfToken) ? 'yes' : 'no') . ", template: " . (isset($template) ? 'yes' : 'no') . ")");
             try {
