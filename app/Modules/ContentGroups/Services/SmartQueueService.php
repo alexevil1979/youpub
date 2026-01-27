@@ -184,33 +184,40 @@ class SmartQueueService extends Service
                 error_log("SmartQueueService::processGroupSchedule: Idea too short or empty, falling back to template");
                 $autoGenType = 0; // Fallback to template
             } else {
-                // Генерируем контент используя AutoShortsGenerator
-                $autoGenerator = new \App\Modules\ContentGroups\Services\AutoShortsGenerator();
-                $variants = $autoGenerator->generateMultipleVariants($idea, 1);
-                
-                if (!empty($variants) && isset($variants[0])) {
-                    $generated = $variants[0];
-                    $content = $generated['content'] ?? [];
+                try {
+                    // Генерируем контент используя AutoShortsGenerator
+                    $autoGenerator = new \App\Modules\ContentGroups\Services\AutoShortsGenerator();
+                    $variants = $autoGenerator->generateMultipleVariants($idea, 1);
                     
-                    $autoTitle = $content['title'] ?? $videoTitle;
-                    // Анти-дубликатор заголовков внутри группы
-                    $autoTitle = $this->makeTitleUniqueWithinGroup($autoTitle, (int)$group['id'], (int)$video['id']);
+                    if (!empty($variants) && isset($variants[0])) {
+                        $generated = $variants[0];
+                        $content = $generated['content'] ?? [];
+                        
+                        $autoTitle = $content['title'] ?? $videoTitle;
+                        // Анти-дубликатор заголовков внутри группы
+                        $autoTitle = $this->makeTitleUniqueWithinGroup($autoTitle, (int)$group['id'], (int)$video['id']);
 
-                    $templated = [
-                        'title' => $autoTitle,
-                        'description' => $content['description'] ?? '',
-                        'tags' => !empty($content['tags']) && is_array($content['tags']) 
-                            ? implode(', ', $content['tags']) 
-                            : ($content['tags'] ?? ''),
-                        'question' => '',
-                        'pinned_comment' => $content['pinned_comment'] ?? '',
-                        'hook_type' => $generated['intent']['content_type'] ?? 'emotional',
-                    ];
-                    
-                    error_log("SmartQueueService::processGroupSchedule: Auto-generated title: " . mb_substr($templated['title'] ?? 'N/A', 0, 100));
-                    error_log("SmartQueueService::processGroupSchedule: Auto-generated description: " . mb_substr($templated['description'] ?? 'N/A', 0, 100));
-                } else {
-                    error_log("SmartQueueService::processGroupSchedule: Auto-generation failed, falling back to template");
+                        $templated = [
+                            'title' => $autoTitle,
+                            'description' => $content['description'] ?? '',
+                            'tags' => !empty($content['tags']) && is_array($content['tags']) 
+                                ? implode(', ', $content['tags']) 
+                                : ($content['tags'] ?? ''),
+                            'question' => '',
+                            'pinned_comment' => $content['pinned_comment'] ?? '',
+                            'hook_type' => $generated['intent']['content_type'] ?? 'emotional',
+                        ];
+                        
+                        error_log("SmartQueueService::processGroupSchedule: Auto-generated title: " . mb_substr($templated['title'] ?? 'N/A', 0, 100));
+                        error_log("SmartQueueService::processGroupSchedule: Auto-generated description: " . mb_substr($templated['description'] ?? 'N/A', 0, 100));
+                    } else {
+                        error_log("SmartQueueService::processGroupSchedule: Auto-generation failed, falling back to template");
+                        $autoGenType = 0; // Fallback to template
+                    }
+                } catch (\Throwable $genError) {
+                    error_log("SmartQueueService::processGroupSchedule: Auto-generation exception: " . $genError->getMessage());
+                    error_log("SmartQueueService::processGroupSchedule: Stack trace: " . $genError->getTraceAsString());
+                    error_log("SmartQueueService::processGroupSchedule: File: " . $genError->getFile() . ":" . $genError->getLine());
                     $autoGenType = 0; // Fallback to template
                 }
             }
@@ -692,31 +699,44 @@ class SmartQueueService extends Service
                         error_log("SmartQueueService::publishGroupFileNow: Idea too short or empty, falling back to template");
                         $autoGenType = 0; // Fallback to template
                     } else {
-                        // Генерируем контент используя AutoShortsGenerator
-                        $autoGenerator = new \App\Modules\ContentGroups\Services\AutoShortsGenerator();
-                        $variants = $autoGenerator->generateMultipleVariants($idea, 1);
-                        
-                        if (!empty($variants) && isset($variants[0])) {
-                            $generated = $variants[0];
-                            $content = $generated['content'] ?? [];
+                        try {
+                            // Генерируем контент используя AutoShortsGenerator
+                            $autoGenerator = new \App\Modules\ContentGroups\Services\AutoShortsGenerator();
+                            $variants = $autoGenerator->generateMultipleVariants($idea, 1);
                             
-                            $autoTitle = $content['title'] ?? $videoTitle;
-                            $autoTitle = $this->makeTitleUniqueWithinGroup($autoTitle, (int)$groupId, (int)$video['id']);
+                            if (!empty($variants) && isset($variants[0])) {
+                                $generated = $variants[0];
+                                $content = $generated['content'] ?? [];
+                                
+                                $autoTitle = $content['title'] ?? $videoTitle;
+                                $autoTitle = $this->makeTitleUniqueWithinGroup($autoTitle, (int)$groupId, (int)$video['id']);
 
-                            $templated = [
-                                'title' => $autoTitle,
-                                'description' => $content['description'] ?? '',
-                                'tags' => !empty($content['tags']) && is_array($content['tags']) 
-                                    ? implode(', ', $content['tags']) 
-                                    : ($content['tags'] ?? ''),
-                                'question' => '',
-                                'pinned_comment' => $content['pinned_comment'] ?? '',
-                                'hook_type' => $generated['intent']['content_type'] ?? 'emotional',
-                            ];
-                            
-                            error_log("SmartQueueService::publishGroupFileNow: Auto-generated title: " . ($templated['title'] ?? 'N/A'));
-                            error_log("SmartQueueService::publishGroupFileNow: Auto-generated description: " . mb_substr($templated['description'] ?? 'N/A', 0, 100));
-                        } else {
+                                $templated = [
+                                    'title' => $autoTitle,
+                                    'description' => $content['description'] ?? '',
+                                    'tags' => !empty($content['tags']) && is_array($content['tags']) 
+                                        ? implode(', ', $content['tags']) 
+                                        : ($content['tags'] ?? ''),
+                                    'question' => '',
+                                    'pinned_comment' => $content['pinned_comment'] ?? '',
+                                    'hook_type' => $generated['intent']['content_type'] ?? 'emotional',
+                                ];
+                                
+                                error_log("SmartQueueService::publishGroupFileNow: Auto-generated title: " . ($templated['title'] ?? 'N/A'));
+                                error_log("SmartQueueService::publishGroupFileNow: Auto-generated description: " . mb_substr($templated['description'] ?? 'N/A', 0, 100));
+                            } else {
+                                error_log("SmartQueueService::publishGroupFileNow: Auto-generation failed, falling back to template");
+                                $autoGenType = 0; // Fallback to template
+                            }
+                        } catch (\Throwable $genError) {
+                            error_log("SmartQueueService::publishGroupFileNow: Auto-generation exception: " . $genError->getMessage());
+                            error_log("SmartQueueService::publishGroupFileNow: Stack trace: " . $genError->getTraceAsString());
+                            error_log("SmartQueueService::publishGroupFileNow: File: " . $genError->getFile() . ":" . $genError->getLine());
+                            $autoGenType = 0; // Fallback to template
+                        }
+                    }
+                    
+                    if ($autoGenType === 0) {
                             error_log("SmartQueueService::publishGroupFileNow: Auto-generation failed, falling back to template");
                             $autoGenType = 0; // Fallback to template
                         }

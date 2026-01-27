@@ -26,11 +26,18 @@ class AutoShortsGenerator
 
     /**
      * Генерировать один вариант контента из идеи (формат для AutoShortsController).
+     * 
+     * @throws \RuntimeException если генерация не удалась
      */
     public function generateFromIdea(string $idea): array
     {
         $variants = $this->generateMultipleVariants($idea, 1);
-        return $variants[0] ?? [];
+        
+        if (empty($variants) || !isset($variants[0])) {
+            throw new \RuntimeException('Не удалось сгенерировать контент из идеи: ' . htmlspecialchars($idea));
+        }
+        
+        return $variants[0];
     }
 
     /**
@@ -63,11 +70,15 @@ class AutoShortsGenerator
     */
     public function generateMultipleVariants(string $idea, int $count = 5): array
     {
+        if (empty($idea) || !is_string($idea)) {
+            throw new \InvalidArgumentException('Идея должна быть непустой строкой');
+        }
+        
         $originalIdea   = trim($idea);
         $normalizedIdea = $this->normalizeIdeaText($originalIdea);
 
         if ($normalizedIdea === '' || mb_strlen($normalizedIdea) < 3) {
-            throw new \RuntimeException('Идея должна содержать как минимум 3 значащих символа после нормализации.');
+            throw new \RuntimeException('Идея должна содержать как минимум 3 значащих символа после нормализации. Получено: "' . htmlspecialchars($originalIdea) . '"');
         }
 
         $count = max(1, min($count, 20));

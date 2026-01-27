@@ -264,8 +264,15 @@ class TemplateController extends Controller
                 // Генерируем множественные варианты контента (как в suggestContent)
                 $variantCount = 25; // Генерируем 25 вариантов для богатого выбора
                 error_log('TemplateController::create: Generating ' . $variantCount . ' variants for idea: "' . $videoIdea . '"');
-                $variants = $this->getAutoGenerator()->generateMultipleVariants($videoIdea, $variantCount);
-                error_log('TemplateController::create: Generated ' . count($variants) . ' variants');
+                try {
+                    $variants = $this->getAutoGenerator()->generateMultipleVariants($videoIdea, $variantCount);
+                    error_log('TemplateController::create: Generated ' . count($variants) . ' variants');
+                } catch (\Throwable $genError) {
+                    error_log('TemplateController::create: Generation error: ' . $genError->getMessage());
+                    error_log('TemplateController::create: Stack trace: ' . $genError->getTraceAsString());
+                    error_log('TemplateController::create: File: ' . $genError->getFile() . ':' . $genError->getLine());
+                    throw $genError;
+                }
 
                 if (empty($variants)) {
                     $_SESSION['error'] = 'Не удалось сгенерировать варианты контента. Попробуйте другую идею.';
@@ -826,8 +833,15 @@ class TemplateController extends Controller
             // Генерируем контент (20-30 вариантов)
             $variantCount = 25; // Генерируем 25 вариантов для богатого выбора
             error_log('TemplateController::suggestContent: Calling autoGenerator->generateMultipleVariants with ' . $variantCount . ' variants');
-            $variants = $this->getAutoGenerator()->generateMultipleVariants($idea, $variantCount);
-            error_log('TemplateController::suggestContent: Generation completed successfully, got ' . count($variants) . ' variants');
+            try {
+                $variants = $this->getAutoGenerator()->generateMultipleVariants($idea, $variantCount);
+                error_log('TemplateController::suggestContent: Generation completed successfully, got ' . count($variants) . ' variants');
+            } catch (\Throwable $genError) {
+                error_log('TemplateController::suggestContent: Generation error: ' . $genError->getMessage());
+                error_log('TemplateController::suggestContent: Stack trace: ' . $genError->getTraceAsString());
+                error_log('TemplateController::suggestContent: File: ' . $genError->getFile() . ':' . $genError->getLine());
+                throw $genError;
+            }
 
             if (empty($variants)) {
                 header('Content-Type: application/json');

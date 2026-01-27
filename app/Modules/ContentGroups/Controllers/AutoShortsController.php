@@ -176,16 +176,31 @@ class AutoShortsController extends Controller
             }
 
             // Генерируем контент
-            $result = $this->autoGenerator->generateFromIdea($videoIdea);
-
-            // Сохраняем результат в сессии для отображения
-            $_SESSION['auto_shorts_result'] = $result;
-
-            header('Location: /content-groups/auto-shorts/result');
-            exit;
+            try {
+                $result = $this->autoGenerator->generateFromIdea($videoIdea);
+                
+                // Проверяем что результат валидный
+                if (empty($result) || !isset($result['idea']) || !isset($result['intent']) || !isset($result['content'])) {
+                    throw new \RuntimeException('Генерация вернула неполные данные');
+                }
+                
+                // Сохраняем результат в сессии для отображения
+                $_SESSION['auto_shorts_result'] = $result;
+                
+                header('Location: /content-groups/auto-shorts/result');
+                exit;
+            } catch (\Throwable $genError) {
+                error_log('AutoShorts generation error: ' . $genError->getMessage());
+                error_log('AutoShorts generation stack trace: ' . $genError->getTraceAsString());
+                error_log('AutoShorts generation file: ' . $genError->getFile() . ':' . $genError->getLine());
+                $_SESSION['error'] = 'Произошла ошибка при генерации контента: ' . htmlspecialchars($genError->getMessage());
+                header('Location: /content-groups/auto-shorts');
+                exit;
+            }
 
         } catch (\Exception $e) {
             error_log('AutoShorts generation error: ' . $e->getMessage());
+            error_log('AutoShorts generation stack trace: ' . $e->getTraceAsString());
             $_SESSION['error'] = 'Произошла ошибка при генерации контента.';
             header('Location: /content-groups/auto-shorts');
             exit;
