@@ -136,12 +136,33 @@ $videoRepo = new \App\Repositories\VideoRepository();
 $groupRepo = new \App\Modules\ContentGroups\Repositories\ContentGroupRepository();
 ?>
 
-<h1>Расписания публикаций</h1>
+<div class="page-header">
+    <div class="page-header-main">
+        <h1 class="page-title">Расписания публикаций</h1>
+        <p class="page-subtitle">
+            Контролируйте, когда и на какие платформы выходят ваши видео.
+        </p>
+    </div>
+    <div class="page-header-actions">
+        <a href="/schedules/create" class="btn btn-primary">
+            <i class="fa-solid fa-calendar-plus icon-inline" aria-hidden="true"></i>
+            Создать расписание
+        </a>
+        <a href="/content-groups/schedules/create" class="btn btn-secondary">
+            <i class="fa-solid fa-wand-magic-sparkles icon-inline" aria-hidden="true"></i>
+            Умное расписание
+        </a>
+    </div>
+</div>
 
 <div class="schedules-header">
     <div class="header-actions">
-        <a href="/schedules/create" class="btn btn-primary"><?= \App\Helpers\IconHelper::render('add', 20, 'icon-inline') ?> Создать расписание</a>
-        <a href="/content-groups/schedules/create" class="btn btn-success"><?= \App\Helpers\IconHelper::render('calendar', 20, 'icon-inline') ?> Умное расписание</a>
+        <button type="button"
+                class="btn btn-secondary btn-sm"
+                onclick="document.getElementById('filtersForm').scrollIntoView({ behavior: 'smooth', block: 'start' })">
+            <i class="fa-solid fa-filter icon-inline" aria-hidden="true"></i>
+            Фильтры
+        </button>
     </div>
     
     <!-- Статистика -->

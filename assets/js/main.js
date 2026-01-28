@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 5000);
     });
 
-    // Валидация форм
+    // Валидация форм (базовая)
     const forms = document.querySelectorAll('form');
     forms.forEach(form => {
         form.addEventListener('submit', function(e) {
@@ -54,16 +54,46 @@ document.addEventListener('DOMContentLoaded', function() {
             requiredFields.forEach(field => {
                 if (!field.value.trim()) {
                     isValid = false;
-                    field.style.borderColor = '#e74c3c';
+                    field.classList.add('field-error');
                 } else {
-                    field.style.borderColor = '';
+                    field.classList.remove('field-error');
                 }
             });
 
             if (!isValid) {
                 e.preventDefault();
-                alert('Пожалуйста, заполните все обязательные поля');
+                showToast('Пожалуйста, заполните все обязательные поля', 'error');
             }
         });
     });
+
+    // Переключение сайдбара на мобильных
+    const sidebarToggle = document.querySelector('.sidebar-toggle');
+    const sidebar = document.getElementById('sidebar');
+    if (sidebarToggle && sidebar) {
+        sidebarToggle.style.display = 'inline-flex';
+        sidebarToggle.addEventListener('click', function() {
+            const isOpen = document.body.classList.toggle('sidebar-open');
+            sidebarToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        });
+    }
 });
+
+/**
+ * Глобальная функция для toast-уведомлений, чтобы переиспользовать её на страницах.
+ */
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = 'toast toast-' + type;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+
+    requestAnimationFrame(() => {
+        toast.classList.add('show');
+    });
+
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}

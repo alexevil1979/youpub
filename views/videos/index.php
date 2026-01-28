@@ -76,10 +76,26 @@ foreach ($allGroups as $group) {
 }
 ?>
 
-<h1>Мои видео</h1>
-<div style="margin-bottom: 1rem;">
-    <a href="/videos/upload" class="btn btn-primary"><?= \App\Helpers\IconHelper::render('upload', 20, 'icon-inline') ?> Загрузить видео</a>
-    <button type="button" class="btn btn-secondary" onclick="toggleViewMode()" id="viewModeBtn"><?= \App\Helpers\IconHelper::render('copy', 20, 'icon-inline') ?> Вид: Каталог</button>
+<div class="page-header">
+    <div class="page-header-main">
+        <h1 class="page-title">Мои видео</h1>
+        <p class="page-subtitle">
+            Управляйте загруженными видео, группами и расписаниями публикаций.
+        </p>
+    </div>
+    <div class="page-header-actions">
+        <a href="/videos/upload" class="btn btn-primary">
+            <i class="fa-solid fa-cloud-arrow-up icon-inline" aria-hidden="true"></i>
+            Загрузить видео
+        </a>
+        <button type="button"
+                class="btn btn-secondary"
+                onclick="toggleViewMode()"
+                id="viewModeBtn">
+            <?= \App\Helpers\IconHelper::render('copy', 20, 'icon-inline') ?>
+            Вид: Каталог
+        </button>
+    </div>
 </div>
 
 <div id="catalog-view" class="catalog-view">
@@ -257,7 +273,7 @@ foreach ($allGroups as $group) {
     <?php if (empty($videos)): ?>
         <p>Нет загруженных видео</p>
     <?php else: ?>
-        <table>
+        <table class="data-table" aria-label="Видео в табличном виде">
             <thead>
                 <tr>
                     <th>Название</th>

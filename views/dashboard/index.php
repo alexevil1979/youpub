@@ -3,80 +3,188 @@ $title = 'Дашборд';
 ob_start();
 ?>
 
-<h1>Дашборд</h1>
-
-<div class="stats-grid">
-    <div class="stat-card">
-        <h3>Всего видео</h3>
-        <p class="stat-number"><?= $stats['videos_total'] ?></p>
+<div class="page-header">
+    <div class="page-header-main">
+        <h1 class="page-title">Дашборд</h1>
+        <p class="page-subtitle">
+            Сводка по видео, расписаниям и публикациям в YouPub.
+        </p>
     </div>
-    <div class="stat-card">
-        <h3>Ожидают публикации</h3>
-        <p class="stat-number"><?= $stats['schedules_pending'] ?></p>
-    </div>
-    <div class="stat-card">
-        <h3>Успешных публикаций</h3>
-        <p class="stat-number"><?= $stats['publications_success'] ?></p>
-    </div>
-    <div class="stat-card">
-        <h3>Ошибок</h3>
-        <p class="stat-number"><?= $stats['publications_failed'] ?></p>
+    <div class="page-header-actions" aria-label="Быстрые действия">
+        <a href="/videos/upload" class="btn btn-primary">
+            <i class="fa-solid fa-cloud-arrow-up icon-inline" aria-hidden="true"></i>
+            Загрузить видео
+        </a>
+        <a href="/schedules/create" class="btn btn-secondary">
+            <i class="fa-solid fa-calendar-plus icon-inline" aria-hidden="true"></i>
+            Новое расписание
+        </a>
     </div>
 </div>
 
-<div class="dashboard-sections">
-    <section>
-        <h2>Последние видео</h2>
-        <?php if (empty($recentVideos)): ?>
-            <p>Нет загруженных видео</p>
-        <?php else: ?>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Название</th>
-                        <th>Размер</th>
-                        <th>Дата</th>
-                        <th>Действия</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($recentVideos as $video): ?>
-                    <tr>
-                        <td><?= htmlspecialchars($video['title'] ?? $video['file_name']) ?></td>
-                        <td><?= number_format($video['file_size'] / 1024 / 1024, 2) ?> MB</td>
-                        <td><?= date('d.m.Y H:i', strtotime($video['created_at'])) ?></td>
-                        <td><a href="/videos/<?= $video['id'] ?>">Просмотр</a></td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        <?php endif; ?>
+<!-- Основная сетка дашборда: статистика + контент -->
+<div class="dashboard-layout">
+    <!-- Левая колонка: ключевые метрики -->
+    <section class="dashboard-panel dashboard-panel--metrics" aria-label="Ключевые метрики">
+        <div class="stats-grid">
+            <article class="stat-card" aria-label="Всего видео">
+                <div class="stat-card-header">
+                    <div class="stat-card-icon stat-card-icon--primary">
+                        <i class="fa-solid fa-video" aria-hidden="true"></i>
+                    </div>
+                    <span class="stat-label">Всего видео</span>
+                </div>
+                <p class="stat-number"><?= (int)($stats['videos_total'] ?? 0) ?></p>
+            </article>
+
+            <article class="stat-card" aria-label="Ожидают публикации">
+                <div class="stat-card-header">
+                    <div class="stat-card-icon stat-card-icon--warning">
+                        <i class="fa-solid fa-clock" aria-hidden="true"></i>
+                    </div>
+                    <span class="stat-label">Ожидают публикации</span>
+                </div>
+                <p class="stat-number"><?= (int)($stats['schedules_pending'] ?? 0) ?></p>
+            </article>
+
+            <article class="stat-card" aria-label="Успешных публикаций">
+                <div class="stat-card-header">
+                    <div class="stat-card-icon stat-card-icon--success">
+                        <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                    </div>
+                    <span class="stat-label">Успешных публикаций</span>
+                </div>
+                <p class="stat-number"><?= (int)($stats['publications_success'] ?? 0) ?></p>
+            </article>
+
+            <article class="stat-card" aria-label="Ошибок публикаций">
+                <div class="stat-card-header">
+                    <div class="stat-card-icon stat-card-icon--danger">
+                        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                    </div>
+                    <span class="stat-label">Ошибок</span>
+                </div>
+                <p class="stat-number"><?= (int)($stats['publications_failed'] ?? 0) ?></p>
+            </article>
+        </div>
     </section>
 
-    <section>
-        <h2>Ближайшие публикации</h2>
-        <?php if (empty($upcomingSchedules)): ?>
-            <p>Нет запланированных публикаций</p>
-        <?php else: ?>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Платформа</th>
-                        <th>Дата публикации</th>
-                        <th>Статус</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($upcomingSchedules as $schedule): ?>
-                    <tr>
-                        <td><?= ucfirst($schedule['platform']) ?></td>
-                        <td><?= date('d.m.Y H:i', strtotime($schedule['publish_at'])) ?></td>
-                        <td><?= ucfirst($schedule['status']) ?></td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        <?php endif; ?>
+    <!-- Правая колонка: последние сущности -->
+    <section class="dashboard-panel dashboard-panel--lists">
+        <div class="dashboard-sections">
+            <section class="dashboard-card" aria-labelledby="latest-videos-heading">
+                <div class="dashboard-card-header">
+                    <h2 id="latest-videos-heading" class="dashboard-card-title">
+                        <i class="fa-solid fa-play-circle icon-inline" aria-hidden="true"></i>
+                        Последние видео
+                    </h2>
+                    <a href="/videos" class="dashboard-card-link">Все видео</a>
+                </div>
+
+                <?php if (empty($recentVideos)): ?>
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fa-regular fa-circle-play" aria-hidden="true"></i>
+                        </div>
+                        <h3>Нет загруженных видео</h3>
+                        <p>Загрузите первое видео, чтобы начать планировать публикации.</p>
+                        <a href="/videos/upload" class="btn btn-primary">Загрузить видео</a>
+                    </div>
+                <?php else: ?>
+                    <div class="table-wrapper">
+                        <table class="data-table" aria-label="Последние загруженные видео">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Видео</th>
+                                    <th scope="col">Размер</th>
+                                    <th scope="col">Загружено</th>
+                                    <th scope="col" class="text-right">Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($recentVideos as $video): ?>
+                                    <tr>
+                                        <td>
+                                            <div class="cell-main">
+                                                <span class="cell-title">
+                                                    <?= htmlspecialchars($video['title'] ?? $video['file_name']) ?>
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <?= number_format(($video['file_size'] ?? 0) / 1024 / 1024, 2) ?> MB
+                                        </td>
+                                        <td>
+                                            <?= date('d.m.Y H:i', strtotime($video['created_at'])) ?>
+                                        </td>
+                                        <td class="text-right">
+                                            <a href="/videos/<?= $video['id'] ?>"
+                                               class="btn-action btn-view"
+                                               title="Открыть видео"
+                                               aria-label="Открыть видео">
+                                                <i class="fa-regular fa-eye" aria-hidden="true"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </section>
+
+            <section class="dashboard-card" aria-labelledby="upcoming-schedules-heading">
+                <div class="dashboard-card-header">
+                    <h2 id="upcoming-schedules-heading" class="dashboard-card-title">
+                        <i class="fa-solid fa-calendar-days icon-inline" aria-hidden="true"></i>
+                        Ближайшие публикации
+                    </h2>
+                    <a href="/schedules" class="dashboard-card-link">Все расписания</a>
+                </div>
+
+                <?php if (empty($upcomingSchedules)): ?>
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fa-regular fa-calendar" aria-hidden="true"></i>
+                        </div>
+                        <h3>Нет запланированных публикаций</h3>
+                        <p>Создайте расписание, чтобы публиковать видео автоматически.</p>
+                        <a href="/schedules/create" class="btn btn-secondary">Создать расписание</a>
+                    </div>
+                <?php else: ?>
+                    <div class="table-wrapper">
+                        <table class="data-table" aria-label="Ближайшие публикации">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Платформа</th>
+                                    <th scope="col">Дата публикации</th>
+                                    <th scope="col">Статус</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($upcomingSchedules as $schedule): ?>
+                                    <tr>
+                                        <td>
+                                            <span class="platform-badge platform-<?= $schedule['platform'] ?>">
+                                                <?= ucfirst($schedule['platform']) ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <?= date('d.m.Y H:i', strtotime($schedule['publish_at'])) ?>
+                                        </td>
+                                        <td>
+                                            <span class="status-badge status-<?= $schedule['status'] ?>">
+                                                <?= ucfirst($schedule['status']) ?>
+                                            </span>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </section>
+        </div>
     </section>
 </div>
 
