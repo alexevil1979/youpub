@@ -106,7 +106,7 @@ foreach ($allGroups as $group) {
             <div class="catalog-section">
                 <h2 class="catalog-section-title"><?= \App\Helpers\IconHelper::render('folder', 24, 'icon-inline') ?> Группы контента</h2>
                 <?php foreach ($groupedByContentGroup as $item): ?>
-                    <div class="catalog-folder">
+                    <div class="catalog-folder expanded">
                         <div class="folder-header" onclick="toggleFolder(this)">
                             <span class="folder-icon"><?= \App\Helpers\IconHelper::render('folder', 20) ?></span>
                             <span class="folder-name"><?= htmlspecialchars($item['group']['name']) ?></span>
@@ -177,7 +177,7 @@ foreach ($allGroups as $group) {
             <h2 class="catalog-section-title"><?= \App\Helpers\IconHelper::render('calendar', 24, 'icon-inline') ?> По дате загрузки</h2>
             
             <?php if (!empty($groupedByDate['today'])): ?>
-                <div class="catalog-folder">
+                <div class="catalog-folder expanded">
                     <div class="folder-header" onclick="toggleFolder(this)">
                         <span class="folder-icon"><?= \App\Helpers\IconHelper::render('calendar', 20) ?></span>
                         <span class="folder-name">Сегодня</span>
@@ -193,7 +193,7 @@ foreach ($allGroups as $group) {
             <?php endif; ?>
 
             <?php if (!empty($groupedByDate['yesterday'])): ?>
-                <div class="catalog-folder">
+                <div class="catalog-folder expanded">
                     <div class="folder-header" onclick="toggleFolder(this)">
                         <span class="folder-icon"><?= \App\Helpers\IconHelper::render('calendar', 20) ?></span>
                         <span class="folder-name">Вчера</span>
@@ -209,7 +209,7 @@ foreach ($allGroups as $group) {
             <?php endif; ?>
 
             <?php if (!empty($groupedByDate['this_week'])): ?>
-                <div class="catalog-folder">
+                <div class="catalog-folder expanded">
                     <div class="folder-header" onclick="toggleFolder(this)">
                         <span class="folder-icon"><?= \App\Helpers\IconHelper::render('calendar', 20) ?></span>
                         <span class="folder-name">На этой неделе</span>
@@ -225,7 +225,7 @@ foreach ($allGroups as $group) {
             <?php endif; ?>
 
             <?php if (!empty($groupedByDate['this_month'])): ?>
-                <div class="catalog-folder">
+                <div class="catalog-folder expanded">
                     <div class="folder-header" onclick="toggleFolder(this)">
                         <span class="folder-icon"><?= \App\Helpers\IconHelper::render('calendar', 20) ?></span>
                         <span class="folder-name">В этом месяце</span>
@@ -241,7 +241,7 @@ foreach ($allGroups as $group) {
             <?php endif; ?>
 
             <?php if (!empty($groupedByDate['older'])): ?>
-                <div class="catalog-folder">
+                <div class="catalog-folder expanded">
                     <div class="folder-header" onclick="toggleFolder(this)">
                         <span class="folder-icon"><?= \App\Helpers\IconHelper::render('calendar', 20) ?></span>
                         <span class="folder-name">Ранее</span>
