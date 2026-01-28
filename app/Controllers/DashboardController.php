@@ -267,7 +267,7 @@ class DashboardController extends Controller
             // Создаем запись сессии в БД, если её нет
             if (!isset($_SESSION['session_id'])) {
                 $sessionId = bin2hex(random_bytes(32));
-                $lifetime = (int)($this->config['SESSION_LIFETIME'] ?? 3600);
+                $lifetime = max(7200, (int)($this->config['SESSION_LIFETIME'] ?? 7200));
                 $expiresAt = date('Y-m-d H:i:s', time() + $lifetime);
                 $clientIp = $_SERVER['REMOTE_ADDR'] ?? '';
                 $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
