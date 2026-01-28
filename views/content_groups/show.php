@@ -381,7 +381,7 @@ ob_start();
                                     if (!$pubUrl && $pub['platform_id']) {
                                         switch ($pub['platform']) {
                                             case 'youtube':
-                                                $pubUrl = 'https://youtube.com/watch?v=' . $pub['platform_id'];
+                                                $pubUrl = 'https://youtube.com/shorts/' . $pub['platform_id'];
                                                 break;
                                             case 'telegram':
                                                 $pubUrl = 'https://t.me/' . $pub['platform_id'];
@@ -505,7 +505,7 @@ ob_start();
                                     if (!$pubUrl && $pub['platform_id']) {
                                         switch ($pub['platform']) {
                                             case 'youtube':
-                                                $pubUrl = 'https://youtube.com/watch?v=' . $pub['platform_id'];
+                                                $pubUrl = 'https://youtube.com/shorts/' . $pub['platform_id'];
                                                 break;
                                             case 'telegram':
                                                 $pubUrl = 'https://t.me/' . $pub['platform_id'];

@@ -192,7 +192,7 @@ class YoutubeService extends Service
                     'message' => 'Video already published (duplicate prevented)',
                     'data' => [
                         'publication_id' => $recentPublication['id'],
-                        'video_url' => 'https://youtube.com/watch?v=' . ($recentPublication['platform_id'] ?? '')
+                        'video_url' => 'https://youtube.com/shorts/' . ($recentPublication['platform_id'] ?? '')
                     ]
                 ];
             }
@@ -374,7 +374,7 @@ class YoutubeService extends Service
             }
 
             $videoId = $uploadResult['video_id'];
-            $videoUrl = 'https://youtube.com/watch?v=' . $videoId;
+            $videoUrl = 'https://youtube.com/shorts/' . $videoId;
 
             // Создание записи о публикации
             $publicationId = $this->publicationRepo->create([

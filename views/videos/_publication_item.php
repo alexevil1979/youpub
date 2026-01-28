@@ -6,7 +6,7 @@ if (!empty($publication['platform_url'])) {
 } elseif (!empty($publication['platform_id'])) {
     switch ($publication['platform']) {
         case 'youtube':
-            $url = 'https://youtube.com/watch?v=' . $publication['platform_id'];
+            $url = 'https://youtube.com/shorts/' . $publication['platform_id'];
             break;
         case 'telegram':
             $url = 'https://t.me/' . $publication['platform_id'];
