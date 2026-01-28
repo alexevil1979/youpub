@@ -65,9 +65,11 @@ ob_start();
 
     <div class="form-group">
         <label>Варианты описания (рандомизация)</label>
-        <input type="text" name="variant_1" value="<?= htmlspecialchars(json_decode($template['variants'] ?? '{}', true)['description'][0] ?? '') ?>" placeholder="Вариант 1">
-        <input type="text" name="variant_2" value="<?= htmlspecialchars(json_decode($template['variants'] ?? '{}', true)['description'][1] ?? '') ?>" placeholder="Вариант 2" style="margin-top: 0.5rem;">
-        <input type="text" name="variant_3" value="<?= htmlspecialchars(json_decode($template['variants'] ?? '{}', true)['description'][2] ?? '') ?>" placeholder="Вариант 3" style="margin-top: 0.5rem;">
+        <div class="variant-inputs">
+            <input type="text" name="variant_1" value="<?= htmlspecialchars(json_decode($template['variants'] ?? '{}', true)['description'][0] ?? '') ?>" placeholder="Вариант 1">
+            <input type="text" name="variant_2" value="<?= htmlspecialchars(json_decode($template['variants'] ?? '{}', true)['description'][1] ?? '') ?>" placeholder="Вариант 2">
+            <input type="text" name="variant_3" value="<?= htmlspecialchars(json_decode($template['variants'] ?? '{}', true)['description'][2] ?? '') ?>" placeholder="Вариант 3">
+        </div>
         <small>Если указаны варианты, будет выбран случайный при применении шаблона</small>
     </div>
 

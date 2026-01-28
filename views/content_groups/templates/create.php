@@ -13,20 +13,20 @@ ob_start();
 </div>
 
 <?php if (isset($_SESSION['error'])): ?>
-    <div class="alert alert-error" style="margin-bottom: 1rem;">
+    <div class="alert alert-error">
         <?= htmlspecialchars($_SESSION['error']) ?>
     </div>
     <?php unset($_SESSION['error']); ?>
 <?php endif; ?>
 
 <?php if (isset($_SESSION['success'])): ?>
-    <div class="alert alert-success" style="margin-bottom: 1rem;">
+    <div class="alert alert-success">
         <?= htmlspecialchars($_SESSION['success']) ?>
     </div>
     <?php unset($_SESSION['success']); ?>
 <?php endif; ?>
 
-<form method="POST" action="/content-groups/templates/create" class="template-form">
+<form method="POST" action="/content-groups/templates/create" class="form-card">
     <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">
     
     <div class="form-group">
@@ -65,9 +65,11 @@ ob_start();
 
     <div class="form-group">
         <label>Варианты описания (для рандомизации)</label>
-        <input type="text" name="variant_1" placeholder="Вариант 1" style="margin-bottom: 0.5rem;">
-        <input type="text" name="variant_2" placeholder="Вариант 2" style="margin-bottom: 0.5rem;">
-        <input type="text" name="variant_3" placeholder="Вариант 3">
+        <div class="variant-inputs">
+            <input type="text" name="variant_1" placeholder="Вариант 1">
+            <input type="text" name="variant_2" placeholder="Вариант 2">
+            <input type="text" name="variant_3" placeholder="Вариант 3">
+        </div>
         <small>Если указаны варианты, будет выбран случайный при публикации</small>
     </div>
 
