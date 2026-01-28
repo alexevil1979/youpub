@@ -29,7 +29,14 @@ foreach ($publications as $publication) {
 }
 ?>
 
-<h1>Статистика</h1>
+<div class="page-header">
+    <div class="page-header-main">
+        <h1 class="page-title">Статистика</h1>
+        <p class="page-subtitle">
+            Сводные показатели просмотров, вовлечённости и подробная статистика по публикациям.
+        </p>
+    </div>
+</div>
 
 <div class="stats-overview">
     <div class="stat-card">
