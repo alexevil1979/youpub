@@ -3,7 +3,14 @@ $title = 'Создать группу контента';
 ob_start();
 ?>
 
-<h1>Создать группу контента</h1>
+<div class="page-header">
+    <div class="page-header-main">
+        <h1 class="page-title">Создать группу контента</h1>
+        <p class="page-subtitle">
+            Настройте группу, шаблон оформления и каналы публикации для автоматической работы.
+        </p>
+    </div>
+</div>
 
 <form method="POST" action="/content-groups/create" class="group-form">
     <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">

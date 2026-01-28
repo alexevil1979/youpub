@@ -3,11 +3,18 @@ $title = 'Группа: ' . htmlspecialchars($group['name']);
 ob_start();
 ?>
 
-<h1><?= htmlspecialchars($group['name']) ?></h1>
-
-<?php if ($group['description']): ?>
-    <p><?= htmlspecialchars($group['description']) ?></p>
-<?php endif; ?>
+<div class="page-header">
+    <div class="page-header-main">
+        <h1 class="page-title"><?= htmlspecialchars($group['name']) ?></h1>
+        <?php if ($group['description']): ?>
+            <p class="page-subtitle"><?= htmlspecialchars($group['description']) ?></p>
+        <?php else: ?>
+            <p class="page-subtitle">
+                Детали группы, расписания и список видео с их статусом публикации.
+            </p>
+        <?php endif; ?>
+    </div>
+</div>
 
 <div class="info-card group-stats">
     <h3>Статистика группы</h3>

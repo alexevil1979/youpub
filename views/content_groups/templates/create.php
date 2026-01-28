@@ -3,7 +3,14 @@ $title = 'Создать шаблон оформления';
 ob_start();
 ?>
 
-<h1>Создать шаблон оформления</h1>
+<div class="page-header">
+    <div class="page-header-main">
+        <h1 class="page-title">Создать шаблон оформления</h1>
+        <p class="page-subtitle">
+            Опишите структуру названия, описания и тегов, чтобы автоматизировать оформление публикаций.
+        </p>
+    </div>
+</div>
 
 <?php if (isset($_SESSION['error'])): ?>
     <div class="alert alert-error" style="margin-bottom: 1rem;">

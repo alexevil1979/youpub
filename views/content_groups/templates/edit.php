@@ -3,7 +3,14 @@ $title = 'Редактировать шаблон';
 ob_start();
 ?>
 
-<h1>Редактировать шаблон</h1>
+<div class="page-header">
+    <div class="page-header-main">
+        <h1 class="page-title">Редактировать шаблон</h1>
+        <p class="page-subtitle">
+            Внесите изменения в структуру оформления, переменные и статус шаблона.
+        </p>
+    </div>
+</div>
 
 <?php if (isset($_SESSION['error'])): ?>
     <div class="alert alert-error" style="margin-bottom: 1rem;">

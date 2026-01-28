@@ -3,7 +3,14 @@ $title = 'Редактировать группу: ' . htmlspecialchars($group['
 ob_start();
 ?>
 
-<h1>Редактировать группу</h1>
+<div class="page-header">
+    <div class="page-header-main">
+        <h1 class="page-title">Редактировать группу</h1>
+        <p class="page-subtitle">
+            <?= htmlspecialchars($group['name']) ?> — измените настройки автогенерации, расписания и каналов публикации.
+        </p>
+    </div>
+</div>
 
 <form method="POST" action="/content-groups/<?= $group['id'] ?>/edit" class="group-form">
     <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">

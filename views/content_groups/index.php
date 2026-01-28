@@ -3,9 +3,20 @@ $title = 'Группы контента';
 ob_start();
 ?>
 
-<h1>Группы контента</h1>
-
-<a href="/content-groups/create" class="btn btn-primary">Создать группу</a>
+<div class="page-header">
+    <div class="page-header-main">
+        <h1 class="page-title">Группы контента</h1>
+        <p class="page-subtitle">
+            Объединяйте видео в логические группы для автоматической и умной публикации.
+        </p>
+    </div>
+    <div class="page-header-actions">
+        <a href="/content-groups/create" class="btn btn-primary">
+            <i class="fa-solid fa-folder-plus icon-inline" aria-hidden="true"></i>
+            Создать группу
+        </a>
+    </div>
+</div>
 
 <?php if (empty($groups)): ?>
     <p style="margin-top: 2rem;">Нет созданных групп</p>

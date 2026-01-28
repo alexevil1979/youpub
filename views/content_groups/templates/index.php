@@ -3,7 +3,22 @@ $title = 'Шаблоны оформления';
 ob_start();
 ?>
 
-<h1>Шаблоны оформления</h1>
+<div class="page-header">
+    <div class="page-header-main">
+        <h1 class="page-title">Шаблоны оформления</h1>
+        <p class="page-subtitle">
+            Управляйте шаблонами заголовков, описаний и тегов для автоматического оформления публикаций.
+        </p>
+    </div>
+    <div class="page-header-actions">
+        <a href="/content-groups/auto-shorts" class="btn btn-secondary">
+            🚀 Автогенерация Shorts
+        </a>
+        <a href="/content-groups/templates/create-shorts" class="btn btn-primary">
+            🎯 Создать Shorts шаблон
+        </a>
+    </div>
+</div>
 
 <?php if (isset($_SESSION['error'])): ?>
     <div class="alert alert-error" style="margin-bottom: 1rem;">
@@ -18,9 +33,6 @@ ob_start();
     </div>
     <?php unset($_SESSION['success']); ?>
 <?php endif; ?>
-
-<a href="/content-groups/auto-shorts" class="btn btn-primary">🚀 Автогенерация Shorts</a>
-<a href="/content-groups/templates/create-shorts" class="btn btn-primary">🎯 Создать Shorts шаблон</a>
 
 <?php 
 // Убеждаемся, что переменная определена
