@@ -65,10 +65,24 @@ class SmartQueueService extends Service
         }
         
         // Ищем все группы, которые используют это расписание через schedule_id (новая логика)
-        $stmt = $this->db->prepare("SELECT * FROM content_groups WHERE schedule_id = ? AND status = 'active'");
+        // Используем FOR UPDATE для блокировки строк и предотвращения race condition
+        $stmt = $this->db->prepare("SELECT * FROM content_groups WHERE schedule_id = ? AND status = 'active' FOR UPDATE");
         $stmt->execute([$schedule['id']]);
         $groupsByScheduleId = $stmt->fetchAll(\PDO::FETCH_ASSOC);
         error_log("SmartQueueService::processGroupSchedule: Found " . count($groupsByScheduleId) . " groups using schedule_id = {$schedule['id']}");
+        
+        // Дополнительная диагностика: проверяем все группы с этим schedule_id (включая неактивные)
+        $stmtAll = $this->db->prepare("SELECT id, name, status, schedule_id FROM content_groups WHERE schedule_id = ?");
+        $stmtAll->execute([$schedule['id']]);
+        $allGroupsWithScheduleId = $stmtAll->fetchAll(\PDO::FETCH_ASSOC);
+        if (count($allGroupsWithScheduleId) > 0) {
+            error_log("SmartQueueService::processGroupSchedule: All groups with schedule_id = {$schedule['id']}:");
+            foreach ($allGroupsWithScheduleId as $g) {
+                error_log("SmartQueueService::processGroupSchedule:   - Group ID={$g['id']}, Name={$g['name']}, Status={$g['status']}, schedule_id={$g['schedule_id']}");
+            }
+        } else {
+            error_log("SmartQueueService::processGroupSchedule: No groups found with schedule_id = {$schedule['id']} (even inactive ones)");
+        }
         
         // Добавляем группы, найденные через schedule_id (если их еще нет в списке)
         foreach ($groupsByScheduleId as $group) {
