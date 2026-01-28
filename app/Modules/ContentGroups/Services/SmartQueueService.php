@@ -1172,18 +1172,6 @@ class SmartQueueService extends Service
                     $errorMessages[] = "{$platform}: " . $e->getMessage();
                 }
             }
-                    $this->db->rollBack();
-                    error_log("SmartQueueService::publishGroupFileNow: Exception in transaction for {$platform}: " . $e->getMessage());
-                    $results[] = [
-                        'platform' => $platform,
-                        'integration_id' => $integrationId,
-                        'success' => false,
-                        'message' => 'Ошибка подготовки публикации: ' . $e->getMessage()
-                    ];
-                    $allSuccess = false;
-                    $errorMessages[] = "{$platform}: " . $e->getMessage();
-                }
-            }
             
             // Формируем итоговый результат
             if (empty($results)) {
