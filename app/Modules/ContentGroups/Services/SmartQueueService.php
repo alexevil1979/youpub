@@ -127,7 +127,9 @@ class SmartQueueService extends Service
                         'publish_at' => $nextTime,
                         'status' => 'pending'
                     ]);
-                    error_log("SmartQueueService::processGroupForSchedule: No unpublished videos in group {$group['id']}, but updated publish_at to {$nextTime} for interval schedule");
+                    error_log("SmartQueueService::processGroupForSchedule: No unpublished videos in group {$group['id']}, but updated publish_at to {$nextTime} for interval schedule ID {$schedule['id']}");
+                } else {
+                    error_log("SmartQueueService::processGroupForSchedule: WARNING - Could not calculate next publish time for interval schedule ID {$schedule['id']}");
                 }
             }
             

@@ -81,6 +81,11 @@ try {
     $schedules = $scheduleRepo->findActiveGroupSchedules(50);
 
     logMessage('Found ' . count($schedules) . ' group schedules to process', $logFile);
+    
+    // Детальное логирование найденных расписаний
+    foreach ($schedules as $idx => $sched) {
+        logMessage("Schedule #{$idx}: ID={$sched['id']}, Type={$sched['schedule_type']}, Status={$sched['status']}, Publish_at={$sched['publish_at']}, Interval={$sched['interval_minutes']}, Group={$sched['group_name']}", $logFile);
+    }
 
     foreach ($schedules as $schedule) {
         if ($shutdown) {
