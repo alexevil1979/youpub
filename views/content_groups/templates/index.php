@@ -139,7 +139,7 @@ try {
 }
 ?>
 
-<div class="filters-panel" style="margin-top: 1rem;">
+<div class="filters-panel">
     <form method="GET" action="/content-groups/templates" class="filters-form" id="filtersForm">
         <div class="filter-group">
             <label for="filter_query">Поиск:</label>
@@ -168,7 +168,7 @@ try {
                 <option value="created_at_asc" <?= $sortBy === 'created_at_asc' ? 'selected' : '' ?>>Сначала старые</option>
             </select>
         </div>
-        <div class="filter-group" style="display: flex; gap: 0.5rem; align-items: flex-end;">
+        <div class="filter-group filter-group-actions">
             <button type="submit" class="btn btn-sm btn-primary" title="Применить">
                 <?= \App\Helpers\IconHelper::render('search', 14, 'icon-inline') ?>
             </button>
