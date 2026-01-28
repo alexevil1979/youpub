@@ -35,8 +35,8 @@ class Auth
         ini_set('session.cookie_secure', $secure ? '1' : '0');
         ini_set('session.cookie_samesite', 'Strict');
 
-        // Получаем время жизни сессии из конфига (минимум 2 часа = 7200 секунд)
-        $sessionLifetime = max(7200, (int)($this->config['SESSION_LIFETIME'] ?? 7200));
+        // Получаем время жизни сессии (минимум 2 часа = 7200 секунд) с учётом глобальных настроек
+        $sessionLifetime = $this->getSessionLifetime();
         
         // Устанавливаем время жизни сессии PHP
         ini_set('session.gc_maxlifetime', $sessionLifetime);
@@ -113,7 +113,7 @@ class Auth
         session_regenerate_id(true);
         $sessionId = bin2hex(random_bytes(32));
         // Минимум 2 часа (7200 секунд) для времени жизни сессии
-        $lifetime = max(7200, (int)($this->config['SESSION_LIFETIME'] ?? 7200));
+        $lifetime = $this->getSessionLifetime();
         $expiresAt = date('Y-m-d H:i:s', time() + $lifetime);
         $clientIp = $this->getClientIp();
         $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
@@ -209,10 +209,9 @@ class Auth
 
                     // Строгая привязка сессии к IP может вызывать частые вылогинивания
                     // (мобильные сети, провайдеры с плавающим IP, прокси и т.п.).
-                    // Делаем это поведение настраиваемым через конфиг:
-                    // SESSION_STRICT_IP = true  -> разлогинивать при смене IP
-                    // SESSION_STRICT_IP = false -> только логировать несоответствие IP, но не разлогинивать
-                    $strictIpCheck = (bool)($this->config['SESSION_STRICT_IP'] ?? false);
+                    // Делается настраиваемой через конфиг / глобальные настройки:
+                    // SESSION_STRICT_IP (env) и app_settings.session_strict_ip (панель админа)
+                    $strictIpCheck = $this->getSessionStrictIp();
 
                     if (!empty($session['ip_address']) && $session['ip_address'] !== $clientIp) {
                         error_log("Auth::check: IP mismatch - session: {$session['ip_address']}, current: {$clientIp}");
@@ -229,7 +228,7 @@ class Auth
                     // Автопродление сессии при активности (если осталось меньше 30 минут)
                     $expiresAt = strtotime($session['expires_at']);
                     $timeLeft = $expiresAt - time();
-                    $sessionLifetime = max(7200, (int)($this->config['SESSION_LIFETIME'] ?? 7200));
+                    $sessionLifetime = $this->getSessionLifetime();
                     $minTimeLeft = $sessionLifetime * 0.25; // 25% от времени жизни (например, 30 минут из 2 часов)
                     
                     if ($timeLeft < $minTimeLeft) {
@@ -249,6 +248,70 @@ class Auth
         // Если user_id есть в сессии, считаем пользователя авторизованным
         // Это позволяет работать даже если таблица sessions недоступна
         return isset($_SESSION['user_id']) && !empty($_SESSION['user_id']);
+    }
+
+    /**
+     * Получить актуальное время жизни сессии (в секундах) с учётом глобальных настроек.
+     */
+    private function getSessionLifetime(): int
+    {
+        // Базовое значение из конфига (env)
+        $configLifetime = (int)($this->config['SESSION_LIFETIME'] ?? 7200);
+
+        // Пытаемся переопределить через таблицу app_settings (если миграция применена)
+        try {
+            $db = Database::getInstance();
+            $stmt = $db->prepare("SHOW TABLES LIKE 'app_settings'");
+            $stmt->execute();
+            $hasTable = (bool)$stmt->fetchColumn();
+
+            if ($hasTable) {
+                $stmt = $db->prepare("SELECT `value` FROM app_settings WHERE `key` = 'session_lifetime_seconds' LIMIT 1");
+                $stmt->execute();
+                $value = $stmt->fetchColumn();
+                if ($value !== false && $value !== null && $value !== '') {
+                    $override = (int)$value;
+                    if ($override > 0) {
+                        $configLifetime = $override;
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // В случае ошибки БД просто используем значение из конфига
+            error_log("Auth::getSessionLifetime: error reading app_settings: " . $e->getMessage());
+        }
+
+        // Никогда не опускаемся ниже 2 часов, как и раньше
+        return max(7200, $configLifetime);
+    }
+
+    /**
+     * Получить флаг строгой проверки IP для сессии (разлогинивать при смене IP или нет).
+     */
+    private function getSessionStrictIp(): bool
+    {
+        // Базовое значение из env
+        $strictFromConfig = (bool)($this->config['SESSION_STRICT_IP'] ?? false);
+
+        try {
+            $db = Database::getInstance();
+            $stmt = $db->prepare("SHOW TABLES LIKE 'app_settings'");
+            $stmt->execute();
+            $hasTable = (bool)$stmt->fetchColumn();
+
+            if ($hasTable) {
+                $stmt = $db->prepare("SELECT `value` FROM app_settings WHERE `key` = 'session_strict_ip' LIMIT 1");
+                $stmt->execute();
+                $value = $stmt->fetchColumn();
+                if ($value !== false && $value !== null && $value !== '') {
+                    return filter_var($value, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE) ?? $strictFromConfig;
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log("Auth::getSessionStrictIp: error reading app_settings: " . $e->getMessage());
+        }
+
+        return $strictFromConfig;
     }
 
     /**
