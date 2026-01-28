@@ -67,7 +67,15 @@ if (function_exists('pcntl_signal')) {
     pcntl_signal(SIGINT, function() use (&$shutdown) { $shutdown = true; });
 }
 
-logMessage('Smart publish worker started', $logFile);
+// Получаем версию воркера на основе даты последнего изменения файла
+$workerFile = __FILE__;
+$workerVersion = 'unknown';
+if (file_exists($workerFile)) {
+    $lastModified = filemtime($workerFile);
+    $workerVersion = date('Y-m-d H:i:s', $lastModified);
+}
+
+logMessage("Smart publish worker started (version: {$workerVersion})", $logFile);
 
 try {
     $scheduleRepo = new ScheduleRepository();
