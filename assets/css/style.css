@@ -623,6 +623,12 @@ section + section {
     text-align: center;
 }
 
+.auth-box form .btn {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+}
+
 .form-group {
     margin-bottom: 1rem;
 }
