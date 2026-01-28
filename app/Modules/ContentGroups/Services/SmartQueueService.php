@@ -1092,73 +1092,86 @@ class SmartQueueService extends Service
 
                     $this->fileRepo->updateFileStatus((int)$groupFile['id'], 'queued');
                     $this->db->commit();
-                    
-                    // Обновляем метаданные видео ПЕРЕД публикацией
-                    try {
-                        $this->updateVideoMetadata($tempScheduleId, $templated);
-                        error_log("SmartQueueService::publishGroupFileNow: Video metadata updated successfully for schedule {$tempScheduleId}");
-                    } catch (\Exception $e) {
-                        error_log("SmartQueueService::publishGroupFileNow: Error updating metadata: " . $e->getMessage());
-                    }
+                } catch (\Exception $e) {
+                    $this->db->rollBack();
+                    error_log("SmartQueueService::publishGroupFileNow: Exception in transaction for {$platform}: " . $e->getMessage());
+                    $results[] = [
+                        'platform' => $platform,
+                        'integration_id' => $integrationId,
+                        'success' => false,
+                        'message' => 'Ошибка подготовки публикации: ' . $e->getMessage()
+                    ];
+                    $allSuccess = false;
+                    $errorMessages[] = "{$platform}: " . $e->getMessage();
+                    continue;
+                }
+                
+                // Обновляем метаданные видео ПЕРЕД публикацией (после успешной транзакции)
+                try {
+                    $this->updateVideoMetadata($tempScheduleId, $templated);
+                    error_log("SmartQueueService::publishGroupFileNow: Video metadata updated successfully for schedule {$tempScheduleId}");
+                } catch (\Exception $e) {
+                    error_log("SmartQueueService::publishGroupFileNow: Error updating metadata: " . $e->getMessage());
+                }
 
-                    // Публикуем
-                    error_log("SmartQueueService::publishGroupFileNow: Starting publishVideo for schedule {$tempScheduleId} ({$platform})");
-                    try {
-                        $result = $this->publishVideo($platform, $tempScheduleId, $templated);
-                        error_log("SmartQueueService::publishGroupFileNow: publishVideo completed for {$platform}. Success: " . ($result['success'] ? 'true' : 'false'));
+                // Публикуем
+                error_log("SmartQueueService::publishGroupFileNow: Starting publishVideo for schedule {$tempScheduleId} ({$platform})");
+                try {
+                    $result = $this->publishVideo($platform, $tempScheduleId, $templated);
+                    error_log("SmartQueueService::publishGroupFileNow: publishVideo completed for {$platform}. Success: " . ($result['success'] ? 'true' : 'false'));
 
-                        if ($result['success']) {
-                            $publicationId = $result['data']['publication_id'] ?? null;
-                            $this->fileRepo->updateFileStatus((int)$groupFile['id'], 'published', $publicationId ? (int)$publicationId : null);
-                            $this->scheduleRepo->update($tempScheduleId, [
-                                'status' => 'published',
-                                'error_message' => null,
-                            ]);
-                            error_log("SmartQueueService::publishGroupFileNow: Publication successful for {$platform}. Publication ID: {$publicationId}");
-                            $results[] = [
-                                'platform' => $platform,
-                                'integration_id' => $integrationId,
-                                'success' => true,
-                                'message' => 'Опубликовано на ' . $platform,
-                                'publication_id' => $publicationId
-                            ];
-                        } else {
-                            $errorMessage = $result['message'] ?? 'Unknown error';
-                            error_log("SmartQueueService::publishGroupFileNow: Publication failed for {$platform}. Error: {$errorMessage}");
-                            $this->fileRepo->updateFileStatus((int)$groupFile['id'], 'error');
-                            $this->fileRepo->update((int)$groupFile['id'], [
-                                'error_message' => $errorMessage
-                            ]);
-                            $this->scheduleRepo->update($tempScheduleId, [
-                                'status' => 'failed',
-                                'error_message' => $errorMessage,
-                            ]);
-                            $results[] = [
-                                'platform' => $platform,
-                                'integration_id' => $integrationId,
-                                'success' => false,
-                                'message' => $errorMessage
-                            ];
-                            $allSuccess = false;
-                            $errorMessages[] = "{$platform}: {$errorMessage}";
-                        }
-                    } catch (\Exception $e) {
-                        error_log("SmartQueueService::publishGroupFileNow: Exception in publishVideo for {$platform}: " . $e->getMessage());
+                    if ($result['success']) {
+                        $publicationId = $result['data']['publication_id'] ?? null;
+                        $this->fileRepo->updateFileStatus((int)$groupFile['id'], 'published', $publicationId ? (int)$publicationId : null);
+                        $this->scheduleRepo->update($tempScheduleId, [
+                            'status' => 'published',
+                            'error_message' => null,
+                        ]);
+                        error_log("SmartQueueService::publishGroupFileNow: Publication successful for {$platform}. Publication ID: {$publicationId}");
+                        $results[] = [
+                            'platform' => $platform,
+                            'integration_id' => $integrationId,
+                            'success' => true,
+                            'message' => 'Опубликовано на ' . $platform,
+                            'publication_id' => $publicationId
+                        ];
+                    } else {
+                        $errorMessage = $result['message'] ?? 'Unknown error';
+                        error_log("SmartQueueService::publishGroupFileNow: Publication failed for {$platform}. Error: {$errorMessage}");
                         $this->fileRepo->updateFileStatus((int)$groupFile['id'], 'error');
+                        $this->fileRepo->update((int)$groupFile['id'], [
+                            'error_message' => $errorMessage
+                        ]);
                         $this->scheduleRepo->update($tempScheduleId, [
                             'status' => 'failed',
-                            'error_message' => $e->getMessage(),
+                            'error_message' => $errorMessage,
                         ]);
                         $results[] = [
                             'platform' => $platform,
                             'integration_id' => $integrationId,
                             'success' => false,
-                            'message' => 'Ошибка при публикации: ' . $e->getMessage()
+                            'message' => $errorMessage
                         ];
                         $allSuccess = false;
-                        $errorMessages[] = "{$platform}: " . $e->getMessage();
+                        $errorMessages[] = "{$platform}: {$errorMessage}";
                     }
                 } catch (\Exception $e) {
+                    error_log("SmartQueueService::publishGroupFileNow: Exception in publishVideo for {$platform}: " . $e->getMessage());
+                    $this->fileRepo->updateFileStatus((int)$groupFile['id'], 'error');
+                    $this->scheduleRepo->update($tempScheduleId, [
+                        'status' => 'failed',
+                        'error_message' => $e->getMessage(),
+                    ]);
+                    $results[] = [
+                        'platform' => $platform,
+                        'integration_id' => $integrationId,
+                        'success' => false,
+                        'message' => 'Ошибка при публикации: ' . $e->getMessage()
+                    ];
+                    $allSuccess = false;
+                    $errorMessages[] = "{$platform}: " . $e->getMessage();
+                }
+            }
                     $this->db->rollBack();
                     error_log("SmartQueueService::publishGroupFileNow: Exception in transaction for {$platform}: " . $e->getMessage());
                     $results[] = [
