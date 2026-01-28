@@ -127,6 +127,9 @@ ob_start();
             if (!empty($channelLabels)) {
                 $channelLabel = implode(' • ', $channelLabels);
             }
+
+            // Находим последнее расписание, связанное с этой группой
+            $groupSchedule = $latestSchedules[$groupId] ?? null;
             ?>
             <div class="group-card <?= $group['status'] === 'active' ? 'group-card-active' : 'group-card-paused' ?>">
                 <div class="group-card-header">
@@ -152,6 +155,45 @@ ob_start();
                     <div class="group-info-item">
                         <span class="info-label">Канал:</span>
                         <span class="info-value info-value-muted"><?= htmlspecialchars($channelLabel) ?></span>
+                    </div>
+                    <div class="group-info-item">
+                        <span class="info-label">Расписание:</span>
+                        <?php if ($groupSchedule): ?>
+                            <?php
+                                $scheduleName = $groupSchedule['name'] ?? '';
+                                $scheduleType = $groupSchedule['schedule_type'] ?? 'fixed';
+                                $scheduleTypes = [
+                                    'fixed' => 'Фиксированное',
+                                    'interval' => 'Интервальное',
+                                    'batch' => 'Пакетное',
+                                    'random' => 'Случайное',
+                                    'wave' => 'Волновое',
+                                    'daily_points' => 'Точки в день',
+                                ];
+                                $scheduleTypeLabel = $scheduleTypes[$scheduleType] ?? ucfirst($scheduleType);
+                                $publishAt = $groupSchedule['publish_at'] ?? null;
+                            ?>
+                            <span class="info-value">
+                                <?php if ($scheduleName): ?>
+                                    <span class="info-value-success">
+                                        <?= \App\Helpers\IconHelper::render('calendar', 16, 'icon-inline') ?>
+                                        <?= htmlspecialchars($scheduleName) ?>
+                                    </span>
+                                <?php else: ?>
+                                    <span class="info-value-muted">
+                                        <?= \App\Helpers\IconHelper::render('calendar', 16, 'icon-inline') ?>
+                                        <?= htmlspecialchars($scheduleTypeLabel) ?>
+                                    </span>
+                                <?php endif; ?>
+                                <?php if ($publishAt): ?>
+                                    <span class="info-value-muted" style="margin-left: 0.5rem;">
+                                        <?= date('d.m.Y H:i', strtotime($publishAt)) ?>
+                                    </span>
+                                <?php endif; ?>
+                            </span>
+                        <?php else: ?>
+                            <span class="info-value info-value-muted">Расписание не назначено</span>
+                        <?php endif; ?>
                     </div>
                 </div>
                 
