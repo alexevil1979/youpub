@@ -108,6 +108,8 @@ try {
             // Диагностика: проверим, есть ли вообще расписания с группами
             try {
                 $db = Database::getInstance();
+                
+                // Общая статистика
                 $diagStmt = $db->prepare("
                     SELECT COUNT(*) as total,
                            SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_count,
@@ -120,8 +122,33 @@ try {
                 $diagStmt->execute();
                 $diag = $diagStmt->fetch();
                 logMessage("Diagnostics: Total group schedules={$diag['total']}, Pending={$diag['pending_count']}, Published={$diag['published_count']}, Interval={$diag['interval_count']}", $logFile);
+                
+                // Детальная информация о pending расписаниях
+                $detailStmt = $db->prepare("
+                    SELECT s.id, s.schedule_type, s.status, s.publish_at, s.interval_minutes,
+                           s.content_group_id, cg1.name as group_name_1, cg1.status as group_status_1,
+                           cg2.id as group_id_2, cg2.name as group_name_2, cg2.status as group_status_2
+                    FROM schedules s
+                    LEFT JOIN content_groups cg1 ON cg1.id = s.content_group_id
+                    LEFT JOIN content_groups cg2 ON cg2.schedule_id = s.id
+                    WHERE s.video_id IS NULL
+                    AND s.status IN ('pending', 'published')
+                    AND (s.content_group_id IS NOT NULL OR cg2.id IS NOT NULL)
+                    ORDER BY s.publish_at ASC
+                    LIMIT 10
+                ");
+                $detailStmt->execute();
+                $details = $detailStmt->fetchAll();
+                logMessage("Found " . count($details) . " schedules in database (showing first 10):", $logFile);
+                foreach ($details as $detail) {
+                    $groupInfo = "Group1: " . ($detail['group_name_1'] ?? 'NULL') . " (status: " . ($detail['group_status_1'] ?? 'NULL') . ")";
+                    if ($detail['group_name_2']) {
+                        $groupInfo .= ", Group2: " . $detail['group_name_2'] . " (status: " . ($detail['group_status_2'] ?? 'NULL') . ")";
+                    }
+                    logMessage("  Schedule ID={$detail['id']}, Type={$detail['schedule_type']}, Status={$detail['status']}, Publish_at={$detail['publish_at']}, Interval={$detail['interval_minutes']}, {$groupInfo}", $logFile);
+                }
             } catch (\Exception $diagError) {
-                logMessage("Diagnostics error: " . $diagError->getMessage(), $logFile);
+                logMessage("Diagnostics error: " . $diagError->getMessage() . " in " . $diagError->getFile() . ":" . $diagError->getLine(), $logFile);
             }
         } else {
             foreach ($schedules as $idx => $sched) {
