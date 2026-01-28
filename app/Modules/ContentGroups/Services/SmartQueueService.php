@@ -748,12 +748,6 @@ class SmartQueueService extends Service
                             $autoGenType = 0; // Fallback to template
                         }
                     }
-                    
-                    if ($autoGenType === 0) {
-                            error_log("SmartQueueService::publishGroupFileNow: Auto-generation failed, falling back to template");
-                            $autoGenType = 0; // Fallback to template
-                        }
-                    }
                 }
                 
                 // Если автогенерация не использовалась или не удалась, применяем шаблон
@@ -854,6 +848,9 @@ class SmartQueueService extends Service
                     }
                 }
 
+                // Инициализируем переменную перед транзакцией
+                $tempScheduleId = null;
+                
                 $this->db->beginTransaction();
                 try {
                     // Блокируем строку файла для предотвращения параллельной публикации
@@ -1020,8 +1017,8 @@ class SmartQueueService extends Service
                     
                     $tempScheduleId = $this->scheduleRepo->create($scheduleData);
 
-                if (!$tempScheduleId) {
-                    $this->db->rollBack();
+                    if (!$tempScheduleId) {
+                        $this->db->rollBack();
                         error_log("SmartQueueService::publishGroupFileNow: Failed to create schedule for {$platform} integration {$integrationId}");
                         $results[] = [
                             'platform' => $platform,
@@ -1109,6 +1106,12 @@ class SmartQueueService extends Service
                 }
                 
                 // Обновляем метаданные видео ПЕРЕД публикацией (после успешной транзакции)
+                // Проверяем, что расписание было создано успешно
+                if ($tempScheduleId === null) {
+                    error_log("SmartQueueService::publishGroupFileNow: tempScheduleId is null after transaction, skipping metadata update and publication");
+                    continue;
+                }
+                
                 try {
                     $this->updateVideoMetadata($tempScheduleId, $templated);
                     error_log("SmartQueueService::publishGroupFileNow: Video metadata updated successfully for schedule {$tempScheduleId}");
