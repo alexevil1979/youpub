@@ -60,10 +60,6 @@
                         <i class="fa-solid fa-calendar-check sidebar-link-icon" aria-hidden="true"></i>
                         <span class="sidebar-link-text">Умные расписания</span>
                     </a>
-                    <a href="/schedules" class="sidebar-link <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/schedules') && !str_contains($_SERVER['REQUEST_URI'], '/content-groups') ? 'is-active' : '' ?>">
-                        <i class="fa-solid fa-clock-rotate-left sidebar-link-icon" aria-hidden="true"></i>
-                        <span class="sidebar-link-text">Все расписания</span>
-                    </a>
                     <a href="/integrations" class="sidebar-link <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/integrations') ? 'is-active' : '' ?>">
                         <i class="fa-solid fa-plug sidebar-link-icon" aria-hidden="true"></i>
                         <span class="sidebar-link-text">Интеграции</span>
@@ -85,12 +81,10 @@
                         <i class="fa-solid fa-user sidebar-link-icon" aria-hidden="true"></i>
                         <span class="sidebar-link-text">Профиль</span>
                     </a>
-                    <button type="button"
-                            class="sidebar-link sidebar-link-secondary sidebar-logout"
-                            onclick="document.getElementById('logout-form')?.submit()">
+                    <a href="/logout" class="sidebar-link sidebar-link-secondary sidebar-logout">
                         <i class="fa-solid fa-right-from-bracket sidebar-link-icon" aria-hidden="true"></i>
                         <span class="sidebar-link-text">Выход</span>
-                    </button>
+                    </a>
                 </div>
             </aside>
 

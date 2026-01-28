@@ -3,16 +3,20 @@ $title = 'Админ-панель';
 ob_start();
 ?>
 
-<h1>Админ-панель</h1>
-
-<nav class="admin-nav">
-    <a href="/admin/dashboard">Обзор</a>
-    <a href="/admin/users">Пользователи</a>
-    <a href="/admin/videos">Видео</a>
-    <a href="/admin/schedules">Расписания</a>
-    <a href="/admin/logs">Логи</a>
-    <a href="/admin/settings">Настройки системы</a>
-</nav>
+<div class="page-header">
+    <div class="page-header-main">
+        <h1 class="page-title">Админ-панель</h1>
+        <p class="page-subtitle">
+            Обзор ключевых метрик сервиса и последних публикаций.
+        </p>
+    </div>
+    <div class="page-header-actions">
+        <a href="/admin/settings" class="btn btn-secondary">
+            <i class="fa-solid fa-gear icon-inline" aria-hidden="true"></i>
+            Настройки системы
+        </a>
+    </div>
+</div>
 
 <div class="stats-grid">
     <div class="stat-card">
@@ -43,7 +47,7 @@ ob_start();
 
 <section>
     <h2>Последние публикации</h2>
-    <table>
+    <table class="data-table">
         <thead>
             <tr>
                 <th>Пользователь</th>

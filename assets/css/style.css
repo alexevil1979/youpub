@@ -216,6 +216,88 @@ body {
     text-align: left;
 }
 
+/* Свернутый сайдбар (иконки без текста) */
+body.sidebar-collapsed .sidebar {
+    width: 72px;
+}
+
+body.sidebar-collapsed .sidebar-logo-text {
+    display: none;
+}
+
+body.sidebar-collapsed .sidebar-link-text {
+    display: none;
+}
+
+body.sidebar-collapsed .sidebar-link {
+    justify-content: center;
+}
+
+body.sidebar-collapsed .sidebar-footer {
+    align-items: center;
+}
+
+/* Мобильный режим: сайдбар как оверлей */
+@media (max-width: 900px) {
+    .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        transform: translateX(-100%);
+        transition: transform 0.2s ease-out;
+    }
+
+    body.sidebar-open .sidebar {
+        transform: translateX(0);
+    }
+
+    .sidebar-toggle {
+        display: inline-flex;
+    }
+}
+
+/* Единый отступ между заголовком и контентом */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.page-header-main {
+    max-width: 60%;
+}
+
+.page-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.page-subtitle {
+    font-size: 0.95rem;
+    color: var(--color-text-soft);
+}
+
+.page-header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+@media (max-width: 900px) {
+    .page-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .page-header-main {
+        max-width: 100%;
+    }
+}
+
 /* =========
    TOPBAR
    ========= */
