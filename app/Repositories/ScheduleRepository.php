@@ -170,10 +170,11 @@ class ScheduleRepository extends Repository
                 ))
             )
             ORDER BY s.publish_at ASC
-            LIMIT {$limit}
+            LIMIT :limit
         ";
 
         $stmt = $this->db->prepare($sql);
+        $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll();
     }
