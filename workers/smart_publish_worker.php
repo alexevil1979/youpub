@@ -218,10 +218,29 @@ try {
                 }
             } else {
                 logMessage("Schedule ID {$schedule['id']} failed: " . ($result['message'] ?? 'Unknown error'), $logFile);
-                $scheduleRepo->update($schedule['id'], [
-                    'status' => 'pending',
-                    'error_message' => $result['message'] ?? 'Unknown error'
-                ]);
+                
+                // Для интервальных расписаний даже при ошибке обновляем publish_at, чтобы не блокировать следующие попытки
+                if (($schedule['schedule_type'] ?? '') === 'interval') {
+                    $nextTime = $scheduleEngine->getNextPublishTime($schedule);
+                    if ($nextTime) {
+                        $scheduleRepo->update($schedule['id'], [
+                            'status' => 'pending',
+                            'publish_at' => $nextTime,
+                            'error_message' => $result['message'] ?? 'Unknown error'
+                        ]);
+                        logMessage("Schedule ID {$schedule['id']} (interval) publish_at updated to {$nextTime} despite error", $logFile);
+                    } else {
+                        $scheduleRepo->update($schedule['id'], [
+                            'status' => 'pending',
+                            'error_message' => $result['message'] ?? 'Unknown error'
+                        ]);
+                    }
+                } else {
+                    $scheduleRepo->update($schedule['id'], [
+                        'status' => 'pending',
+                        'error_message' => $result['message'] ?? 'Unknown error'
+                    ]);
+                }
             }
 
         } catch (\Exception $e) {

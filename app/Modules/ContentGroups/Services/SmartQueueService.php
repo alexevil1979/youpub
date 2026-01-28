@@ -118,8 +118,19 @@ class SmartQueueService extends Service
         if (!$groupFile) {
             error_log("SmartQueueService::processGroupForSchedule: No unpublished file found. Group ID: {$group['id']}, Skip published: " . ($skipPublished ? 'true' : 'false'));
             
-            // Все видео опубликованы или нет доступных - пропускаем эту группу, но не останавливаем расписание
-            // так как оно может использоваться другими группами
+            // Все видео опубликованы или нет доступных - пропускаем эту группу
+            // Для интервальных расписаний обновляем publish_at, чтобы не блокировать другие группы
+            if (($schedule['schedule_type'] ?? '') === 'interval') {
+                $nextTime = $this->scheduleEngine->getNextPublishTime($schedule);
+                if ($nextTime) {
+                    $this->scheduleRepo->update($schedule['id'], [
+                        'publish_at' => $nextTime,
+                        'status' => 'pending'
+                    ]);
+                    error_log("SmartQueueService::processGroupForSchedule: No unpublished videos in group {$group['id']}, but updated publish_at to {$nextTime} for interval schedule");
+                }
+            }
+            
             error_log("SmartQueueService::processGroupForSchedule: No unpublished videos in group {$group['id']}, skipping this group");
             return ['success' => true, 'message' => 'No unpublished videos in group', 'group_id' => $group['id']];
         }
