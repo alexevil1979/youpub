@@ -298,6 +298,52 @@ body.sidebar-collapsed .sidebar-footer {
     }
 }
 
+/* Базовые отступы и разделение блоков на всех страницах */
+.main-content > h1 {
+    margin-bottom: 0.25rem;
+}
+
+.main-content > h1 + p {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    color: var(--color-text-soft);
+}
+
+.main-content > .stats-grid,
+.main-content > .dashboard-sections,
+.main-content > .catalog-view,
+.main-content > .schedules-header,
+.main-content > .filters-panel,
+.main-content > .schedules-table-container,
+.main-content > .profile-section,
+.main-content > .integrations-grid,
+.main-content > .video-container,
+.main-content > .form-card,
+.main-content > .info-card,
+.main-content > .empty-state {
+    margin-bottom: 1.5rem;
+}
+
+.dashboard-sections section,
+.info-card,
+.form-card,
+.profile-section,
+.integration-card,
+.stats-section,
+.video-publications {
+    margin-bottom: 1.5rem;
+}
+
+.data-table,
+.schedules-table {
+    margin-top: 0.75rem;
+    margin-bottom: 0;
+}
+
+section + section {
+    margin-top: 1.5rem;
+}
+
 /* =========
    TOPBAR
    ========= */
