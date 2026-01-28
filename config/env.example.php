@@ -24,6 +24,9 @@ return [
     'SECRET_KEY' => 'CHANGE_THIS_TO_RANDOM_RANDOM_STRING_32_CHARS_MIN',
     'JWT_SECRET' => 'CHANGE_THIS_TO_RANDOM_RANDOM_STRING_32_CHARS_MIN',
     'SESSION_LIFETIME' => 7200, // 2 часа (минимум), можно увеличить до 86400 (24 часа) или больше
+    // Если true — сессия жёстко привязана к IP и при его смене пользователь разлогинивается.
+    // Если false — несоответствие IP только логируется (рекомендуется для мобильных/динамических сетей).
+    'SESSION_STRICT_IP' => false,
     'TRUSTED_PROXIES' => [], // список доверенных прокси IP
     
     // Загрузка файлов

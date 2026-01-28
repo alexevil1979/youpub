@@ -206,10 +206,21 @@ class Auth
                     // Проверка IP и User-Agent только если они заданы в БД
                     $clientIp = $this->getClientIp();
                     $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+
+                    // Строгая привязка сессии к IP может вызывать частые вылогинивания
+                    // (мобильные сети, провайдеры с плавающим IP, прокси и т.п.).
+                    // Делаем это поведение настраиваемым через конфиг:
+                    // SESSION_STRICT_IP = true  -> разлогинивать при смене IP
+                    // SESSION_STRICT_IP = false -> только логировать несоответствие IP, но не разлогинивать
+                    $strictIpCheck = (bool)($this->config['SESSION_STRICT_IP'] ?? false);
+
                     if (!empty($session['ip_address']) && $session['ip_address'] !== $clientIp) {
                         error_log("Auth::check: IP mismatch - session: {$session['ip_address']}, current: {$clientIp}");
-                        return false;
+                        if ($strictIpCheck) {
+                            return false;
+                        }
                     }
+
                     if (!empty($session['user_agent']) && $session['user_agent'] !== $userAgent) {
                         error_log("Auth::check: User-Agent mismatch");
                         return false;
