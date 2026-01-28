@@ -139,7 +139,6 @@ class ScheduleRepository extends Repository
             LEFT JOIN content_groups cg1 ON cg1.id = s.content_group_id AND cg1.status = 'active'
             LEFT JOIN content_groups cg2 ON cg2.schedule_id = s.id AND cg2.status = 'active'
             WHERE s.status IN ('pending', 'published')
-            AND s.status != 'paused'
             AND s.video_id IS NULL
             AND (
                 -- Расписание с content_group_id (старая логика)
