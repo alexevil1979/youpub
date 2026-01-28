@@ -3,9 +3,16 @@ $title = 'Создать расписание';
 ob_start();
 ?>
 
-<h1>Создать расписание публикации</h1>
+<div class="page-header">
+    <div class="page-header-main">
+        <h1 class="page-title">Создать расписание публикации</h1>
+        <p class="page-subtitle">
+            Выберите видео, платформу и задайте дату, время или несколько точек публикации.
+        </p>
+    </div>
+</div>
 
-<form method="POST" action="/schedules/create" class="schedule-form">
+<form method="POST" action="/schedules/create" class="form-card schedule-form">
     <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">
     
     <div class="form-group">
