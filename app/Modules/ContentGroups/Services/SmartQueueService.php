@@ -50,21 +50,51 @@ class SmartQueueService extends Service
         // Определяем группы для обработки
         $groupsToProcess = [];
         
+        error_log("SmartQueueService::processGroupSchedule: Checking groups for schedule ID {$schedule['id']}. content_group_id: " . ($schedule['content_group_id'] ?? 'NULL'));
+        
         // Если у расписания есть content_group_id (старая логика для обратной совместимости)
         if (!empty($schedule['content_group_id'])) {
-        $group = $this->groupRepo->findById($schedule['content_group_id']);
+            $group = $this->groupRepo->findById($schedule['content_group_id']);
+            error_log("SmartQueueService::processGroupSchedule: Found group by content_group_id: " . ($group ? "ID={$group['id']}, Name={$group['name']}, Status={$group['status']}" : 'NOT FOUND'));
             if ($group && $group['status'] === 'active') {
                 $groupsToProcess[] = $group;
+                error_log("SmartQueueService::processGroupSchedule: Added group ID {$group['id']} to processing list (via content_group_id)");
+            } else {
+                error_log("SmartQueueService::processGroupSchedule: Group not found or not active (status: " . ($group['status'] ?? 'NULL') . ")");
             }
-        } else {
-            // Ищем все группы, которые используют это расписание через schedule_id
-            $stmt = $this->db->prepare("SELECT * FROM content_groups WHERE schedule_id = ? AND status = 'active'");
-            $stmt->execute([$schedule['id']]);
-            $groupsToProcess = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-            error_log("SmartQueueService::processGroupSchedule: Found " . count($groupsToProcess) . " groups using schedule ID {$schedule['id']}");
+        }
+        
+        // Ищем все группы, которые используют это расписание через schedule_id (новая логика)
+        $stmt = $this->db->prepare("SELECT * FROM content_groups WHERE schedule_id = ? AND status = 'active'");
+        $stmt->execute([$schedule['id']]);
+        $groupsByScheduleId = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        error_log("SmartQueueService::processGroupSchedule: Found " . count($groupsByScheduleId) . " groups using schedule_id = {$schedule['id']}");
+        
+        // Добавляем группы, найденные через schedule_id (если их еще нет в списке)
+        foreach ($groupsByScheduleId as $group) {
+            $alreadyAdded = false;
+            foreach ($groupsToProcess as $existingGroup) {
+                if ($existingGroup['id'] == $group['id']) {
+                    $alreadyAdded = true;
+                    break;
+                }
+            }
+            if (!$alreadyAdded) {
+                $groupsToProcess[] = $group;
+                error_log("SmartQueueService::processGroupSchedule: Added group ID {$group['id']}, Name: {$group['name']} to processing list (via schedule_id)");
+            }
         }
         
         if (empty($groupsToProcess)) {
+            // Диагностика: проверяем, есть ли вообще группы с этим schedule_id (даже неактивные)
+            $stmtAll = $this->db->prepare("SELECT id, name, status FROM content_groups WHERE schedule_id = ?");
+            $stmtAll->execute([$schedule['id']]);
+            $allGroups = $stmtAll->fetchAll(\PDO::FETCH_ASSOC);
+            error_log("SmartQueueService::processGroupSchedule: Total groups with schedule_id = {$schedule['id']}: " . count($allGroups));
+            foreach ($allGroups as $g) {
+                error_log("SmartQueueService::processGroupSchedule: Group ID={$g['id']}, Name={$g['name']}, Status={$g['status']}");
+            }
+            
             error_log("SmartQueueService::processGroupSchedule: No active groups found for schedule ID {$schedule['id']}");
             return ['success' => false, 'message' => 'No active groups found for this schedule'];
         }
