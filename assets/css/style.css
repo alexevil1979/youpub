@@ -240,28 +240,28 @@ body {
     color: #e5e7eb;
 }
 
-body.sidebar-collapsed .sidebar-collapse-toggle i {
+.sidebar-collapsed .sidebar-collapse-toggle i {
     transform: rotate(180deg);
 }
 
 /* Свернутый сайдбар (иконки без текста) */
-body.sidebar-collapsed .sidebar {
+.sidebar-collapsed .sidebar {
     width: 72px;
 }
 
-body.sidebar-collapsed .sidebar-logo-text {
+.sidebar-collapsed .sidebar-logo-text {
     display: none;
 }
 
-body.sidebar-collapsed .sidebar-link-text {
+.sidebar-collapsed .sidebar-link-text {
     display: none;
 }
 
-body.sidebar-collapsed .sidebar-link {
+.sidebar-collapsed .sidebar-link {
     justify-content: center;
 }
 
-body.sidebar-collapsed .sidebar-footer {
+.sidebar-collapsed .sidebar-footer {
     align-items: center;
 }
 

@@ -82,16 +82,28 @@ document.addEventListener('DOMContentLoaded', function() {
     const collapseToggle = document.querySelector('.sidebar-collapse-toggle');
     if (collapseToggle) {
         const COLLAPSE_KEY = 'youpub_sidebar_collapsed';
-        const saved = window.localStorage.getItem(COLLAPSE_KEY);
-        if (saved === '1') {
-            document.body.classList.add('sidebar-collapsed');
-            collapseToggle.setAttribute('aria-pressed', 'true');
+
+        try {
+            const saved = window.localStorage.getItem(COLLAPSE_KEY);
+            if (saved === '1') {
+                document.documentElement.classList.add('sidebar-collapsed');
+                document.body.classList.add('sidebar-collapsed');
+                collapseToggle.setAttribute('aria-pressed', 'true');
+            }
+        } catch (e) {
+            // ignore
         }
 
         collapseToggle.addEventListener('click', function() {
-            const collapsed = document.body.classList.toggle('sidebar-collapsed');
-            collapseToggle.setAttribute('aria-pressed', collapsed ? 'true' : 'false');
-            window.localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0');
+            const nowCollapsed = !document.documentElement.classList.contains('sidebar-collapsed');
+            document.documentElement.classList.toggle('sidebar-collapsed', nowCollapsed);
+            document.body.classList.toggle('sidebar-collapsed', nowCollapsed);
+            collapseToggle.setAttribute('aria-pressed', nowCollapsed ? 'true' : 'false');
+            try {
+                window.localStorage.setItem(COLLAPSE_KEY, nowCollapsed ? '1' : '0');
+            } catch (e) {
+                // ignore
+            }
         });
     }
 });

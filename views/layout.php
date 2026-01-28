@@ -26,6 +26,18 @@
           crossorigin="anonymous"
           referrerpolicy="no-referrer">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <script>
+        // Моментально применяем состояние свёрнутого сайдбара до рендера контента
+        (function() {
+            try {
+                if (window.localStorage && localStorage.getItem('youpub_sidebar_collapsed') === '1') {
+                    document.documentElement.classList.add('sidebar-collapsed');
+                }
+            } catch (e) {
+                // игнорируем ошибки доступа к localStorage
+            }
+        })();
+    </script>
 </head>
 <body>
     <?php if (isset($_SESSION['user_id'])): ?>
