@@ -46,7 +46,10 @@ if (!is_dir($config['WORKER_LOG_DIR'])) {
 function logMessage(string $message, string $logFile): void
 {
     $timestamp = date('Y-m-d H:i:s');
-    file_put_contents($logFile, "[{$timestamp}] {$message}\n", FILE_APPEND | LOCK_EX);
+    $result = @file_put_contents($logFile, "[{$timestamp}] {$message}\n", FILE_APPEND | LOCK_EX);
+    if ($result === false) {
+        error_log("Failed to write to log file: {$logFile}");
+    }
 }
 
 // Блокировка, чтобы не запускать параллельно
@@ -71,14 +74,23 @@ try {
     $smartQueue = new SmartQueueService();
     $scheduleEngine = new ScheduleEngineService();
     
+    logMessage('Worker initialized successfully', $logFile);
+    
     // Очищаем зависшие расписания 'processing' (старше 10 минут)
-    $cleaned = $scheduleRepo->cleanupStuckProcessing(10);
-    if ($cleaned > 0) {
-        logMessage("Cleaned up {$cleaned} stuck processing schedules", $logFile);
+    try {
+        $cleaned = $scheduleRepo->cleanupStuckProcessing(10);
+        if ($cleaned > 0) {
+            logMessage("Cleaned up {$cleaned} stuck processing schedules", $logFile);
+        } else {
+            logMessage("No stuck processing schedules found", $logFile);
+        }
+    } catch (\Exception $cleanupError) {
+        logMessage("Error during cleanup: " . $cleanupError->getMessage(), $logFile);
     }
 
     // Найти расписания с группами, готовые к публикации
     try {
+        logMessage('Calling findActiveGroupSchedules...', $logFile);
         $schedules = $scheduleRepo->findActiveGroupSchedules(50);
         logMessage('Found ' . count($schedules) . ' group schedules to process', $logFile);
         
