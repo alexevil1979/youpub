@@ -3,9 +3,16 @@ $title = 'Редактировать расписание';
 ob_start();
 ?>
 
-<h1>Редактировать расписание публикации</h1>
+<div class="page-header">
+    <div class="page-header-main">
+        <h1 class="page-title">Редактировать расписание публикации</h1>
+        <p class="page-subtitle">
+            Обновите видео, платформу и временные параметры этого расписания.
+        </p>
+    </div>
+</div>
 
-<form method="POST" action="/schedules/<?= $schedule['id'] ?>/update" class="schedule-form">
+<form method="POST" action="/schedules/<?= $schedule['id'] ?>/update" class="form-card schedule-form">
     <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">
     
     <div class="form-group">

@@ -25,7 +25,14 @@ if (!empty($schedule['content_group_id'])) {
 }
 ?>
 
-<h1>Расписание публикации</h1>
+<div class="page-header">
+    <div class="page-header-main">
+        <h1 class="page-title">Расписание публикации</h1>
+        <p class="page-subtitle">
+            Детальная информация о выбранном расписании: видео или группа, платформа и статус.
+        </p>
+    </div>
+</div>
 
 <div class="info-card schedule-details">
     <div class="info-card-grid">
