@@ -3,9 +3,16 @@ $title = 'Интеграции';
 ob_start();
 ?>
 
-<h1>Интеграции</h1>
+<div class="page-header">
+    <div class="page-header-main">
+        <h1 class="page-title">Интеграции</h1>
+        <p class="page-subtitle">
+            Подключайте каналы и аккаунты на платформах, где будут публиковаться ваши видео.
+        </p>
+    </div>
+</div>
 
-<div class="integrations-grid" style="display: grid; gap: 1.5rem; margin-top: 2rem;">
+<div class="integrations-grid">
     
     <!-- YouTube -->
     <div class="integration-card">
