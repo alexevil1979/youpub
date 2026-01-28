@@ -77,6 +77,23 @@ document.addEventListener('DOMContentLoaded', function() {
             sidebarToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
         });
     }
+
+    // Сворачивание сайдбара до иконок (desktop) с сохранением состояния
+    const collapseToggle = document.querySelector('.sidebar-collapse-toggle');
+    if (collapseToggle) {
+        const COLLAPSE_KEY = 'youpub_sidebar_collapsed';
+        const saved = window.localStorage.getItem(COLLAPSE_KEY);
+        if (saved === '1') {
+            document.body.classList.add('sidebar-collapsed');
+            collapseToggle.setAttribute('aria-pressed', 'true');
+        }
+
+        collapseToggle.addEventListener('click', function() {
+            const collapsed = document.body.classList.toggle('sidebar-collapsed');
+            collapseToggle.setAttribute('aria-pressed', collapsed ? 'true' : 'false');
+            window.localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0');
+        });
+    }
 });
 
 /**

@@ -37,6 +37,12 @@
                         <span class="sidebar-logo-mark">Y</span>
                         <span class="sidebar-logo-text">YouPub</span>
                     </a>
+                    <button type="button"
+                            class="sidebar-collapse-toggle"
+                            aria-label="Свернуть или развернуть меню"
+                            aria-pressed="false">
+                        <i class="fa-solid fa-angles-left" aria-hidden="true"></i>
+                    </button>
                 </div>
 
                 <nav class="sidebar-nav">
