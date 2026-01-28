@@ -11,9 +11,6 @@ ob_start();
         </p>
     </div>
     <div class="page-header-actions">
-        <a href="/content-groups/auto-shorts" class="btn btn-secondary">
-            🚀 Автогенерация Shorts
-        </a>
         <a href="/content-groups/templates/create-shorts" class="btn btn-primary">
             🎯 Создать Shorts шаблон
         </a>
