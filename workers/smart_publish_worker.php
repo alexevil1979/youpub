@@ -78,9 +78,31 @@ if (file_exists($workerFile)) {
 logMessage("Smart publish worker started (version: {$workerVersion})", $logFile);
 
 try {
-    $scheduleRepo = new ScheduleRepository();
-    $smartQueue = new SmartQueueService();
-    $scheduleEngine = new ScheduleEngineService();
+    logMessage('Initializing services...', $logFile);
+    
+    try {
+        $scheduleRepo = new ScheduleRepository();
+        logMessage('ScheduleRepository initialized', $logFile);
+    } catch (\Exception $e) {
+        logMessage('ERROR initializing ScheduleRepository: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine(), $logFile);
+        throw $e;
+    }
+    
+    try {
+        $smartQueue = new SmartQueueService();
+        logMessage('SmartQueueService initialized', $logFile);
+    } catch (\Exception $e) {
+        logMessage('ERROR initializing SmartQueueService: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine(), $logFile);
+        throw $e;
+    }
+    
+    try {
+        $scheduleEngine = new ScheduleEngineService();
+        logMessage('ScheduleEngineService initialized', $logFile);
+    } catch (\Exception $e) {
+        logMessage('ERROR initializing ScheduleEngineService: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine(), $logFile);
+        throw $e;
+    }
     
     logMessage('Worker initialized successfully', $logFile);
     
@@ -353,13 +375,20 @@ try {
 
     logMessage('Smart publish worker finished', $logFile);
 
-} catch (\Exception $e) {
-    logMessage('Fatal error: ' . $e->getMessage(), $logFile);
+} catch (\Throwable $e) {
+    logMessage('Fatal error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine(), $logFile);
+    logMessage('Stack trace: ' . $e->getTraceAsString(), $logFile);
+    error_log('Smart publish worker fatal error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
     exit(1);
 } finally {
-    Database::close();
+    try {
+        Database::close();
+    } catch (\Exception $e) {
+        logMessage('Error closing database: ' . $e->getMessage(), $logFile);
+    }
     if (isset($lockHandle) && is_resource($lockHandle)) {
         flock($lockHandle, LOCK_UN);
         fclose($lockHandle);
     }
+    logMessage('Smart publish worker finished', $logFile);
 }
