@@ -163,6 +163,23 @@ try {
             // Проверяем, готово ли расписание (с учетом типа и лимитов)
             if (!$scheduleEngine->isScheduleReady($schedule)) {
                 logMessage("Schedule ID {$schedule['id']} not ready (limits or timing). Publish_at: " . ($schedule['publish_at'] ?? 'NULL') . $timeUntilPublish . ", Status: " . ($schedule['status'] ?? 'NULL') . ", Type: " . ($schedule['schedule_type'] ?? 'NULL'), $logFile);
+                
+                // Для интервальных расписаний, если время прошло, но расписание не готово (из-за лимитов),
+                // обновляем publish_at на следующее время, чтобы не блокировать следующие попытки
+                if (($schedule['schedule_type'] ?? '') === 'interval' && !empty($schedule['publish_at'])) {
+                    $publishAt = strtotime($schedule['publish_at']);
+                    $now = time();
+                    if ($publishAt <= $now) {
+                        // Время прошло, но расписание не готово (вероятно, из-за лимитов)
+                        // Обновляем publish_at на следующее время
+                        $nextTime = $scheduleEngine->getNextPublishTime($schedule);
+                        if ($nextTime) {
+                            $scheduleRepo->update($schedule['id'], ['publish_at' => $nextTime]);
+                            logMessage("Schedule ID {$schedule['id']} (interval) publish_at updated to {$nextTime} because schedule not ready (likely due to limits)", $logFile);
+                        }
+                    }
+                }
+                
                 continue;
             }
             
