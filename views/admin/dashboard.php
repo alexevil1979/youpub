@@ -5,6 +5,15 @@ ob_start();
 
 <h1>Админ-панель</h1>
 
+<nav class="admin-nav">
+    <a href="/admin/dashboard">Обзор</a>
+    <a href="/admin/users">Пользователи</a>
+    <a href="/admin/videos">Видео</a>
+    <a href="/admin/schedules">Расписания</a>
+    <a href="/admin/logs">Логи</a>
+    <a href="/admin/settings">Настройки системы</a>
+</nav>
+
 <div class="stats-grid">
     <div class="stat-card">
         <h3>Всего пользователей</h3>
