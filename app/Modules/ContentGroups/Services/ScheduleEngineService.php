@@ -117,25 +117,40 @@ class ScheduleEngineService extends Service
     private function checkIntervalSchedule(array $schedule): bool
     {
         if (empty($schedule['interval_minutes'])) {
+            error_log("ScheduleEngineService::checkIntervalSchedule: No interval_minutes for schedule ID " . ($schedule['id'] ?? 'unknown'));
             return false;
         }
 
         $now = time();
+        $interval = (int)$schedule['interval_minutes'] * 60;
+        
         // Для интервальных расписаний поле publish_at используется как "следующее время публикации".
         // Если оно задано и ещё не наступило — публиковать рано.
         if (!empty($schedule['publish_at'])) {
             $publishAt = strtotime($schedule['publish_at']);
-            if ($publishAt > $now) {
+            
+            // Если время публикации наступило (или прошло), можно публиковать
+            // Не требуем точного совпадения, так как worker может запускаться с небольшой задержкой
+            if ($publishAt <= $now) {
+                // Время наступило - можно публиковать
+                error_log("ScheduleEngineService::checkIntervalSchedule: Publish time reached for schedule ID " . ($schedule['id'] ?? 'unknown') . ", publish_at: " . $schedule['publish_at'] . ", now: " . date('Y-m-d H:i:s', $now) . ", overdue by: " . ($now - $publishAt) . " seconds");
+                // Проверяем только лимиты, не проверяем время с последней публикации
+                // так как publish_at уже учитывает интервал
+                return $this->checkLimits($schedule);
+            } else {
+                // Время еще не наступило
+                $timeUntilPublish = $publishAt - $now;
+                error_log("ScheduleEngineService::checkIntervalSchedule: Publish time not reached for schedule ID " . ($schedule['id'] ?? 'unknown') . ", publish_at: " . $schedule['publish_at'] . ", now: " . date('Y-m-d H:i:s', $now) . ", time until: {$timeUntilPublish}s");
                 return false;
             }
-        }
-
-        $interval = $schedule['interval_minutes'] * 60;
-
-        // Проверяем, прошло ли достаточно времени с последней публикации
-        $lastPublication = $this->getLastPublicationTime($schedule);
-        if ($lastPublication && ($now - $lastPublication) < $interval) {
-            return false;
+        } else {
+            // Если publish_at не задано, используем проверку последней публикации как fallback
+            error_log("ScheduleEngineService::checkIntervalSchedule: No publish_at for schedule ID " . ($schedule['id'] ?? 'unknown') . ", using last publication time check");
+            $lastPublication = $this->getLastPublicationTimeForSchedule($schedule);
+            if ($lastPublication && ($now - $lastPublication) < $interval) {
+                error_log("ScheduleEngineService::checkIntervalSchedule: Not enough time since last publication for schedule ID " . ($schedule['id'] ?? 'unknown') . ", time since: " . ($now - $lastPublication) . "s, required: {$interval}s");
+                return false;
+            }
         }
 
         return $this->checkLimits($schedule);
@@ -250,21 +265,48 @@ class ScheduleEngineService extends Service
     }
 
     /**
-     * Получить время последней публикации
+     * Получить время последней публикации для конкретного расписания
+     * Ищет публикации, созданные через это расписание (через временные расписания)
      */
-    private function getLastPublicationTime(array $schedule): ?int
+    private function getLastPublicationTimeForSchedule(array $schedule): ?int
     {
+        // Пытаемся найти последнюю публикацию через временные расписания этого расписания
+        // Временные расписания создаются в SmartQueueService и имеют parent_schedule_id
+        $stmt = $this->db->prepare("
+            SELECT MAX(p.published_at) as last_published
+            FROM publications p
+            JOIN schedules temp_schedule ON temp_schedule.id = p.schedule_id
+            WHERE temp_schedule.parent_schedule_id = ?
+            AND p.status = 'success'
+            AND p.published_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+        ");
+        $stmt->execute([$schedule['id']]);
+        $result = $stmt->fetch();
+        
+        if ($result && $result['last_published']) {
+            return strtotime($result['last_published']);
+        }
+        
+        // Fallback: ищем по user_id и platform (для обратной совместимости)
         $stmt = $this->db->prepare("
             SELECT MAX(p.published_at) as last_published
             FROM publications p
             WHERE p.user_id = ? AND p.platform = ?
             AND p.status = 'success'
-            AND DATE(p.published_at) = CURDATE()
+            AND p.published_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
         ");
         $stmt->execute([$schedule['user_id'], $schedule['platform']]);
         $result = $stmt->fetch();
         
         return $result && $result['last_published'] ? strtotime($result['last_published']) : null;
+    }
+    
+    /**
+     * Получить время последней публикации (старый метод для обратной совместимости)
+     */
+    private function getLastPublicationTime(array $schedule): ?int
+    {
+        return $this->getLastPublicationTimeForSchedule($schedule);
     }
 
     /**
@@ -324,8 +366,17 @@ class ScheduleEngineService extends Service
         
         switch ($scheduleType) {
             case 'interval':
-                $interval = ($schedule['interval_minutes'] ?? 60) * 60;
-                return date('Y-m-d H:i:s', time() + $interval);
+                $intervalMinutes = (int)($schedule['interval_minutes'] ?? 60);
+                $interval = $intervalMinutes * 60;
+                $now = time();
+                
+                // Для интервальных расписаний вычисляем следующее время от текущего момента
+                // с учетом интервала
+                $nextTime = $now + $interval;
+                
+                error_log("ScheduleEngineService::getNextPublishTime: Interval schedule ID " . ($schedule['id'] ?? 'unknown') . ", interval: {$intervalMinutes} minutes, next time: " . date('Y-m-d H:i:s', $nextTime));
+                
+                return date('Y-m-d H:i:s', $nextTime);
             
             case 'batch':
                 $delay = ($schedule['delay_between_posts'] ?? 30) * 60;
