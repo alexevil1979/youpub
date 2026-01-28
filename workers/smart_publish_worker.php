@@ -78,13 +78,39 @@ try {
     }
 
     // Найти расписания с группами, готовые к публикации
-    $schedules = $scheduleRepo->findActiveGroupSchedules(50);
-
-    logMessage('Found ' . count($schedules) . ' group schedules to process', $logFile);
-    
-    // Детальное логирование найденных расписаний
-    foreach ($schedules as $idx => $sched) {
-        logMessage("Schedule #{$idx}: ID={$sched['id']}, Type={$sched['schedule_type']}, Status={$sched['status']}, Publish_at={$sched['publish_at']}, Interval={$sched['interval_minutes']}, Group={$sched['group_name']}", $logFile);
+    try {
+        $schedules = $scheduleRepo->findActiveGroupSchedules(50);
+        logMessage('Found ' . count($schedules) . ' group schedules to process', $logFile);
+        
+        // Детальное логирование найденных расписаний
+        if (empty($schedules)) {
+            logMessage('WARNING: No schedules found! Checking database...', $logFile);
+            // Диагностика: проверим, есть ли вообще расписания с группами
+            try {
+                $db = Database::getInstance();
+                $diagStmt = $db->prepare("
+                    SELECT COUNT(*) as total,
+                           SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_count,
+                           SUM(CASE WHEN status = 'published' THEN 1 ELSE 0 END) as published_count,
+                           SUM(CASE WHEN schedule_type = 'interval' THEN 1 ELSE 0 END) as interval_count
+                    FROM schedules
+                    WHERE video_id IS NULL
+                    AND (content_group_id IS NOT NULL OR id IN (SELECT schedule_id FROM content_groups WHERE schedule_id IS NOT NULL))
+                ");
+                $diagStmt->execute();
+                $diag = $diagStmt->fetch();
+                logMessage("Diagnostics: Total group schedules={$diag['total']}, Pending={$diag['pending_count']}, Published={$diag['published_count']}, Interval={$diag['interval_count']}", $logFile);
+            } catch (\Exception $diagError) {
+                logMessage("Diagnostics error: " . $diagError->getMessage(), $logFile);
+            }
+        } else {
+            foreach ($schedules as $idx => $sched) {
+                logMessage("Schedule #{$idx}: ID={$sched['id']}, Type={$sched['schedule_type']}, Status={$sched['status']}, Publish_at={$sched['publish_at']}, Interval={$sched['interval_minutes']}, Group={$sched['group_name']}", $logFile);
+            }
+        }
+    } catch (\Exception $e) {
+        logMessage('ERROR finding schedules: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine(), $logFile);
+        $schedules = [];
     }
 
     foreach ($schedules as $schedule) {
