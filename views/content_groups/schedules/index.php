@@ -3,7 +3,20 @@ $title = 'Расписания';
 ob_start();
 ?>
 
-<h1>Расписания</h1>
+<div class="page-header">
+    <div class="page-header-main">
+        <h1 class="page-title">Умные расписания</h1>
+        <p class="page-subtitle">
+            Настраивайте расписания для автоматической публикации групп контента по заданным правилам.
+        </p>
+    </div>
+    <div class="page-header-actions">
+        <a href="/content-groups/schedules/create" class="btn btn-primary">
+            <i class="fa-solid fa-calendar-plus icon-inline" aria-hidden="true"></i>
+            Создать расписание
+        </a>
+    </div>
+</div>
 
 <?php if (isset($_SESSION['error'])): ?>
     <div class="alert alert-error" style="margin-bottom: 1rem;">
@@ -18,8 +31,6 @@ ob_start();
     </div>
     <?php unset($_SESSION['success']); ?>
 <?php endif; ?>
-
-<a href="/content-groups/schedules/create" class="btn btn-primary">Создать расписание</a>
 
 <?php 
 // Убеждаемся, что переменные определены
