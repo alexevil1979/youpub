@@ -645,43 +645,41 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         xhr.addEventListener('load', function() {
-            if (xhr.status === 200) {
-                try {
-                    const response = JSON.parse(xhr.responseText);
-                    if (response.success) {
-                        progressFill.style.width = '100%';
-                        progressPercent.textContent = '100%';
-                        progressText.textContent = 'Загрузка завершена!';
-                        
-                        // Показываем результаты
-                        if (response.data && response.data.results) {
-                            response.data.results.forEach(result => {
-                                const item = document.createElement('div');
-                                item.className = 'file-progress-item';
-                                const statusClass = result.success ? 'success' : 'error';
-                                const statusText = result.success ? '✓ Загружено' : '✗ Ошибка: ' + (result.message || 'Неизвестная ошибка');
-                                item.innerHTML = `
-                                    <span class="file-progress-name">${escapeHtml(result.fileName || '')}</span>
-                                    <span class="file-progress-status ${statusClass}">${statusText}</span>
-                                `;
-                                fileProgressList.appendChild(item);
-                            });
-                        }
-                        
-                        setTimeout(() => {
-                            window.location.href = '/videos';
-                        }, 2000);
-                    } else {
-                        alert('Ошибка: ' + (response.message || 'Не удалось загрузить файлы'));
-                        uploadBtn.disabled = false;
-                    }
-                } catch (e) {
-                    console.error('Error parsing response:', e);
-                    alert('Произошла ошибка при обработке ответа сервера');
-                    uploadBtn.disabled = false;
+            let response = null;
+            try {
+                response = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+            } catch (e) {
+                console.error('Error parsing response JSON:', e, xhr.responseText);
+            }
+
+            if (xhr.status === 200 && response && response.success) {
+                progressFill.style.width = '100%';
+                progressPercent.textContent = '100%';
+                progressText.textContent = 'Загрузка завершена!';
+                
+                // Показываем результаты
+                if (response.data && response.data.results) {
+                    response.data.results.forEach(result => {
+                        const item = document.createElement('div');
+                        item.className = 'file-progress-item';
+                        const statusClass = result.success ? 'success' : 'error';
+                        const statusText = result.success ? '✓ Загружено' : '✗ Ошибка: ' + (result.message || 'Неизвестная ошибка');
+                        item.innerHTML = `
+                            <span class="file-progress-name">${escapeHtml(result.fileName || '')}</span>
+                            <span class="file-progress-status ${statusClass}">${statusText}</span>
+                        `;
+                        fileProgressList.appendChild(item);
+                    });
                 }
+                
+                setTimeout(() => {
+                    window.location.href = '/videos';
+                }, 2000);
             } else {
-                alert('Ошибка загрузки. Код: ' + xhr.status);
+                const message = response && response.message
+                    ? response.message
+                    : 'Ошибка загрузки. Код: ' + xhr.status;
+                alert(message);
                 uploadBtn.disabled = false;
             }
         });
