@@ -10,11 +10,12 @@ ob_start();
             Управляйте шаблонами заголовков, описаний и тегов для автоматического оформления публикаций.
         </p>
     </div>
-    <?php /*
-    Блок действий с кнопкой автогенерации Shorts убран по запросу пользователя.
-    Если понадобится вернуть создание шаблонов, можно добавить здесь кнопку
-    с ссылкой на /content-groups/templates/create без упоминания Shorts.
-    */ ?>
+    <div class="page-header-actions">
+        <a href="/content-groups/templates/create" class="btn btn-primary">
+            <?= \App\Helpers\IconHelper::render('add', 18, 'icon-inline') ?>
+            Добавить шаблон
+        </a>
+    </div>
 </div>
 
 <?php if (isset($_SESSION['error'])): ?>
