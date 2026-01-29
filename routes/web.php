@@ -65,6 +65,7 @@ $router->post('/videos/{id}/edit', [VideoController::class, 'update'], [AuthMidd
 $router->post('/videos/{id}/publish', [VideoController::class, 'publishNow'], [AuthMiddleware::class]);
 $router->post('/videos/{id}/toggle-status', [VideoController::class, 'toggleStatus'], [AuthMiddleware::class]);
 $router->delete('/videos/{id}', [VideoController::class, 'delete'], [AuthMiddleware::class]);
+$router->post('/videos/bulk-delete', [VideoController::class, 'bulkDelete'], [AuthMiddleware::class]);
 
 // Расписания (используем умные расписания)
 $router->get('/schedules', [SmartScheduleController::class, 'index'], [AuthMiddleware::class]);

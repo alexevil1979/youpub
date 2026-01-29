@@ -1,4 +1,7 @@
-<div class="catalog-item">
+<div class="catalog-item" data-video-id="<?= (int)$video['id'] ?>">
+    <label class="video-checkbox-wrap" onclick="event.stopPropagation();">
+        <input type="checkbox" class="video-checkbox" name="video_ids[]" value="<?= (int)$video['id'] ?>" form="videos-bulk-form">
+    </label>
     <div class="item-icon">
         <?php if (!empty($video['thumbnail_path'])): ?>
             <img src="/storage/uploads/<?= htmlspecialchars($video['thumbnail_path']) ?>"

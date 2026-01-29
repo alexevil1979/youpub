@@ -336,6 +336,34 @@ class VideoService extends Service
     }
 
     /**
+     * Массовое удаление видео
+     * @param int[] $ids
+     */
+    public function bulkDeleteVideos(array $ids, int $userId): array
+    {
+        $deleted = 0;
+        $errors = [];
+        foreach ($ids as $id) {
+            $id = (int) $id;
+            if ($id <= 0) {
+                continue;
+            }
+            $result = $this->deleteVideo($id, $userId);
+            if ($result['success']) {
+                $deleted++;
+            } else {
+                $errors[] = "ID {$id}: " . $result['message'];
+            }
+        }
+        return [
+            'success' => $deleted > 0,
+            'message' => $deleted > 0 ? "Удалено видео: {$deleted}" : 'Не удалось удалить выбранные видео',
+            'deleted' => $deleted,
+            'errors' => $errors,
+        ];
+    }
+
+    /**
      * Асинхронная генерация превью для видео
      */
     private function generateThumbnailAsync(int $videoId, string $videoPath): void

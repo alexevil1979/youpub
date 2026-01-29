@@ -427,6 +427,43 @@ class VideoController extends Controller
     }
 
     /**
+     * Массовое удаление видео
+     */
+    public function bulkDelete(): void
+    {
+        if (!$this->validateCsrf()) {
+            $this->error('Invalid CSRF token', 403);
+            return;
+        }
+
+        $userId = $_SESSION['user_id'] ?? 0;
+        if (!$userId) {
+            $this->error('Unauthorized', 401);
+            return;
+        }
+
+        $data = $this->getRequestData();
+        $ids = $data['video_ids'] ?? $data['ids'] ?? $_POST['video_ids'] ?? $_POST['ids'] ?? [];
+        if (!is_array($ids)) {
+            $ids = [];
+        }
+        $ids = array_values(array_filter(array_map('intval', $ids), fn($id) => $id > 0));
+
+        if (empty($ids)) {
+            $this->error('Выберите хотя бы одно видео', 400);
+            return;
+        }
+
+        $result = $this->videoService->bulkDeleteVideos($ids, $userId);
+
+        if ($result['success']) {
+            $this->success(['deleted' => $result['deleted']], $result['message']);
+        } else {
+            $this->error($result['message'], 400);
+        }
+    }
+
+    /**
      * Переключить статус видео
      */
     public function toggleStatus(int $id): void

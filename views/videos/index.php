@@ -98,6 +98,16 @@ foreach ($allGroups as $group) {
     </div>
 </div>
 
+<!-- Панель групповых действий (показывается при выборе) -->
+<div id="videos-bulk-toolbar" class="videos-bulk-toolbar" style="display: none;">
+    <form id="videos-bulk-form" method="post" action="/videos/bulk-delete">
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars((new \Core\Auth())->generateCsrfToken()) ?>">
+        <span id="videos-bulk-count" class="videos-bulk-count">Выбрано: 0</span>
+        <button type="button" id="videos-bulk-delete-btn" class="btn btn-danger btn-sm">Удалить выбранные</button>
+        <button type="button" id="videos-bulk-clear" class="btn btn-secondary btn-sm">Снять выбор</button>
+    </form>
+</div>
+
 <div id="catalog-view" class="catalog-view">
     <div class="catalog-container">
         
@@ -106,7 +116,7 @@ foreach ($allGroups as $group) {
             <div class="catalog-section">
                 <h2 class="catalog-section-title"><?= \App\Helpers\IconHelper::render('folder', 24, 'icon-inline') ?> Группы контента</h2>
                 <?php foreach ($groupedByContentGroup as $item): ?>
-                    <div class="catalog-folder expanded">
+                    <div class="catalog-folder">
                         <div class="folder-header" onclick="toggleFolder(this)">
                             <span class="folder-icon"><?= \App\Helpers\IconHelper::render('folder', 20) ?></span>
                             <span class="folder-name"><?= htmlspecialchars($item['group']['name']) ?></span>
@@ -115,7 +125,10 @@ foreach ($allGroups as $group) {
                         </div>
                         <div class="folder-content">
                             <?php foreach ($item['videos'] as $video): ?>
-                                <div class="catalog-item">
+                                <div class="catalog-item" data-video-id="<?= (int)$video['id'] ?>">
+                                    <label class="video-checkbox-wrap" onclick="event.stopPropagation();">
+                                        <input type="checkbox" class="video-checkbox" name="video_ids[]" value="<?= (int)$video['id'] ?>" form="videos-bulk-form">
+                                    </label>
                                     <span class="item-icon"><?= \App\Helpers\IconHelper::render('video', 20) ?></span>
                                     <div class="item-info">
                                         <div class="item-title"><?= htmlspecialchars($video['title'] ?? $video['file_name']) ?></div>
@@ -177,7 +190,7 @@ foreach ($allGroups as $group) {
             <h2 class="catalog-section-title"><?= \App\Helpers\IconHelper::render('calendar', 24, 'icon-inline') ?> По дате загрузки</h2>
             
             <?php if (!empty($groupedByDate['today'])): ?>
-                <div class="catalog-folder expanded">
+                <div class="catalog-folder">
                     <div class="folder-header" onclick="toggleFolder(this)">
                         <span class="folder-icon"><?= \App\Helpers\IconHelper::render('calendar', 20) ?></span>
                         <span class="folder-name">Сегодня</span>
@@ -193,7 +206,7 @@ foreach ($allGroups as $group) {
             <?php endif; ?>
 
             <?php if (!empty($groupedByDate['yesterday'])): ?>
-                <div class="catalog-folder expanded">
+                <div class="catalog-folder">
                     <div class="folder-header" onclick="toggleFolder(this)">
                         <span class="folder-icon"><?= \App\Helpers\IconHelper::render('calendar', 20) ?></span>
                         <span class="folder-name">Вчера</span>
@@ -209,7 +222,7 @@ foreach ($allGroups as $group) {
             <?php endif; ?>
 
             <?php if (!empty($groupedByDate['this_week'])): ?>
-                <div class="catalog-folder expanded">
+                <div class="catalog-folder">
                     <div class="folder-header" onclick="toggleFolder(this)">
                         <span class="folder-icon"><?= \App\Helpers\IconHelper::render('calendar', 20) ?></span>
                         <span class="folder-name">На этой неделе</span>
@@ -225,7 +238,7 @@ foreach ($allGroups as $group) {
             <?php endif; ?>
 
             <?php if (!empty($groupedByDate['this_month'])): ?>
-                <div class="catalog-folder expanded">
+                <div class="catalog-folder">
                     <div class="folder-header" onclick="toggleFolder(this)">
                         <span class="folder-icon"><?= \App\Helpers\IconHelper::render('calendar', 20) ?></span>
                         <span class="folder-name">В этом месяце</span>
@@ -241,7 +254,7 @@ foreach ($allGroups as $group) {
             <?php endif; ?>
 
             <?php if (!empty($groupedByDate['older'])): ?>
-                <div class="catalog-folder expanded">
+                <div class="catalog-folder">
                     <div class="folder-header" onclick="toggleFolder(this)">
                         <span class="folder-icon"><?= \App\Helpers\IconHelper::render('calendar', 20) ?></span>
                         <span class="folder-name">Ранее</span>
@@ -268,81 +281,80 @@ foreach ($allGroups as $group) {
     </div>
 </div>
 
-<!-- Табличный вид (скрыт по умолчанию) -->
-<div id="table-view" class="table-view" style="display: none;">
-    <?php if (empty($videos)): ?>
-        <p>Нет загруженных видео</p>
-    <?php else: ?>
-        <table class="data-table" aria-label="Видео в табличном виде">
-            <thead>
-                <tr>
-                    <th>Название</th>
-                    <th>Размер</th>
-                    <th>Статус</th>
-                    <th>Дата загрузки</th>
-                    <th>Действия</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($videos as $video): ?>
-                <tr>
-                    <td><?= htmlspecialchars($video['title'] ?? $video['file_name']) ?></td>
-                    <td><?= number_format($video['file_size'] / 1024 / 1024, 2) ?> MB</td>
-                    <td><?= ucfirst($video['status']) ?></td>
-                    <td><?= date('d.m.Y H:i', strtotime($video['created_at'])) ?></td>
-                    <td>
-                        <a href="/videos/<?= $video['id'] ?>" class="btn-action" title="Просмотр" aria-label="Просмотр">
-                            <?= \App\Helpers\IconHelper::render('view', 16, 'icon-inline') ?>
-                        </a>
-                        <?php if (isset($videoPublications[$video['id']])): 
-                            $pub = $videoPublications[$video['id']];
-                            $pubUrl = $pub['platform_url'] ?? '';
-                            if (!$pubUrl && $pub['platform_id']) {
-                                switch ($pub['platform']) {
-                                    case 'youtube':
-                                        $pubUrl = 'https://youtube.com/shorts/' . $pub['platform_id'];
-                                        break;
-                                    case 'telegram':
-                                        $pubUrl = 'https://t.me/' . $pub['platform_id'];
-                                        break;
-                                    case 'tiktok':
-                                        $pubUrl = 'https://www.tiktok.com/@' . $pub['platform_id'];
-                                        break;
-                                    case 'instagram':
-                                        $pubUrl = 'https://www.instagram.com/p/' . $pub['platform_id'];
-                                        break;
-                                    case 'pinterest':
-                                        $pubUrl = 'https://www.pinterest.com/pin/' . $pub['platform_id'];
-                                        break;
-                                }
-                            }
-                            if ($pubUrl):
-                        ?>
-                            <a href="<?= htmlspecialchars($pubUrl) ?>" target="_blank" class="btn-action btn-action-publish" title="Перейти к публикации на <?= ucfirst($pub['platform']) ?>" aria-label="Перейти к публикации">
-                                <?= \App\Helpers\IconHelper::render('publish', 16, 'icon-inline') ?>
-                            </a>
-                        <?php endif; endif; ?>
-                        <a href="/schedules/create?video_id=<?= $video['id'] ?>" class="btn-action" title="Запланировать" aria-label="Запланировать">
-                            <?= \App\Helpers\IconHelper::render('calendar', 16, 'icon-inline') ?>
-                        </a>
-                        <button type="button" class="btn-action" onclick="showAddToGroupModal(<?= $video['id'] ?>)" title="В группу" aria-label="В группу">
-                            <?= \App\Helpers\IconHelper::render('folder', 16, 'icon-inline') ?>
-                        </button>
-                        <button type="button" class="btn-action <?= ($video['status'] === 'active' || $video['status'] === 'uploaded' || $video['status'] === 'ready') ? 'btn-pause' : 'btn-play' ?>" 
-                                onclick="toggleVideoStatus(<?= $video['id'] ?>)"
-                                title="<?= ($video['status'] === 'active' || $video['status'] === 'uploaded' || $video['status'] === 'ready') ? 'Выключить' : 'Включить' ?>"
-                                aria-label="<?= ($video['status'] === 'active' || $video['status'] === 'uploaded' || $video['status'] === 'ready') ? 'Выключить' : 'Включить' ?>">
-                            <?= ($video['status'] === 'active' || $video['status'] === 'uploaded' || $video['status'] === 'ready') ? \App\Helpers\IconHelper::render('pause', 16, 'icon-inline') : \App\Helpers\IconHelper::render('play', 16, 'icon-inline') ?>
-                        </button>
-                        <button type="button" class="btn-action btn-delete" onclick="deleteVideo(<?= $video['id'] ?>)" title="Удалить" aria-label="Удалить">
-                            <?= \App\Helpers\IconHelper::render('delete', 16, 'icon-inline') ?>
-                        </button>
-                    </td>
-                </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-    <?php endif; ?>
+<!-- Табличный вид (скрыт по умолчанию), оформление как в каталоге -->
+<div id="table-view" class="table-view catalog-view" style="display: none;">
+    <div class="catalog-container">
+        <?php if (empty($videos)): ?>
+            <p>Нет загруженных видео</p>
+        <?php else: ?>
+            <div class="table-sort-bar">
+                <span class="table-sort-label">Сортировка:</span>
+                <span class="table-sort-value">сначала новые</span>
+            </div>
+            <div class="table-wrapper">
+                <table class="data-table videos-table" aria-label="Видео в табличном виде">
+                    <thead>
+                        <tr>
+                            <th class="col-checkbox">
+                                <label class="video-checkbox-wrap">
+                                    <input type="checkbox" id="video-select-all" class="video-checkbox" form="videos-bulk-form" title="Выбрать все">
+                                </label>
+                            </th>
+                            <th>Файл</th>
+                            <th>Размер</th>
+                            <th>Статус</th>
+                            <th>Загружено</th>
+                            <th class="col-actions">Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($videos as $video): ?>
+                        <tr data-video-id="<?= (int)$video['id'] ?>">
+                            <td class="col-checkbox">
+                                <label class="video-checkbox-wrap">
+                                    <input type="checkbox" class="video-checkbox" name="video_ids[]" value="<?= (int)$video['id'] ?>" form="videos-bulk-form">
+                                </label>
+                            </td>
+                            <td>
+                                <div class="cell-main">
+                                    <span class="cell-title"><?= htmlspecialchars($video['file_name'] ?? 'video') ?></span>
+                                </div>
+                            </td>
+                            <td><?= number_format(($video['file_size'] ?? 0) / 1024 / 1024, 2) ?> MB</td>
+                            <td><span class="status-badge status-<?= $video['status'] ?>"><?= ucfirst($video['status']) ?></span></td>
+                            <td><?= date('d.m.Y H:i', strtotime($video['created_at'])) ?></td>
+                            <td class="col-actions item-actions">
+                                <a href="/videos/<?= $video['id'] ?>" class="btn-action" title="Просмотр"><?= \App\Helpers\IconHelper::render('view', 20) ?></a>
+                                <?php if (isset($videoPublications[$video['id']])): 
+                                    $pub = $videoPublications[$video['id']];
+                                    $pubUrl = $pub['platform_url'] ?? '';
+                                    if (!$pubUrl && !empty($pub['platform_id'])) {
+                                        switch ($pub['platform']) {
+                                            case 'youtube': $pubUrl = 'https://youtube.com/shorts/' . $pub['platform_id']; break;
+                                            case 'telegram': $pubUrl = 'https://t.me/' . $pub['platform_id']; break;
+                                            case 'tiktok': $pubUrl = 'https://www.tiktok.com/@' . $pub['platform_id']; break;
+                                            case 'instagram': $pubUrl = 'https://www.instagram.com/p/' . $pub['platform_id']; break;
+                                            case 'pinterest': $pubUrl = 'https://www.pinterest.com/pin/' . $pub['platform_id']; break;
+                                        }
+                                    }
+                                    if ($pubUrl):
+                                ?>
+                                    <a href="<?= htmlspecialchars($pubUrl) ?>" target="_blank" class="btn-action btn-action-publish" title="Перейти к публикации на <?= ucfirst($pub['platform']) ?>"><?= \App\Helpers\IconHelper::render('publish', 20) ?></a>
+                                <?php endif; endif; ?>
+                                <a href="/schedules/create?video_id=<?= $video['id'] ?>" class="btn-action" title="Запланировать"><?= \App\Helpers\IconHelper::render('calendar', 20) ?></a>
+                                <button type="button" class="btn-action" onclick="showAddToGroupModal(<?= $video['id'] ?>)" title="В группу"><?= \App\Helpers\IconHelper::render('folder', 20) ?></button>
+                                <button type="button" class="btn-action <?= ($video['status'] === 'active' || $video['status'] === 'uploaded' || $video['status'] === 'ready') ? 'btn-pause' : 'btn-play' ?>" onclick="toggleVideoStatus(<?= $video['id'] ?>)" title="<?= ($video['status'] === 'active' || $video['status'] === 'uploaded' || $video['status'] === 'ready') ? 'Выключить' : 'Включить' ?>">
+                                    <?= ($video['status'] === 'active' || $video['status'] === 'uploaded' || $video['status'] === 'ready') ? \App\Helpers\IconHelper::render('pause', 20) : \App\Helpers\IconHelper::render('play', 20) ?>
+                                </button>
+                                <button type="button" class="btn-action btn-delete" onclick="deleteVideo(<?= $video['id'] ?>)" title="Удалить"><?= \App\Helpers\IconHelper::render('delete', 20) ?></button>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
 </div>
 
 <!-- Модальное окно для добавления в группу -->
@@ -395,28 +407,63 @@ function toggleViewMode() {
 
 function toggleFolder(header) {
     const folder = header.closest('.catalog-folder');
-    const content = folder.querySelector('.folder-content');
     const toggle = header.querySelector('.folder-toggle');
-    
-    if (content.style.display === 'none' || !content.style.display) {
-        content.style.display = 'block';
-        toggle.textContent = '▼';
-        folder.classList.add('expanded');
-    } else {
-        content.style.display = 'none';
-        toggle.textContent = '▶';
+    if (folder.classList.contains('expanded')) {
         folder.classList.remove('expanded');
+        if (toggle) toggle.textContent = '▶';
+    } else {
+        folder.classList.add('expanded');
+        if (toggle) toggle.textContent = '▼';
     }
 }
 
-// Раскрыть все папки по умолчанию
+// Обновление панели групповых действий и «выбрать все»
+function updateBulkToolbar() {
+    const checkboxes = document.querySelectorAll('.video-checkbox:not(#video-select-all)');
+    const checked = document.querySelectorAll('.video-checkbox:not(#video-select-all):checked');
+    const toolbar = document.getElementById('videos-bulk-toolbar');
+    const countEl = document.getElementById('videos-bulk-count');
+    const selectAll = document.getElementById('video-select-all');
+    if (toolbar) toolbar.style.display = checked.length ? 'block' : 'none';
+    if (countEl) countEl.textContent = 'Выбрано: ' + checked.length;
+    if (selectAll) {
+        selectAll.checked = checkboxes.length > 0 && checked.length === checkboxes.length;
+        selectAll.indeterminate = checked.length > 0 && checked.length < checkboxes.length;
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-    const folders = document.querySelectorAll('.catalog-folder');
-    folders.forEach(folder => {
-        const content = folder.querySelector('.folder-content');
-        content.style.display = 'block';
-        folder.classList.add('expanded');
+    const form = document.getElementById('videos-bulk-form');
+    if (form) {
+        form.addEventListener('change', updateBulkToolbar);
+    }
+    document.getElementById('video-select-all')?.addEventListener('change', function() {
+        document.querySelectorAll('.video-checkbox:not(#video-select-all)').forEach(cb => { cb.checked = this.checked; });
+        updateBulkToolbar();
     });
+    document.getElementById('videos-bulk-clear')?.addEventListener('click', function() {
+        document.querySelectorAll('.video-checkbox').forEach(cb => { cb.checked = false; });
+        updateBulkToolbar();
+    });
+    document.getElementById('videos-bulk-delete-btn')?.addEventListener('click', function() {
+        const ids = Array.from(document.querySelectorAll('.video-checkbox:not(#video-select-all):checked')).map(c => c.value);
+        if (!ids.length) return;
+        if (!confirm('Удалить выбранные видео (' + ids.length + ')? Действие нельзя отменить.')) return;
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || form?.querySelector('input[name="csrf_token"]')?.value || '';
+        fetch('/videos/bulk-delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-Token': csrf },
+            body: JSON.stringify({ video_ids: ids })
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                showToast(data.message || 'Удалено', 'success');
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                showToast('Ошибка: ' + (data.message || 'Не удалось удалить'), 'error');
+            }
+        }).catch(() => showToast('Произошла ошибка', 'error'));
+    });
+    updateBulkToolbar();
 });
 
 function showAddToGroupModal(videoId) {
