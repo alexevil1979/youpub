@@ -72,83 +72,6 @@ ob_start();
     <!-- Правая колонка: последние сущности -->
     <section class="dashboard-panel dashboard-panel--lists">
         <div class="dashboard-sections">
-            <section class="dashboard-card" aria-labelledby="latest-uploads-heading">
-                <div class="dashboard-card-header">
-                    <h2 id="latest-uploads-heading" class="dashboard-card-title">
-                        <i class="fa-solid fa-cloud-arrow-up icon-inline" aria-hidden="true"></i>
-                        Последние загруженные
-                    </h2>
-                    <a href="/videos" class="dashboard-card-link">Все видео</a>
-                </div>
-
-                <?php if (empty($recentVideos)): ?>
-                    <div class="empty-state">
-                        <div class="empty-icon">
-                            <i class="fa-regular fa-circle-play" aria-hidden="true"></i>
-                        </div>
-                        <h3>Нет загруженных видео</h3>
-                        <p>Загрузите первое видео, чтобы начать планировать публикации.</p>
-                        <a href="/videos/upload" class="btn btn-primary">Загрузить видео</a>
-                    </div>
-                <?php else: ?>
-                    <div class="table-wrapper">
-                        <table class="data-table" aria-label="Последние загруженные видео">
-                            <thead>
-                                <tr>
-                                    <th scope="col">Файл</th>
-                                    <th scope="col">Размер</th>
-                                    <th scope="col">Загружено</th>
-                                    <th scope="col" class="text-right">Действия</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php
-                                $recentVideoPublications = $recentVideoPublications ?? [];
-                                foreach ($recentVideos as $video):
-                                    $videoId = (int)$video['id'];
-                                    $pub = $recentVideoPublications[$videoId] ?? null;
-                                    $pubUrl = $pub && !empty($pub['platform_url']) ? $pub['platform_url'] : null;
-                                ?>
-                                    <tr>
-                                        <td>
-                                            <div class="cell-main">
-                                                <span class="cell-title">
-                                                    <?= htmlspecialchars($video['file_name'] ?? 'video') ?>
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <?= number_format(($video['file_size'] ?? 0) / 1024 / 1024, 2) ?> MB
-                                        </td>
-                                        <td>
-                                            <?= date('d.m.Y H:i', strtotime($video['created_at'])) ?>
-                                        </td>
-                                        <td class="text-right">
-                                            <?php if ($pubUrl): ?>
-                                                <a href="<?= htmlspecialchars($pubUrl) ?>"
-                                                   target="_blank"
-                                                   rel="noopener noreferrer"
-                                                   class="btn-action btn-action-publish"
-                                                   title="Перейти к публикации на <?= ucfirst($pub['platform'] ?? '') ?>"
-                                                   aria-label="Перейти к публикации">
-                                                    <i class="fa-solid fa-external-link-alt" aria-hidden="true"></i>
-                                                </a>
-                                            <?php endif; ?>
-                                            <a href="/videos/<?= $videoId ?>"
-                                               class="btn-action btn-view"
-                                               title="Открыть видео"
-                                               aria-label="Открыть видео">
-                                                <i class="fa-regular fa-eye" aria-hidden="true"></i>
-                                            </a>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                <?php endif; ?>
-            </section>
-
             <section class="dashboard-card" aria-labelledby="latest-published-heading">
                 <div class="dashboard-card-header">
                     <h2 id="latest-published-heading" class="dashboard-card-title">
@@ -221,6 +144,83 @@ ob_start();
                                                     <i class="fa-regular fa-eye" aria-hidden="true"></i>
                                                 </a>
                                             <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </section>
+
+            <section class="dashboard-card" aria-labelledby="latest-uploads-heading">
+                <div class="dashboard-card-header">
+                    <h2 id="latest-uploads-heading" class="dashboard-card-title">
+                        <i class="fa-solid fa-cloud-arrow-up icon-inline" aria-hidden="true"></i>
+                        Последние загруженные
+                    </h2>
+                    <a href="/videos" class="dashboard-card-link">Все видео</a>
+                </div>
+
+                <?php if (empty($recentVideos)): ?>
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fa-regular fa-circle-play" aria-hidden="true"></i>
+                        </div>
+                        <h3>Нет загруженных видео</h3>
+                        <p>Загрузите первое видео, чтобы начать планировать публикации.</p>
+                        <a href="/videos/upload" class="btn btn-primary">Загрузить видео</a>
+                    </div>
+                <?php else: ?>
+                    <div class="table-wrapper">
+                        <table class="data-table" aria-label="Последние загруженные видео">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Файл</th>
+                                    <th scope="col">Размер</th>
+                                    <th scope="col">Загружено</th>
+                                    <th scope="col" class="text-right">Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php
+                                $recentVideoPublications = $recentVideoPublications ?? [];
+                                foreach ($recentVideos as $video):
+                                    $videoId = (int)$video['id'];
+                                    $pub = $recentVideoPublications[$videoId] ?? null;
+                                    $pubUrl = $pub && !empty($pub['platform_url']) ? $pub['platform_url'] : null;
+                                ?>
+                                    <tr>
+                                        <td>
+                                            <div class="cell-main">
+                                                <span class="cell-title">
+                                                    <?= htmlspecialchars($video['file_name'] ?? 'video') ?>
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <?= number_format(($video['file_size'] ?? 0) / 1024 / 1024, 2) ?> MB
+                                        </td>
+                                        <td>
+                                            <?= date('d.m.Y H:i', strtotime($video['created_at'])) ?>
+                                        </td>
+                                        <td class="text-right">
+                                            <?php if ($pubUrl): ?>
+                                                <a href="<?= htmlspecialchars($pubUrl) ?>"
+                                                   target="_blank"
+                                                   rel="noopener noreferrer"
+                                                   class="btn-action btn-action-publish"
+                                                   title="Перейти к публикации на <?= ucfirst($pub['platform'] ?? '') ?>"
+                                                   aria-label="Перейти к публикации">
+                                                    <i class="fa-solid fa-external-link-alt" aria-hidden="true"></i>
+                                                </a>
+                                            <?php endif; ?>
+                                            <a href="/videos/<?= $videoId ?>"
+                                               class="btn-action btn-view"
+                                               title="Открыть видео"
+                                               aria-label="Открыть видео">
+                                                <i class="fa-regular fa-eye" aria-hidden="true"></i>
+                                            </a>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
