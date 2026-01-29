@@ -37,6 +37,18 @@ class PublicationRepository extends Repository
     }
 
     /**
+     * Последние успешные публикации пользователя (для дашборда)
+     */
+    public function findRecentSuccessfulByUserId(int $userId, int $limit = 5): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT * FROM {$this->table} WHERE user_id = ? AND status = 'success' ORDER BY published_at DESC LIMIT ?"
+        );
+        $stmt->execute([$userId, $limit]);
+        return $stmt->fetchAll();
+    }
+
+    /**
      * Найти по video_id
      */
     public function findByVideoId(int $videoId, array $orderBy = []): array

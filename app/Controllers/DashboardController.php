@@ -45,6 +45,16 @@ class DashboardController extends Controller
         $recentVideoIds = array_map(fn($v) => (int)$v['id'], $recentVideos);
         $recentVideoPublications = $this->publicationRepo->findLatestSuccessfulByVideoIds($recentVideoIds);
 
+        $recentPublications = $this->publicationRepo->findRecentSuccessfulByUserId($userId, 5);
+        $recentPublicationsVideoNames = [];
+        foreach ($recentPublications as $pub) {
+            $vid = (int)($pub['video_id'] ?? 0);
+            if ($vid > 0 && !isset($recentPublicationsVideoNames[$vid])) {
+                $v = $this->videoRepo->findById($vid);
+                $recentPublicationsVideoNames[$vid] = $v ? ($v['file_name'] ?? $v['title'] ?? 'video') : 'video';
+            }
+        }
+
         include __DIR__ . '/../../views/dashboard/index.php';
     }
 
