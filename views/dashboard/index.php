@@ -102,12 +102,18 @@ ob_start();
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($recentVideos as $video): ?>
+                                <?php
+                                $recentVideoPublications = $recentVideoPublications ?? [];
+                                foreach ($recentVideos as $video):
+                                    $videoId = (int)$video['id'];
+                                    $pub = $recentVideoPublications[$videoId] ?? null;
+                                    $pubUrl = $pub && !empty($pub['platform_url']) ? $pub['platform_url'] : null;
+                                ?>
                                     <tr>
                                         <td>
                                             <div class="cell-main">
                                                 <span class="cell-title">
-                                                    <?= htmlspecialchars($video['title'] ?? $video['file_name']) ?>
+                                                    <?= htmlspecialchars($video['file_name'] ?? 'video') ?>
                                                 </span>
                                             </div>
                                         </td>
@@ -118,7 +124,17 @@ ob_start();
                                             <?= date('d.m.Y H:i', strtotime($video['created_at'])) ?>
                                         </td>
                                         <td class="text-right">
-                                            <a href="/videos/<?= $video['id'] ?>"
+                                            <?php if ($pubUrl): ?>
+                                                <a href="<?= htmlspecialchars($pubUrl) ?>"
+                                                   target="_blank"
+                                                   rel="noopener noreferrer"
+                                                   class="btn-action btn-action-publish"
+                                                   title="Перейти к публикации на <?= ucfirst($pub['platform'] ?? '') ?>"
+                                                   aria-label="Перейти к публикации">
+                                                    <i class="fa-solid fa-external-link-alt" aria-hidden="true"></i>
+                                                </a>
+                                            <?php endif; ?>
+                                            <a href="/videos/<?= $videoId ?>"
                                                class="btn-action btn-view"
                                                title="Открыть видео"
                                                aria-label="Открыть видео">

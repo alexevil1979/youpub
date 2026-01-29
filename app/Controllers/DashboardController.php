@@ -42,6 +42,9 @@ class DashboardController extends Controller
         $recentVideos = $this->videoRepo->findByUserId($userId, ['created_at' => 'DESC'], 5);
         $upcomingSchedules = $this->scheduleRepo->findUpcoming($userId, 5);
 
+        $recentVideoIds = array_map(fn($v) => (int)$v['id'], $recentVideos);
+        $recentVideoPublications = $this->publicationRepo->findLatestSuccessfulByVideoIds($recentVideoIds);
+
         include __DIR__ . '/../../views/dashboard/index.php';
     }
 
