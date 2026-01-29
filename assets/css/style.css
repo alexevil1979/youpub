@@ -1396,6 +1396,16 @@ footer {
     color: white;
 }
 
+.badge-error {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.badge-debug {
+    background-color: #95a5a6;
+    color: white;
+}
+
 /* Группы контента - улучшенный UI */
 .groups-grid {
     display: grid;

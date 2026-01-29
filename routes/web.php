@@ -52,6 +52,7 @@ $router->post('/logout', [AuthController::class, 'logout']);
 // Защищенные маршруты
 $router->get('/dashboard', [DashboardController::class, 'index'], [AuthMiddleware::class]);
 $router->get('/profile', [DashboardController::class, 'profile'], [AuthMiddleware::class]);
+$router->post('/profile/change-password', [DashboardController::class, 'changePassword'], [AuthMiddleware::class]);
 
 // Видео
 $router->get('/videos', [VideoController::class, 'index'], [AuthMiddleware::class]);

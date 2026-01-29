@@ -193,34 +193,6 @@ php -r "opcache_reset();" # Очистка кэша PHP
 mysql -u youpub_user -p youpub < database/migrations/new_migration.sql
 ```
 
-## Правила работы AI‑ассистента для этого проекта
-
-- **Git и фиксация изменений**
-  - AI **всегда сам коммитит и пушит** все внесённые изменения в этот репозиторий, **без дополнительных вопросов**, как только код в рабочем состоянии.
-  - Сообщения коммита должны кратко описывать суть изменений.
-  - Конфиги с чувствительными данными (`config/env.php` и т.п.), которые игнорируются `.gitignore`, **никогда не добавляются** в git.
-
-- **Команды для обновления кода на VPS**
-  - После каждого блока изменений AI обязан в ответе давать **готовый набор команд**, который нужно выполнить на VPS для применения правок, например:
-    ```bash
-    cd /ssd/www/youpub
-    git pull origin main
-    sudo systemctl reload php8.1-fpm
-    # при изменениях в БД:
-    # mysql -u youpub_user -p youpub < database/migrations/016_create_app_settings_table.sql
-    ```
-
-- **Авто‑поиск путей и окружения**
-  - AI **всегда сам ищет** в проекте:
-    - пути до папки проекта на VPS (`/ssd/www/youpub`, `you.1tlt.ru` и т.п.),
-    - настройки домена и URL (`config/env.php`, `config/env.example.php`),
-    - миграции БД (`database/migrations/*.sql`),
-    - структуры папок (`storage/`, `workers/`, `cron/`),
-    - роуты и админ‑панель (`routes/admin.php`, `views/admin/*`).
-  - При необходимости AI использует `AI_CONTEXT.md` и другие docs (`DEPLOY.md`, `CONTENT_GROUPS_*`) для понимания контекста и не задаёт лишних вопросов, если информация уже есть в репозитории.
-
-Эти правила обязательны для всех будущих изменений кода и документации в этом проекте.
-
 ## Безопасность
 
 - Все пароли хешируются через `password_hash()`
@@ -228,6 +200,18 @@ mysql -u youpub_user -p youpub < database/migrations/new_migration.sql
 - Rate limiting для API
 - Валидация загружаемых файлов
 - Разделение ролей (user/admin)
+
+## Развитие бэкенда
+
+Дорожная карта, принципы и приоритеты развития бэкенда (архитектура, безопасность, масштабирование) описаны в **[BACKEND_DEVELOPMENT.md](BACKEND_DEVELOPMENT.md)**.
+
+учти в ответах путь на впс /ssd/www/youpub  и всегла выливай в гит правки самостоятельгно https://github.com/alexevil1979/youpub
+
+Используются:
+- **Monolog** — логирование с уровнями (storage/logs/app.log)
+- **Централизованный ErrorHandler** — перехват исключений и фатальных ошибок, единый формат ответа (JSON/HTML)
+- **Исключения приложения** — `App\Exception\*` (ValidationException, UnauthorizedException, NotFoundException и др.) с HTTP-кодами
+- **Строгая типизация** в `core/` (`declare(strict_types=1)`)
 
 ## Лицензия
 

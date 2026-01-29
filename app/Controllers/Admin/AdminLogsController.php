@@ -46,6 +46,9 @@ class AdminLogsController extends Controller
         $stmt = $db->prepare($sql);
         $stmt->execute($params);
         $logs = $stmt->fetchAll();
+
+        $type = $this->getParam('type');
+        $module = $this->getParam('module');
         
         include __DIR__ . '/../../../views/admin/logs/index.php';
     }

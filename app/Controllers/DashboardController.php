@@ -54,6 +54,57 @@ class DashboardController extends Controller
     }
 
     /**
+     * Смена пароля (обработка формы с профиля)
+     */
+    public function changePassword(): void
+    {
+        if (!$this->validateCsrf()) {
+            $_SESSION['error'] = 'Сессия устарела. Обновите страницу и попробуйте снова.';
+            header('Location: /profile');
+            exit;
+        }
+
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+        if ($userId <= 0) {
+            $_SESSION['error'] = 'Необходимо авторизоваться.';
+            header('Location: /login');
+            exit;
+        }
+
+        $currentPassword = (string)($this->getParam('current_password') ?? '');
+        $newPassword = (string)($this->getParam('new_password') ?? '');
+        $confirmPassword = (string)($this->getParam('confirm_password') ?? '');
+
+        if ($currentPassword === '' || $newPassword === '') {
+            $_SESSION['error'] = 'Заполните все поля.';
+            header('Location: /profile');
+            exit;
+        }
+
+        if ($newPassword !== $confirmPassword) {
+            $_SESSION['error'] = 'Новый пароль и подтверждение не совпадают.';
+            header('Location: /profile');
+            exit;
+        }
+
+        $auth = new \Core\Auth();
+        $result = $auth->changePassword($userId, $currentPassword, $newPassword);
+
+        if ($result['success']) {
+            $_SESSION['success'] = $result['message'];
+        } else {
+            $msg = $result['message'];
+            if (str_contains($msg, 'Password must')) {
+                $msg = 'Новый пароль: минимум 12 символов, заглавные и строчные буквы, цифры.';
+            }
+            $_SESSION['error'] = $msg;
+        }
+
+        header('Location: /profile');
+        exit;
+    }
+
+    /**
      * Интеграции
      */
     public function integrations(): void

@@ -84,4 +84,8 @@ return [
 
     // Debug API (по умолчанию отключён; включайте ТОЛЬКО в защищённой среде)
     'ENABLE_DEBUG_API' => false,
+
+    // Логирование (Monolog)
+    'LOG_DIR' => __DIR__ . '/../storage/logs',
+    'LOG_LEVEL' => 'debug', // debug, info, notice, warning, error, critical, alert, emergency
 ];

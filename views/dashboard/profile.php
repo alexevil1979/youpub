@@ -1,9 +1,20 @@
 <?php
 $title = 'Профиль';
+$success = $_SESSION['success'] ?? null;
+$error = $_SESSION['error'] ?? null;
+if (isset($_SESSION['success'])) unset($_SESSION['success']);
+if (isset($_SESSION['error'])) unset($_SESSION['error']);
 ob_start();
 ?>
 
 <h1>Мой профиль</h1>
+
+<?php if ($success): ?>
+    <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
+<?php endif; ?>
+<?php if ($error): ?>
+    <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
+<?php endif; ?>
 
 <div class="profile-section">
     <h2>Информация о пользователе</h2>
@@ -35,12 +46,13 @@ ob_start();
 
         <div class="form-group">
             <label for="new_password">Новый пароль</label>
-            <input type="password" id="new_password" name="new_password" required minlength="6">
+            <input type="password" id="new_password" name="new_password" required minlength="12" autocomplete="new-password">
+            <small class="form-text">Минимум 12 символов, заглавные и строчные буквы, цифры.</small>
         </div>
 
         <div class="form-group">
             <label for="confirm_password">Подтвердите пароль</label>
-            <input type="password" id="confirm_password" name="confirm_password" required minlength="6">
+            <input type="password" id="confirm_password" name="confirm_password" required minlength="12" autocomplete="new-password">
         </div>
 
         <button type="submit" class="btn btn-primary">Изменить пароль</button>

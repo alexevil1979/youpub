@@ -11,9 +11,25 @@ ob_start();
         </p>
     </div>
     <div class="page-header-actions">
+        <a href="/admin/users" class="btn btn-secondary">
+            <i class="fa-solid fa-users icon-inline" aria-hidden="true"></i>
+            Пользователи
+        </a>
+        <a href="/admin/videos" class="btn btn-secondary">
+            <i class="fa-solid fa-video icon-inline" aria-hidden="true"></i>
+            Видео
+        </a>
+        <a href="/admin/schedules" class="btn btn-secondary">
+            <i class="fa-solid fa-calendar icon-inline" aria-hidden="true"></i>
+            Расписания
+        </a>
+        <a href="/admin/logs" class="btn btn-secondary">
+            <i class="fa-solid fa-list icon-inline" aria-hidden="true"></i>
+            Логи
+        </a>
         <a href="/admin/settings" class="btn btn-secondary">
             <i class="fa-solid fa-gear icon-inline" aria-hidden="true"></i>
-            Настройки системы
+            Настройки
         </a>
     </div>
 </div>

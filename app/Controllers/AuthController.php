@@ -74,6 +74,7 @@ class AuthController extends Controller
                 $this->success($result['user'], $result['message']);
             } else {
                 header('Location: /dashboard');
+                exit;
             }
         } else {
             $rateLimiter->hit($rateKey, 5, 600);
@@ -82,6 +83,7 @@ class AuthController extends Controller
             } else {
                 $_SESSION['error'] = $result['message'];
                 header('Location: /login');
+                exit;
             }
         }
     }
@@ -148,6 +150,7 @@ class AuthController extends Controller
             } else {
                 $_SESSION['success'] = $result['message'];
                 header('Location: /login');
+                exit;
             }
         } else {
             $rateLimiter->hit($rateKey, 3, 3600);
@@ -156,6 +159,7 @@ class AuthController extends Controller
             } else {
                 $_SESSION['error'] = $result['message'];
                 header('Location: /register');
+                exit;
             }
         }
     }

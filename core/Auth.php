@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Core;
 
 use PDO;
@@ -88,6 +90,31 @@ class Auth
         $stmt->execute([$email, $passwordHash, $name]);
 
         return ['success' => true, 'message' => 'User registered successfully'];
+    }
+
+    /**
+     * Смена пароля пользователя
+     */
+    public function changePassword(int $userId, string $currentPassword, string $newPassword): array
+    {
+        $stmt = $this->db->prepare("SELECT id, password_hash FROM users WHERE id = ? AND status = 'active'");
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch();
+
+        if (!$user || !password_verify($currentPassword, $user['password_hash'])) {
+            return ['success' => false, 'message' => 'Текущий пароль неверен'];
+        }
+
+        $passwordValidation = $this->validatePassword($newPassword);
+        if (!$passwordValidation['valid']) {
+            return ['success' => false, 'message' => $passwordValidation['message']];
+        }
+
+        $passwordHash = password_hash($newPassword, PASSWORD_BCRYPT);
+        $stmt = $this->db->prepare("UPDATE users SET password_hash = ?, updated_at = NOW() WHERE id = ?");
+        $stmt->execute([$passwordHash, $userId]);
+
+        return ['success' => true, 'message' => 'Пароль успешно изменён'];
     }
 
     /**
