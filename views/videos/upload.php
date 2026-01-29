@@ -18,14 +18,14 @@ if ($userId) {
         <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">
         
         <div class="form-group">
-            <label for="videos">Видео файлы (до 50 файлов)</label>
+            <label for="videos">Видео файлы (до 12 файлов за один раз)</label>
             <div class="file-upload-area" id="fileUploadArea">
                 <input type="file" id="videos" name="videos[]" accept="video/*" multiple required>
                 <div class="file-upload-dropzone">
                     <div class="dropzone-content">
                         <?= \App\Helpers\IconHelper::render('upload', 48) ?>
                         <p>Перетащите файлы сюда или <span class="file-select-link">выберите файлы</span></p>
-                        <small>Можно выбрать до 50 файлов. Максимальный размер каждого файла: 5GB</small>
+                        <small>Можно выбрать до 12 файлов за один раз. Максимальный размер каждого файла: 5GB</small>
                     </div>
                 </div>
                 <div id="fileList" class="file-list"></div>
@@ -390,7 +390,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const fileUploadArea = document.getElementById('fileUploadArea');
     
     let selectedFiles = [];
-    const MAX_FILES = 50;
+    // Бэкенд сейчас разрешает максимум 12 файлов за один запрос (см. uploadMultipleVideos)
+    const MAX_FILES = 12;
 
     // Обработка выбора файлов
     fileInput.addEventListener('change', function(e) {
@@ -416,7 +417,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function handleFiles(files) {
-        // Ограничение до 50 файлов
+        // Ограничение по количеству файлов за одну загрузку
         if (selectedFiles.length + files.length > MAX_FILES) {
             showToast(`Можно загрузить максимум ${MAX_FILES} файлов. Уже выбрано: ${selectedFiles.length}`, 'warning');
             files = files.slice(0, MAX_FILES - selectedFiles.length);
