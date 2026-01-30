@@ -450,6 +450,86 @@ class YoutubeService extends Service
     }
 
     /**
+     * Получить статистику видео с YouTube Data API v3 (videos.list, part=statistics).
+     * Возвращает массив для сохранения в таблицу statistics: views, likes, comments, shares (shares API не отдаёт — 0).
+     */
+    public function getVideoStatistics(string $accessToken, string $youtubeVideoId): ?array
+    {
+        $youtubeVideoId = trim($youtubeVideoId);
+        if ($youtubeVideoId === '') {
+            return null;
+        }
+
+        $url = 'https://www.googleapis.com/youtube/v3/videos?id=' . urlencode($youtubeVideoId) . '&part=statistics';
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $accessToken,
+            ],
+            CURLOPT_TIMEOUT => 15,
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        if ($curlError) {
+            error_log('YouTube getVideoStatistics: cURL error ' . $curlError);
+            return null;
+        }
+
+        if ($httpCode !== 200) {
+            error_log('YouTube getVideoStatistics: HTTP ' . $httpCode . ' ' . substr($response, 0, 500));
+            return null;
+        }
+
+        $data = json_decode($response, true);
+        if (!isset($data['items'][0]['statistics'])) {
+            return null;
+        }
+
+        $stat = $data['items'][0]['statistics'];
+        return [
+            'views' => (int)($stat['viewCount'] ?? 0),
+            'likes' => (int)($stat['likeCount'] ?? 0),
+            'comments' => (int)($stat['commentCount'] ?? 0),
+            'shares' => 0, // YouTube Data API v3 не отдаёт shares
+        ];
+    }
+
+    /**
+     * Загрузить статистику YouTube для одной публикации: получает access token пользователя и запрашивает API.
+     * Возвращает массив ['views'=>int,'likes'=>int,'comments'=>int,'shares'=>int] или null при ошибке.
+     */
+    public function fetchYouTubeStatsForPublication(int $publicationId): ?array
+    {
+        $publication = $this->publicationRepo->findById($publicationId);
+        if (!$publication || ($publication['platform'] ?? '') !== 'youtube') {
+            return null;
+        }
+
+        $platformId = trim($publication['platform_id'] ?? '');
+        if ($platformId === '') {
+            return null;
+        }
+
+        $integration = $this->integrationRepo->findDefaultByUserId((int)$publication['user_id']);
+        if (!$integration || empty($integration['access_token'])) {
+            error_log('YouTube fetchYouTubeStatsForPublication: no integration for user ' . ($publication['user_id'] ?? ''));
+            return null;
+        }
+
+        $accessToken = $this->getValidAccessToken($integration);
+        if (!$accessToken) {
+            return null;
+        }
+
+        return $this->getVideoStatistics($accessToken, $platformId);
+    }
+
+    /**
      * Обновить access token
      */
     private function refreshAccessToken(string $refreshToken): ?array

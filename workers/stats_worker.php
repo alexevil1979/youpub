@@ -10,6 +10,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 use Core\Database;
 use App\Repositories\PublicationRepository;
 use App\Repositories\StatisticsRepository;
+use App\Services\YoutubeService;
 
 set_time_limit(300);
 ini_set('memory_limit', '512M');
@@ -94,7 +95,10 @@ try {
             $stats = null;
             $platform = $publication['platform'] ?? '';
 
-            logMessage("Stats collection not implemented for platform: {$platform}, publication ID {$publication['id']}", $logFile);
+            if ($platform === 'youtube' && !empty(trim($publication['platform_id'] ?? ''))) {
+                $youtubeService = new YoutubeService();
+                $stats = $youtubeService->fetchYouTubeStatsForPublication((int)$publication['id']);
+            }
 
             if ($stats) {
                 // Проверить, есть ли уже статистика за сегодня
@@ -120,7 +124,13 @@ try {
                     ]);
                 }
 
-                logMessage("Updated stats for publication ID {$publication['id']}", $logFile);
+                logMessage("Updated stats for publication ID {$publication['id']} ({$platform})", $logFile);
+            } else {
+                if ($platform !== 'youtube' || empty(trim($publication['platform_id'] ?? ''))) {
+                    logMessage("Skip publication ID {$publication['id']}: platform {$platform}, no platform_id or not YouTube", $logFile);
+                } else {
+                    logMessage("No stats received for YouTube publication ID {$publication['id']}", $logFile);
+                }
             }
 
         } catch (\Exception $e) {

@@ -55,6 +55,14 @@ foreach ($publications as $publication) {
         <h3>Всего репостов</h3>
         <p class="stat-number"><?= number_format($totalShares) ?></p>
     </div>
+    <?php
+    $engagementRate = $totalViews > 0 ? round(100 * ($totalLikes + $totalComments) / $totalViews, 2) : 0;
+    ?>
+    <div class="stat-card">
+        <h3>Вовлечённость (лайки+комменты / просмотры)</h3>
+        <p class="stat-number"><?= $engagementRate ?>%</p>
+        <p class="stat-hint">Показатель для анализа качества публикаций</p>
+    </div>
 </div>
 
 <div class="stats-section">
@@ -63,6 +71,7 @@ foreach ($publications as $publication) {
     <?php if (empty($publications)): ?>
         <p>Нет опубликованных видео</p>
     <?php else: ?>
+        <p class="stats-source-hint">Данные по YouTube подтягиваются с YouTube Data API (cron каждый час). Остальные платформы — по мере реализации.</p>
         <table>
             <thead>
                 <tr>
@@ -72,6 +81,8 @@ foreach ($publications as $publication) {
                     <th>Лайки</th>
                     <th>Комментарии</th>
                     <th>Репосты</th>
+                    <th>Вовлечённость</th>
+                    <th>Дата сбора данных</th>
                     <th>Ссылка</th>
                 </tr>
             </thead>
@@ -80,19 +91,25 @@ foreach ($publications as $publication) {
                     <?php 
                     $stats = $statsRepo->findByPublicationId($publication['id'], ['collected_at' => 'DESC']);
                     $latestStats = !empty($stats) ? $stats[0] : null;
+                    $views = $latestStats ? (int)$latestStats['views'] : 0;
+                    $likes = $latestStats ? (int)$latestStats['likes'] : 0;
+                    $comments = $latestStats ? (int)$latestStats['comments'] : 0;
+                    $eng = $views > 0 ? round(100 * ($likes + $comments) / $views, 2) : 0;
                     ?>
                     <tr>
                         <td><?= ucfirst($publication['platform']) ?></td>
                         <td><?= $publication['published_at'] ? date('d.m.Y H:i', strtotime($publication['published_at'])) : '-' ?></td>
-                        <td><?= $latestStats ? number_format($latestStats['views']) : '0' ?></td>
-                        <td><?= $latestStats ? number_format($latestStats['likes']) : '0' ?></td>
-                        <td><?= $latestStats ? number_format($latestStats['comments']) : '0' ?></td>
-                        <td><?= $latestStats ? number_format($latestStats['shares']) : '0' ?></td>
+                        <td><?= number_format($views) ?></td>
+                        <td><?= number_format($likes) ?></td>
+                        <td><?= number_format($comments) ?></td>
+                        <td><?= $latestStats ? number_format((int)$latestStats['shares']) : '0' ?></td>
+                        <td><?= $eng ?>%</td>
+                        <td><?= $latestStats && !empty($latestStats['collected_at']) ? date('d.m.Y H:i', strtotime($latestStats['collected_at'])) : '—' ?></td>
                         <td>
                             <?php if ($publication['platform_url']): ?>
                                 <a href="<?= htmlspecialchars($publication['platform_url']) ?>" target="_blank">Открыть</a>
                             <?php else: ?>
-                                -
+                                —
                             <?php endif; ?>
                         </td>
                     </tr>

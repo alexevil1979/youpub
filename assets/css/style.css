@@ -731,6 +731,18 @@ section + section {
     color: #2c3e50;
 }
 
+.stat-hint {
+    font-size: 0.75rem;
+    color: var(--color-muted);
+    margin-top: 0.25rem;
+}
+
+.stats-source-hint {
+    font-size: 0.85rem;
+    color: var(--color-muted);
+    margin-bottom: 1rem;
+}
+
 table {
     width: 100%;
     background: white;

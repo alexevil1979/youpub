@@ -55,9 +55,15 @@ class StatsApiController extends Controller
 
         foreach ($publications as $publication) {
             $pubId = (int)($publication['id'] ?? 0);
+            $latest = $latestStats[$pubId] ?? null;
+            $views = $latest ? (int)($latest['views'] ?? 0) : 0;
+            $likes = $latest ? (int)($latest['likes'] ?? 0) : 0;
+            $comments = $latest ? (int)($latest['comments'] ?? 0) : 0;
+            $engagement_rate = $views > 0 ? round(100 * ($likes + $comments) / $views, 2) : 0;
             $stats[] = [
                 'publication' => $publication,
-                'latest_stats' => $latestStats[$pubId] ?? null,
+                'latest_stats' => $latest,
+                'engagement_rate_percent' => $engagement_rate,
             ];
         }
 
