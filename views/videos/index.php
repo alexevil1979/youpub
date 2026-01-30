@@ -47,6 +47,18 @@ foreach ($videos as $video) {
 
 // $videoPublications уже переданы из контроллера
 
+// Подсчёт по папке: всего файлов, опубликовано, осталось
+function folderStats(array $folderVideos, array $videoPublications): array {
+    $total = count($folderVideos);
+    $published = 0;
+    foreach ($folderVideos as $v) {
+        if (isset($videoPublications[(int)($v['id'] ?? 0)])) {
+            $published++;
+        }
+    }
+    return ['total' => $total, 'published' => $published, 'remaining' => $total - $published];
+}
+
 // Группируем по дате
 $groupedByDate = groupVideosByDate($videos);
 
@@ -115,12 +127,14 @@ foreach ($allGroups as $group) {
         <?php if (!empty($groupedByContentGroup)): ?>
             <div class="catalog-section">
                 <h2 class="catalog-section-title"><?= \App\Helpers\IconHelper::render('folder', 24, 'icon-inline') ?> Группы контента</h2>
-                <?php foreach ($groupedByContentGroup as $item): ?>
+                <?php foreach ($groupedByContentGroup as $item):
+                    $fs = folderStats($item['videos'], $videoPublications ?? []);
+                ?>
                     <div class="catalog-folder">
                         <div class="folder-header" onclick="toggleFolder(this)">
                             <span class="folder-icon"><?= \App\Helpers\IconHelper::render('folder', 20) ?></span>
                             <span class="folder-name"><?= htmlspecialchars($item['group']['name']) ?></span>
-                            <span class="folder-count"><?= count($item['videos']) ?> видео</span>
+                            <span class="folder-count"><?= $fs['total'] ?> файлов · <?= $fs['published'] ?> опубл. · <?= $fs['remaining'] ?> ост.</span>
                             <span class="folder-toggle">▼</span>
                         </div>
                         <div class="folder-content">
@@ -189,12 +203,14 @@ foreach ($allGroups as $group) {
         <div class="catalog-section">
             <h2 class="catalog-section-title"><?= \App\Helpers\IconHelper::render('calendar', 24, 'icon-inline') ?> По дате загрузки</h2>
             
-            <?php if (!empty($groupedByDate['today'])): ?>
+            <?php if (!empty($groupedByDate['today'])):
+                $fs = folderStats($groupedByDate['today'], $videoPublications ?? []);
+            ?>
                 <div class="catalog-folder">
                     <div class="folder-header" onclick="toggleFolder(this)">
                         <span class="folder-icon"><?= \App\Helpers\IconHelper::render('calendar', 20) ?></span>
                         <span class="folder-name">Сегодня</span>
-                        <span class="folder-count"><?= count($groupedByDate['today']) ?> видео</span>
+                        <span class="folder-count"><?= $fs['total'] ?> файлов · <?= $fs['published'] ?> опубл. · <?= $fs['remaining'] ?> ост.</span>
                         <span class="folder-toggle">▼</span>
                     </div>
                     <div class="folder-content">
@@ -205,12 +221,14 @@ foreach ($allGroups as $group) {
                 </div>
             <?php endif; ?>
 
-            <?php if (!empty($groupedByDate['yesterday'])): ?>
+            <?php if (!empty($groupedByDate['yesterday'])):
+                $fs = folderStats($groupedByDate['yesterday'], $videoPublications ?? []);
+            ?>
                 <div class="catalog-folder">
                     <div class="folder-header" onclick="toggleFolder(this)">
                         <span class="folder-icon"><?= \App\Helpers\IconHelper::render('calendar', 20) ?></span>
                         <span class="folder-name">Вчера</span>
-                        <span class="folder-count"><?= count($groupedByDate['yesterday']) ?> видео</span>
+                        <span class="folder-count"><?= $fs['total'] ?> файлов · <?= $fs['published'] ?> опубл. · <?= $fs['remaining'] ?> ост.</span>
                         <span class="folder-toggle">▼</span>
                     </div>
                     <div class="folder-content">
@@ -221,12 +239,14 @@ foreach ($allGroups as $group) {
                 </div>
             <?php endif; ?>
 
-            <?php if (!empty($groupedByDate['this_week'])): ?>
+            <?php if (!empty($groupedByDate['this_week'])):
+                $fs = folderStats($groupedByDate['this_week'], $videoPublications ?? []);
+            ?>
                 <div class="catalog-folder">
                     <div class="folder-header" onclick="toggleFolder(this)">
                         <span class="folder-icon"><?= \App\Helpers\IconHelper::render('calendar', 20) ?></span>
                         <span class="folder-name">На этой неделе</span>
-                        <span class="folder-count"><?= count($groupedByDate['this_week']) ?> видео</span>
+                        <span class="folder-count"><?= $fs['total'] ?> файлов · <?= $fs['published'] ?> опубл. · <?= $fs['remaining'] ?> ост.</span>
                         <span class="folder-toggle">▼</span>
                     </div>
                     <div class="folder-content">
@@ -237,12 +257,14 @@ foreach ($allGroups as $group) {
                 </div>
             <?php endif; ?>
 
-            <?php if (!empty($groupedByDate['this_month'])): ?>
+            <?php if (!empty($groupedByDate['this_month'])):
+                $fs = folderStats($groupedByDate['this_month'], $videoPublications ?? []);
+            ?>
                 <div class="catalog-folder">
                     <div class="folder-header" onclick="toggleFolder(this)">
                         <span class="folder-icon"><?= \App\Helpers\IconHelper::render('calendar', 20) ?></span>
                         <span class="folder-name">В этом месяце</span>
-                        <span class="folder-count"><?= count($groupedByDate['this_month']) ?> видео</span>
+                        <span class="folder-count"><?= $fs['total'] ?> файлов · <?= $fs['published'] ?> опубл. · <?= $fs['remaining'] ?> ост.</span>
                         <span class="folder-toggle">▼</span>
                     </div>
                     <div class="folder-content">
@@ -253,12 +275,14 @@ foreach ($allGroups as $group) {
                 </div>
             <?php endif; ?>
 
-            <?php if (!empty($groupedByDate['older'])): ?>
+            <?php if (!empty($groupedByDate['older'])):
+                $fs = folderStats($groupedByDate['older'], $videoPublications ?? []);
+            ?>
                 <div class="catalog-folder">
                     <div class="folder-header" onclick="toggleFolder(this)">
                         <span class="folder-icon"><?= \App\Helpers\IconHelper::render('calendar', 20) ?></span>
                         <span class="folder-name">Ранее</span>
-                        <span class="folder-count"><?= count($groupedByDate['older']) ?> видео</span>
+                        <span class="folder-count"><?= $fs['total'] ?> файлов · <?= $fs['published'] ?> опубл. · <?= $fs['remaining'] ?> ост.</span>
                         <span class="folder-toggle">▼</span>
                     </div>
                     <div class="folder-content">
