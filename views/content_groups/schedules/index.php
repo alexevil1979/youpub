@@ -285,7 +285,8 @@ $formatInterval = static function (int $seconds): string {
                     <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6; width: 30px;">
                         <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
                     </th>
-                    <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Название / Группа</th>
+                    <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Название</th>
+                    <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Группа</th>
                     <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Платформа</th>
                     <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Тип</th>
                     <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Следующая публикация</th>
@@ -335,6 +336,9 @@ $formatInterval = static function (int $seconds): string {
                     <tr style="border-bottom: 1px solid #dee2e6;" data-publish-at="<?= $nextPublishAt ? date('Y-m-d H:i:s', $nextPublishAt) : '' ?>" data-status="<?= $schedule['status'] ?? '' ?>">
                         <td style="padding: 0.75rem;">
                             <input type="checkbox" class="schedule-checkbox" value="<?= (int)$schedule['id'] ?>">
+                        </td>
+                        <td style="padding: 0.75rem;">
+                            <?= htmlspecialchars($schedule['name'] ?? '') ?: '<span style="color: #95a5a6;">—</span>' ?>
                         </td>
                         <td style="padding: 0.75rem;">
                             <?php if ($group && isset($group['id']) && isset($group['name'])): ?>
