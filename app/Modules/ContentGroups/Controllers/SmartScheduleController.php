@@ -879,22 +879,17 @@ class SmartScheduleController extends Controller
                 $groups = [];
             }
             
-            // Проверяем наличие колонки name в таблице schedules
+            // Название расписания: из формы (name) или автогенерация; колонка name — миграция 014
             $hasNameColumn = $this->checkColumnExists('schedules', 'name');
-            
-            // Генерируем название расписания, если не указано и колонка существует
-            $scheduleName = null;
-            if ($hasNameColumn) {
-                $scheduleName = trim($this->getParam('name', ''));
-                if (empty($scheduleName)) {
-                    $scheduleName = $this->generateScheduleName([
-                        'schedule_type' => $this->getParam('schedule_type', 'fixed'),
-                        'platform' => $this->getParam('platform'),
-                        'content_group_id' => $this->getParam('content_group_id') ? (int)$this->getParam('content_group_id') : null,
-                        'publish_at' => $this->getParam('publish_at'),
-                        'groups' => $groups,
-                    ]);
-                }
+            $scheduleName = trim((string)$this->getParam('name', ''));
+            if ($scheduleName === '' && $hasNameColumn) {
+                $scheduleName = $this->generateScheduleName([
+                    'schedule_type' => $this->getParam('schedule_type', 'fixed'),
+                    'platform' => $this->getParam('platform'),
+                    'content_group_id' => $this->getParam('content_group_id') ? (int)$this->getParam('content_group_id') : null,
+                    'publish_at' => $this->getParam('publish_at'),
+                    'groups' => $groups,
+                ]);
             }
             
             // Платформа обязательна в БД, используем значение по умолчанию если не указана
@@ -919,10 +914,8 @@ class SmartScheduleController extends Controller
                 'skip_published' => $this->getParam('skip_published', '1') === '1',
             ];
             
-            // Добавляем name только если колонка существует
-            if ($hasNameColumn && $scheduleName !== null) {
-                $updateData['name'] = $scheduleName;
-            }
+            // Название расписания: всегда передаём в update (колонка name — миграция 014)
+            $updateData['name'] = $scheduleName;
             
             // Удаляем NULL значения
             $updateData = array_filter($updateData, function($value) {
