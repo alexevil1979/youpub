@@ -61,6 +61,7 @@ return [
     // Очереди
     'WORKER_INTERVAL' => 60, // секунды
     'WORKER_LOG_DIR' => __DIR__ . '/../storage/logs/workers',
+    'STATS_PUBLICATIONS_DAYS' => 365, // за сколько дней подтягивать статистику YouTube (воркер stats)
     
     // Часовой пояс
     'TIMEZONE' => 'Europe/Samara', // Часовой пояс для PHP и MySQL (UTC+4)

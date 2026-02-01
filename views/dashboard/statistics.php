@@ -38,6 +38,17 @@ foreach ($publications as $publication) {
     </div>
 </div>
 
+<?php if ($totalViews === 0 && $totalLikes === 0 && $totalComments === 0 && !empty($publications)): ?>
+    <div class="alert alert-warning" style="margin-bottom: 1rem;">
+        <strong>Данные пока нулевые.</strong> Статистика по YouTube подтягивается воркером раз в час. Проверьте:
+        <ul style="margin: 0.5rem 0 0 1rem;">
+            <li>В crontab добавлена строка: <code>0 * * * * /ssd/www/youpub/cron/stats.sh</code></li>
+            <li>Логи воркера: <code>storage/logs/workers/stats_<?= date('Y-m-d') ?>.log</code></li>
+            <li>У публикаций на YouTube заполнен <code>platform_id</code> и подключена интеграция YouTube.</li>
+        </ul>
+    </div>
+<?php endif; ?>
+
 <div class="stats-overview">
     <div class="stat-card">
         <h3>Всего просмотров</h3>

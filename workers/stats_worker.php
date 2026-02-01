@@ -33,11 +33,12 @@ date_default_timezone_set($timezone);
 // Инициализация БД
 Database::init($config);
 
-// Логирование
-$logFile = $config['WORKER_LOG_DIR'] . '/stats_' . date('Y-m-d') . '.log';
-if (!is_dir($config['WORKER_LOG_DIR'])) {
-    if (!@mkdir($config['WORKER_LOG_DIR'], 0755, true) && !is_dir($config['WORKER_LOG_DIR'])) {
-        error_log('Stats worker: failed to create log directory');
+// Логирование (fallback если WORKER_LOG_DIR не задан в env.php)
+$workerLogDir = $config['WORKER_LOG_DIR'] ?? (__DIR__ . '/../storage/logs/workers');
+$logFile = $workerLogDir . '/stats_' . date('Y-m-d') . '.log';
+if (!is_dir($workerLogDir)) {
+    if (!@mkdir($workerLogDir, 0755, true) && !is_dir($workerLogDir)) {
+        error_log('Stats worker: failed to create log directory: ' . $workerLogDir);
         exit(1);
     }
 }
@@ -69,18 +70,22 @@ try {
     $publicationRepo = new PublicationRepository();
     $statsRepo = new StatisticsRepository();
 
-    // Найти все успешные публикации за последние 7 дней
+    // Найти все успешные публикации за последние 365 дней (чтобы подтянуть статистику и по старым роликам)
+    $statsDays = isset($config['STATS_PUBLICATIONS_DAYS']) ? max(1, (int)$config['STATS_PUBLICATIONS_DAYS']) : 365;
     $db = Database::getInstance();
     $stmt = $db->prepare(
         "SELECT * FROM publications 
          WHERE status = 'success' 
-         AND published_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+         AND published_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
          ORDER BY published_at DESC"
     );
-    $stmt->execute();
+    $stmt->execute([$statsDays]);
     $publications = $stmt->fetchAll();
 
-    logMessage('Found ' . count($publications) . ' publications to update', $logFile);
+    $youtubeCount = count(array_filter($publications, function ($p) {
+        return ($p['platform'] ?? '') === 'youtube' && !empty(trim($p['platform_id'] ?? ''));
+    }));
+    logMessage('Found ' . count($publications) . ' publications (' . $youtubeCount . ' YouTube) to update', $logFile);
 
     foreach ($publications as $publication) {
         if ($shutdown) {
