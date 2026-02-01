@@ -1122,9 +1122,15 @@ class SmartScheduleController extends Controller
     private function checkColumnExists(string $table, string $column): bool
     {
         try {
+            if (preg_match('/^[a-zA-Z0-9_]+$/', $table) !== 1 || preg_match('/^[a-zA-Z0-9_]+$/', $column) !== 1) {
+                return false;
+            }
             $db = \Core\Database::getInstance();
-            $stmt = $db->prepare("SHOW COLUMNS FROM `{$table}` LIKE ?");
-            $stmt->execute([$column]);
+            // MySQL не поддерживает плейсхолдер в SHOW COLUMNS LIKE — используем экранированный литерал
+            $stmt = $db->query("SHOW COLUMNS FROM `{$table}` LIKE '" . $db->quote($column) . "'");
+            if ($stmt === false) {
+                return false;
+            }
             $result = $stmt->fetch();
             return !empty($result);
         } catch (\Exception $e) {

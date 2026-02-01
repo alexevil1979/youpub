@@ -96,8 +96,7 @@ class PinterestIntegrationRepository extends Repository
 
     private function hasDefaultColumn(): bool
     {
-        $stmt = $this->db->prepare("SHOW COLUMNS FROM `{$this->table}` LIKE ?");
-        $stmt->execute(['is_default']);
-        return (bool)$stmt->fetch();
+        $stmt = $this->db->query("SHOW COLUMNS FROM `{$this->table}` LIKE 'is_default'");
+        return $stmt !== false && (bool)$stmt->fetch();
     }
 }
