@@ -772,6 +772,13 @@ section + section {
     vertical-align: top;
 }
 
+/* Заголовки таблицы — перенос строк, чтобы не обрезались */
+.stats-table th {
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+}
+
 .stats-table .stats-col-name {
     max-width: 180px;
     word-break: break-word;
@@ -782,6 +789,22 @@ section + section {
     max-width: 200px;
     word-break: break-word;
     overflow-wrap: break-word;
+}
+
+/* Ячейки с текстом — перенос строк, ограничение высоты с прокруткой при длинном тексте */
+.stats-table .stats-cell-clamp {
+    line-height: 1.35;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+}
+.stats-table .stats-cell-clamp-name {
+    max-height: 3.5em;
+    overflow-y: auto;
+}
+.stats-table .stats-cell-clamp-desc {
+    max-height: 5em;
+    overflow-y: auto;
 }
 
 .stats-table .stats-col-channel {
@@ -808,7 +831,9 @@ section + section {
 
 .stats-table .stats-col-link {
     width: 70px;
-    white-space: nowrap;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
 }
 
 table {
