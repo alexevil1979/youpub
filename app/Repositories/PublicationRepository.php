@@ -27,7 +27,7 @@ class PublicationRepository extends Repository
     }
 
     /**
-     * Найти публикации пользователя с названием и описанием видео (для страницы статистики)
+     * Найти публикации пользователя с названием, описанием видео и каналом (для страницы статистики)
      */
     public function findByUserIdWithVideoInfo(int $userId, array $orderBy = []): array
     {
@@ -36,14 +36,43 @@ class PublicationRepository extends Repository
             $orderBy = ['published_at' => 'DESC'];
         }
         $orderStr = implode(', ', array_map(fn($f, $d) => "p.{$f} " . ($d === 'DESC' ? 'DESC' : 'ASC'), array_keys($orderBy), $orderBy));
-        $sql = "SELECT p.*, v.title AS video_title, v.description AS video_description, v.file_name AS video_file_name 
+
+        $channelJoin = $this->buildChannelJoin();
+        $sql = "SELECT p.*, v.title AS video_title, v.description AS video_description, v.file_name AS video_file_name, {$channelJoin['select']}
                 FROM {$this->table} p 
                 LEFT JOIN videos v ON p.video_id = v.id 
+                {$channelJoin['join']}
                 WHERE p.user_id = ? 
                 ORDER BY {$orderStr}";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$userId]);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Сборка JOIN и SELECT для названия канала (YouTube, Telegram и т.д.)
+     */
+    private function buildChannelJoin(): array
+    {
+        $hasIntegrationId = false;
+        try {
+            $stmt = $this->db->query("SHOW COLUMNS FROM `{$this->table}` LIKE 'integration_id'");
+            $hasIntegrationId = $stmt !== false && (bool)$stmt->fetch();
+        } catch (\Throwable $e) {
+            // колонки нет
+        }
+
+        if ($hasIntegrationId) {
+            $join = "LEFT JOIN youtube_integrations yi ON yi.user_id = p.user_id AND p.platform = 'youtube' AND (yi.id = p.integration_id OR (p.integration_id IS NULL AND yi.is_default = 1))
+                     LEFT JOIN telegram_integrations ti ON ti.user_id = p.user_id AND p.platform = 'telegram' AND (ti.id = p.integration_id OR (p.integration_id IS NULL AND ti.is_default = 1))";
+            $select = "COALESCE(yi.channel_name, yi.account_name, ti.channel_username, ti.account_name) AS channel_name";
+        } else {
+            $join = "LEFT JOIN youtube_integrations yi ON yi.user_id = p.user_id AND p.platform = 'youtube' AND yi.is_default = 1
+                     LEFT JOIN telegram_integrations ti ON ti.user_id = p.user_id AND p.platform = 'telegram' AND ti.is_default = 1";
+            $select = "COALESCE(yi.channel_name, yi.account_name, ti.channel_username, ti.account_name) AS channel_name";
+        }
+
+        return ['join' => $join, 'select' => $select];
     }
 
     /**
