@@ -9,7 +9,7 @@ $userId = $_SESSION['user_id'];
 $publicationRepo = new PublicationRepository();
 $statsRepo = new StatisticsRepository();
 
-$publications = $publicationRepo->findByUserId($userId, ['published_at' => 'DESC']);
+$publications = $publicationRepo->findByUserIdWithVideoInfo($userId, ['published_at' => 'DESC']);
 
 // Подсчет общей статистики
 $totalViews = 0;
@@ -86,6 +86,8 @@ foreach ($publications as $publication) {
         <table>
             <thead>
                 <tr>
+                    <th>Название</th>
+                    <th>Описание</th>
                     <th>Платформа</th>
                     <th>Дата публикации</th>
                     <th>Просмотры</th>
@@ -106,8 +108,13 @@ foreach ($publications as $publication) {
                     $likes = $latestStats ? (int)$latestStats['likes'] : 0;
                     $comments = $latestStats ? (int)$latestStats['comments'] : 0;
                     $eng = $views > 0 ? round(100 * ($likes + $comments) / $views, 2) : 0;
+                    $videoTitle = !empty($publication['video_title']) ? $publication['video_title'] : ($publication['video_file_name'] ?? '—');
+                    $videoDesc = $publication['video_description'] ?? '';
+                    $videoDescShort = mb_strlen($videoDesc) > 120 ? mb_substr($videoDesc, 0, 120) . '…' : $videoDesc;
                     ?>
                     <tr>
+                        <td style="max-width: 220px;" title="<?= htmlspecialchars($videoTitle, ENT_QUOTES) ?>"><?= htmlspecialchars($videoTitle) ?></td>
+                        <td style="max-width: 280px;" title="<?= htmlspecialchars($videoDesc, ENT_QUOTES) ?>"><?= htmlspecialchars($videoDescShort ?: '—') ?></td>
                         <td><?= ucfirst($publication['platform']) ?></td>
                         <td><?= $publication['published_at'] ? date('d.m.Y H:i', strtotime($publication['published_at'])) : '-' ?></td>
                         <td><?= number_format($views) ?></td>

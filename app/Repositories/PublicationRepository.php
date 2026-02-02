@@ -27,6 +27,26 @@ class PublicationRepository extends Repository
     }
 
     /**
+     * Найти публикации пользователя с названием и описанием видео (для страницы статистики)
+     */
+    public function findByUserIdWithVideoInfo(int $userId, array $orderBy = []): array
+    {
+        $orderBy = $this->sanitizeOrderBy($orderBy, ['published_at', 'created_at', 'id']);
+        if (empty($orderBy)) {
+            $orderBy = ['published_at' => 'DESC'];
+        }
+        $orderStr = implode(', ', array_map(fn($f, $d) => "p.{$f} " . ($d === 'DESC' ? 'DESC' : 'ASC'), array_keys($orderBy), $orderBy));
+        $sql = "SELECT p.*, v.title AS video_title, v.description AS video_description, v.file_name AS video_file_name 
+                FROM {$this->table} p 
+                LEFT JOIN videos v ON p.video_id = v.id 
+                WHERE p.user_id = ? 
+                ORDER BY {$orderStr}";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$userId]);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    /**
      * Найти по пользователю и статусу
      */
     public function findByUserIdAndStatus(int $userId, string $status): array
