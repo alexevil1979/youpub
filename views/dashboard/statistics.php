@@ -120,13 +120,27 @@ foreach ($publications as $publication) {
                         <td class="stats-col-desc" title="<?= htmlspecialchars($videoDesc, ENT_QUOTES) ?>"><div class="stats-cell-clamp stats-cell-clamp-desc"><?= htmlspecialchars($videoDescShort ?: '—') ?></div></td>
                         <td class="stats-col-channel"><?= htmlspecialchars($channelName ?: '—') ?></td>
                         <td class="stats-col-platform"><?= ucfirst($publication['platform']) ?></td>
-                        <td class="stats-col-date"><?= $publication['published_at'] ? date('d.m.Y H:i', strtotime($publication['published_at'])) : '-' ?></td>
+                        <td class="stats-col-date"><?php
+                            if ($publication['published_at']) {
+                                $ts = strtotime($publication['published_at']);
+                                echo htmlspecialchars(date('d.m.Y', $ts)) . '<br>' . htmlspecialchars(date('H:i', $ts));
+                            } else {
+                                echo '—';
+                            }
+                        ?></td>
                         <td class="stats-col-num"><?= number_format($views) ?></td>
                         <td class="stats-col-num"><?= number_format($likes) ?></td>
                         <td class="stats-col-num"><?= number_format($comments) ?></td>
                         <td class="stats-col-num"><?= $latestStats ? number_format((int)$latestStats['shares']) : '0' ?></td>
                         <td class="stats-col-num"><?= $eng ?>%</td>
-                        <td class="stats-col-date"><?= $latestStats && !empty($latestStats['collected_at']) ? date('d.m.Y H:i', strtotime($latestStats['collected_at'])) : '—' ?></td>
+                        <td class="stats-col-date"><?php
+                            if ($latestStats && !empty($latestStats['collected_at'])) {
+                                $ts = strtotime($latestStats['collected_at']);
+                                echo htmlspecialchars(date('d.m.Y', $ts)) . '<br>' . htmlspecialchars(date('H:i', $ts));
+                            } else {
+                                echo '—';
+                            }
+                        ?></td>
                         <td class="stats-col-link">
                             <?php if ($publication['platform_url']): ?>
                                 <a href="<?= htmlspecialchars($publication['platform_url']) ?>" target="_blank">Открыть</a>
