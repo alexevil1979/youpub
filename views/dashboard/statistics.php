@@ -83,21 +83,22 @@ foreach ($publications as $publication) {
         <p>Нет опубликованных видео</p>
     <?php else: ?>
         <p class="stats-source-hint">Данные по YouTube подтягиваются с YouTube Data API (cron каждый час). Остальные платформы — по мере реализации.</p>
-        <table>
+        <div class="stats-table-wrapper">
+        <table class="stats-table">
             <thead>
                 <tr>
-                    <th>Название</th>
-                    <th>Описание</th>
-                    <th>Канал</th>
-                    <th>Платформа</th>
-                    <th>Дата публикации</th>
-                    <th>Просмотры</th>
-                    <th>Лайки</th>
-                    <th>Комментарии</th>
-                    <th>Репосты</th>
-                    <th>Вовлечённость</th>
-                    <th>Дата сбора данных</th>
-                    <th>Ссылка</th>
+                    <th class="stats-col-name">Название</th>
+                    <th class="stats-col-desc">Описание</th>
+                    <th class="stats-col-channel">Канал</th>
+                    <th class="stats-col-platform">Платформа</th>
+                    <th class="stats-col-date">Дата публикации</th>
+                    <th class="stats-col-num">Просмотры</th>
+                    <th class="stats-col-num">Лайки</th>
+                    <th class="stats-col-num">Комментарии</th>
+                    <th class="stats-col-num">Репосты</th>
+                    <th class="stats-col-num">Вовлечённость</th>
+                    <th class="stats-col-date">Дата сбора</th>
+                    <th class="stats-col-link">Ссылка</th>
                 </tr>
             </thead>
             <tbody>
@@ -115,18 +116,18 @@ foreach ($publications as $publication) {
                     $channelName = trim($publication['channel_name'] ?? '');
                     ?>
                     <tr>
-                        <td style="max-width: 220px;" title="<?= htmlspecialchars($videoTitle, ENT_QUOTES) ?>"><?= htmlspecialchars($videoTitle) ?></td>
-                        <td style="max-width: 280px;" title="<?= htmlspecialchars($videoDesc, ENT_QUOTES) ?>"><?= htmlspecialchars($videoDescShort ?: '—') ?></td>
-                        <td><?= htmlspecialchars($channelName ?: '—') ?></td>
-                        <td><?= ucfirst($publication['platform']) ?></td>
-                        <td><?= $publication['published_at'] ? date('d.m.Y H:i', strtotime($publication['published_at'])) : '-' ?></td>
-                        <td><?= number_format($views) ?></td>
-                        <td><?= number_format($likes) ?></td>
-                        <td><?= number_format($comments) ?></td>
-                        <td><?= $latestStats ? number_format((int)$latestStats['shares']) : '0' ?></td>
-                        <td><?= $eng ?>%</td>
-                        <td><?= $latestStats && !empty($latestStats['collected_at']) ? date('d.m.Y H:i', strtotime($latestStats['collected_at'])) : '—' ?></td>
-                        <td>
+                        <td class="stats-col-name" title="<?= htmlspecialchars($videoTitle, ENT_QUOTES) ?>"><?= htmlspecialchars($videoTitle) ?></td>
+                        <td class="stats-col-desc" title="<?= htmlspecialchars($videoDesc, ENT_QUOTES) ?>"><?= htmlspecialchars($videoDescShort ?: '—') ?></td>
+                        <td class="stats-col-channel"><?= htmlspecialchars($channelName ?: '—') ?></td>
+                        <td class="stats-col-platform"><?= ucfirst($publication['platform']) ?></td>
+                        <td class="stats-col-date"><?= $publication['published_at'] ? date('d.m.Y H:i', strtotime($publication['published_at'])) : '-' ?></td>
+                        <td class="stats-col-num"><?= number_format($views) ?></td>
+                        <td class="stats-col-num"><?= number_format($likes) ?></td>
+                        <td class="stats-col-num"><?= number_format($comments) ?></td>
+                        <td class="stats-col-num"><?= $latestStats ? number_format((int)$latestStats['shares']) : '0' ?></td>
+                        <td class="stats-col-num"><?= $eng ?>%</td>
+                        <td class="stats-col-date"><?= $latestStats && !empty($latestStats['collected_at']) ? date('d.m.Y H:i', strtotime($latestStats['collected_at'])) : '—' ?></td>
+                        <td class="stats-col-link">
                             <?php if ($publication['platform_url']): ?>
                                 <a href="<?= htmlspecialchars($publication['platform_url']) ?>" target="_blank">Открыть</a>
                             <?php else: ?>
@@ -137,6 +138,7 @@ foreach ($publications as $publication) {
                 <?php endforeach; ?>
             </tbody>
         </table>
+        </div>
         
         <div class="export-section">
             <h3>Экспорт статистики</h3>

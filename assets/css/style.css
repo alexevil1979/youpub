@@ -752,6 +752,65 @@ section + section {
     margin-bottom: 1rem;
 }
 
+/* Таблица статистики — всё умещается: прокрутка по горизонтали, перенос текста */
+.stats-table-wrapper {
+    overflow-x: auto;
+    margin-bottom: 1rem;
+    -webkit-overflow-scrolling: touch;
+}
+
+.stats-table {
+    width: 100%;
+    min-width: 800px;
+    table-layout: fixed;
+    font-size: 0.875rem;
+}
+
+.stats-table th,
+.stats-table td {
+    padding: 0.5rem 0.4rem;
+    vertical-align: top;
+}
+
+.stats-table .stats-col-name {
+    max-width: 180px;
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+
+.stats-table .stats-col-desc {
+    max-width: 200px;
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+
+.stats-table .stats-col-channel {
+    max-width: 140px;
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+
+.stats-table .stats-col-platform {
+    width: 80px;
+    white-space: nowrap;
+}
+
+.stats-table .stats-col-date {
+    width: 100px;
+    white-space: nowrap;
+}
+
+.stats-table .stats-col-num {
+    width: 70px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.stats-table .stats-col-link {
+    width: 70px;
+    white-space: nowrap;
+}
+
 table {
     width: 100%;
     background: white;
