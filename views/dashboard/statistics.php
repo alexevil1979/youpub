@@ -91,13 +91,13 @@ foreach ($publications as $publication) {
                     <th class="stats-col-desc">Описание</th>
                     <th class="stats-col-channel">Канал</th>
                     <th class="stats-col-platform">Платформа</th>
-                    <th class="stats-col-date">Дата публикации</th>
-                    <th class="stats-col-num">Просмотры</th>
+                    <th class="stats-col-date">Дата<br>публикации</th>
+                    <th class="stats-col-num">Просмот<br>ры</th>
                     <th class="stats-col-num">Лайки</th>
-                    <th class="stats-col-num">Комментарии</th>
-                    <th class="stats-col-num">Репосты</th>
-                    <th class="stats-col-num">Вовлечённость</th>
-                    <th class="stats-col-date">Дата сбора</th>
+                    <th class="stats-col-num">Коммента<br>рии</th>
+                    <th class="stats-col-num">Репост<br>ы</th>
+                    <th class="stats-col-num">Вовлечён<br>ность</th>
+                    <th class="stats-col-date">Дата<br>сбора</th>
                     <th class="stats-col-link">Ссылка</th>
                 </tr>
             </thead>
@@ -116,8 +116,8 @@ foreach ($publications as $publication) {
                     $channelName = trim($publication['channel_name'] ?? '');
                     ?>
                     <tr>
-                        <td class="stats-col-name" title="<?= htmlspecialchars($videoTitle, ENT_QUOTES) ?>"><?= htmlspecialchars($videoTitle) ?></td>
-                        <td class="stats-col-desc" title="<?= htmlspecialchars($videoDesc, ENT_QUOTES) ?>"><?= htmlspecialchars($videoDescShort ?: '—') ?></td>
+                        <td class="stats-col-name" title="<?= htmlspecialchars($videoTitle, ENT_QUOTES) ?>"><div class="stats-cell-clamp stats-cell-clamp-name"><?= htmlspecialchars($videoTitle) ?></div></td>
+                        <td class="stats-col-desc" title="<?= htmlspecialchars($videoDesc, ENT_QUOTES) ?>"><div class="stats-cell-clamp stats-cell-clamp-desc"><?= htmlspecialchars($videoDescShort ?: '—') ?></div></td>
                         <td class="stats-col-channel"><?= htmlspecialchars($channelName ?: '—') ?></td>
                         <td class="stats-col-platform"><?= ucfirst($publication['platform']) ?></td>
                         <td class="stats-col-date"><?= $publication['published_at'] ? date('d.m.Y H:i', strtotime($publication['published_at'])) : '-' ?></td>
