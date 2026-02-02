@@ -137,12 +137,18 @@ class GroupController extends Controller
         if (!empty($integrationsList)) {
             $settings['integrations'] = $integrationsList;
         }
+
+        $scheduleIdParam = $this->getParam('schedule_id', '');
+        $scheduleId = ($scheduleIdParam !== '' && $scheduleIdParam !== null) ? (int)$scheduleIdParam : null;
+
+        $useAutoGeneration = (int)$this->getParam('use_auto_generation', 0);
+        $useAutoGeneration = max(0, min(3, $useAutoGeneration)); // 0–3 по миграции 015
         
         $data = [
             'name' => $this->getParam('name', ''),
             'description' => $this->getParam('description', ''),
             'template_id' => $this->getParam('template_id') ? (int)$this->getParam('template_id') : null,
-            'use_auto_generation' => (int)($this->getParam('use_auto_generation', '0') === '1'),
+            'use_auto_generation' => $useAutoGeneration,
             'schedule_id' => $scheduleId,
             'status' => $this->getParam('status', 'active'),
             'settings' => !empty($settings) ? $settings : null,

@@ -26,14 +26,22 @@ class GroupService extends Service
      */
     public function createGroup(int $userId, array $data): array
     {
-        $groupId = $this->groupRepo->create([
+        $createData = [
             'user_id' => $userId,
             'name' => $data['name'] ?? '',
             'description' => $data['description'] ?? null,
             'template_id' => $data['template_id'] ?? null,
             'status' => $data['status'] ?? 'active',
             'settings' => isset($data['settings']) ? json_encode($data['settings']) : null,
-        ]);
+        ];
+        if (array_key_exists('schedule_id', $data)) {
+            $createData['schedule_id'] = ($data['schedule_id'] === '' || $data['schedule_id'] === null) ? null : (int)$data['schedule_id'];
+        }
+        if (array_key_exists('use_auto_generation', $data)) {
+            $createData['use_auto_generation'] = (int)$data['use_auto_generation'];
+        }
+
+        $groupId = $this->groupRepo->create($createData);
 
         return [
             'success' => true,
