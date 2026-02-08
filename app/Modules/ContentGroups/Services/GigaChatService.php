@@ -326,29 +326,18 @@ PROMPT;
 
     private function parseResponse(string $raw, string $idea, string $language): array
     {
-        // Очищаем от markdown-обёрток
-        $clean = trim($raw);
-        if (str_starts_with($clean, '```json')) {
-            $clean = substr($clean, 7);
-        } elseif (str_starts_with($clean, '```')) {
-            $clean = substr($clean, 3);
-        }
-        if (str_ends_with($clean, '```')) {
-            $clean = substr($clean, 0, -3);
-        }
-        $clean = trim($clean);
+        error_log('GigaChatService::parseResponse: Raw response (first 2000 chars): ' . mb_substr($raw, 0, 2000));
 
-        $items = json_decode($clean, true);
+        $items = $this->extractJsonFromText($raw);
 
         if (!is_array($items) || empty($items)) {
-            error_log('GigaChatService::parseResponse: Failed to parse JSON. Raw: ' . mb_substr($raw, 0, 500));
-            // Пробуем извлечь JSON из текста
-            if (preg_match('/\[[\s\S]*\]/u', $raw, $matches)) {
-                $items = json_decode($matches[0], true);
-            }
-            if (!is_array($items) || empty($items)) {
-                throw new \RuntimeException('Не удалось разобрать ответ GigaChat');
-            }
+            error_log('GigaChatService::parseResponse: All JSON extraction methods failed');
+            // Последняя попытка — сформировать вариант из сырого текста
+            $items = $this->buildFallbackVariant($raw, $idea);
+        }
+
+        if (!is_array($items) || empty($items)) {
+            throw new \RuntimeException('Не удалось разобрать ответ GigaChat');
         }
 
         $variants = [];
@@ -422,6 +411,138 @@ PROMPT;
 
         error_log('GigaChatService::parseResponse: Parsed ' . count($variants) . ' variants');
         return $variants;
+    }
+
+    // ─── Извлечение JSON ───────────────────────────────────────────
+
+    /**
+     * Пробует множество способов извлечь JSON-массив из ответа GigaChat.
+     */
+    private function extractJsonFromText(string $raw): ?array
+    {
+        // 1. Прямой парсинг с очисткой markdown
+        $clean = trim($raw);
+
+        // Убираем BOM и прочие невидимые символы в начале
+        $clean = preg_replace('/^\x{FEFF}/u', '', $clean);
+
+        // Убираем ```json ... ``` (разные варианты)
+        if (preg_match('/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/u', $clean, $m)) {
+            $clean = trim($m[1]);
+        } else {
+            // Убираем только открывающие/закрывающие ```
+            $clean = preg_replace('/^```(?:json)?\s*\n?/u', '', $clean);
+            $clean = preg_replace('/\n?\s*```$/u', '', $clean);
+            $clean = trim($clean);
+        }
+
+        $items = json_decode($clean, true);
+        if (is_array($items) && !empty($items)) {
+            // Если вернулся объект, а не массив вариантов — оборачиваем
+            if (isset($items['title'])) {
+                error_log('GigaChatService::extractJson: Got single object, wrapping in array');
+                return [$items];
+            }
+            error_log('GigaChatService::extractJson: Direct parse OK, ' . count($items) . ' items');
+            return $items;
+        }
+
+        // 2. Ищем JSON-массив [...] в тексте (самый большой)
+        if (preg_match_all('/\[[\s\S]*?\](?=[^]]*$|\s*$)/u', $raw, $allMatches)) {
+            // Пробуем от самого длинного совпадения
+            $candidates = $allMatches[0];
+            usort($candidates, fn($a, $b) => strlen($b) - strlen($a));
+            foreach ($candidates as $candidate) {
+                $parsed = json_decode($candidate, true);
+                if (is_array($parsed) && !empty($parsed)) {
+                    error_log('GigaChatService::extractJson: Found array in text, ' . count($parsed) . ' items');
+                    return $parsed;
+                }
+            }
+        }
+
+        // 3. Ищем первый [ и последний ] и пробуем всё между ними
+        $firstBracket = strpos($raw, '[');
+        $lastBracket = strrpos($raw, ']');
+        if ($firstBracket !== false && $lastBracket !== false && $lastBracket > $firstBracket) {
+            $jsonCandidate = substr($raw, $firstBracket, $lastBracket - $firstBracket + 1);
+            $parsed = json_decode($jsonCandidate, true);
+            if (is_array($parsed) && !empty($parsed)) {
+                error_log('GigaChatService::extractJson: Bracket extraction OK, ' . count($parsed) . ' items');
+                return $parsed;
+            }
+
+            // 3b. Возможно, в JSON есть невалидные trailing commas — пробуем почистить
+            $fixedJson = preg_replace('/,\s*([\]}])/u', '$1', $jsonCandidate);
+            $parsed = json_decode($fixedJson, true);
+            if (is_array($parsed) && !empty($parsed)) {
+                error_log('GigaChatService::extractJson: Bracket extraction with trailing comma fix OK');
+                return $parsed;
+            }
+        }
+
+        // 4. Ищем JSON-объект {...} — может быть один вариант вместо массива
+        if (preg_match('/\{[\s\S]*"title"[\s\S]*\}/u', $raw, $objMatch)) {
+            $parsed = json_decode($objMatch[0], true);
+            if (is_array($parsed) && isset($parsed['title'])) {
+                error_log('GigaChatService::extractJson: Found single object with title');
+                return [$parsed];
+            }
+        }
+
+        // 5. GigaChat иногда возвращает несколько JSON-объектов через запятую без обёртки в массив
+        $wrappedRaw = '[' . $clean . ']';
+        $parsed = json_decode($wrappedRaw, true);
+        if (is_array($parsed) && !empty($parsed) && isset($parsed[0]['title'])) {
+            error_log('GigaChatService::extractJson: Wrapped objects as array OK');
+            return $parsed;
+        }
+
+        error_log('GigaChatService::extractJson: All methods failed. JSON error: ' . json_last_error_msg());
+        return null;
+    }
+
+    /**
+     * Формирует fallback-вариант из сырого текста, если JSON не удалось извлечь.
+     */
+    private function buildFallbackVariant(string $raw, string $idea): ?array
+    {
+        // Пробуем вытащить хотя бы заголовок и описание regex-ом
+        $title = '';
+        $description = '';
+        $tags = [];
+
+        // "title": "...", "description": "..."
+        if (preg_match('/"title"\s*:\s*"([^"]+)"/u', $raw, $m)) {
+            $title = $m[1];
+        }
+        if (preg_match('/"description"\s*:\s*"([^"]+)"/u', $raw, $m)) {
+            $description = $m[1];
+        }
+        if (preg_match_all('/"tags"\s*:\s*\[([^\]]+)\]/u', $raw, $m)) {
+            foreach ($m[1] as $tagStr) {
+                if (preg_match_all('/"([^"]+)"/u', $tagStr, $tagMatches)) {
+                    $tags = array_merge($tags, $tagMatches[1]);
+                }
+            }
+        }
+
+        if (empty($title)) {
+            error_log('GigaChatService::buildFallbackVariant: Could not extract title from raw text');
+            return null;
+        }
+
+        error_log('GigaChatService::buildFallbackVariant: Extracted title="' . $title . '"');
+
+        return [[
+            'title' => $title,
+            'description' => $description ?: $idea,
+            'tags' => array_slice(array_unique($tags), 0, 12),
+            'emoji' => '🎬',
+            'pinned_comment' => '',
+            'content_type' => 'generic',
+            'mood' => 'neutral',
+        ]];
     }
 
     // ─── Утилиты ─────────────────────────────────────────────────────
