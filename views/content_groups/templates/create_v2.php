@@ -152,24 +152,6 @@ ob_start();
             <textarea id="description" name="description" rows="2" placeholder="Для чего используется этот шаблон"><?= htmlspecialchars($descriptionValue) ?></textarea>
         </div>
 
-        <!-- Переключатель автогенерации (шаблонная) -->
-        <div class="form-group">
-            <label class="checkbox-label">
-                <input type="checkbox" id="use_auto_generation" name="use_auto_generation">
-                🚀 Использовать автогенерацию контента (шаблонная)
-            </label>
-            <small>Автоматически сгенерировать контент из одной идеи (шаблонный движок, без AI)</small>
-        </div>
-
-        <!-- Переключатель автогенерации через AI GROQ -->
-        <div class="form-group">
-            <label class="checkbox-label checkbox-label-groq">
-                <input type="checkbox" id="use_groq_ai" name="use_groq_ai">
-                🤖 Использовать автогенерацию контента ИИ GROQ
-            </label>
-            <small>Генерация через нейросеть Groq AI (LLaMA 3.3 70B) — более креативные и уникальные результаты</small>
-        </div>
-
         <!-- Переключатель автогенерации через GigaChat -->
         <div class="form-group">
             <label class="checkbox-label checkbox-label-gigachat">
@@ -185,12 +167,6 @@ ob_start();
             <input type="text" id="video_idea" name="video_idea" placeholder="Например: Девушка поёт под неоном" maxlength="100">
             <small>Опишите суть видео в 3-7 словах</small>
             <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
-                <button type="button" class="btn btn-secondary" id="btn_generate_template" onclick="generateFromIdea()" style="display:none;">
-                    🎯 Сгенерировать (шаблон)
-                </button>
-                <button type="button" class="btn btn-primary" id="btn_generate_groq" onclick="generateFromGroq()" style="display:none;">
-                    🤖 Сгенерировать (AI GROQ)
-                </button>
                 <button type="button" class="btn btn-gigachat" id="btn_generate_gigachat" onclick="generateFromGigaChat()" style="display:none;">
                     🧠 Сгенерировать (GigaChat)
                 </button>
@@ -552,44 +528,6 @@ ob_start();
     margin-top: 1rem;
 }
 
-.auto-gen-field.groq-mode {
-    background: #e8e5f5;
-    border-color: #7c3aed;
-}
-
-.checkbox-label-groq {
-    color: #7c3aed;
-    font-weight: bold;
-}
-
-.btn-groq {
-    background: linear-gradient(135deg, #7c3aed, #a855f7);
-    color: #fff;
-    border: none;
-    padding: 0.5rem 1.2rem;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: bold;
-}
-.btn-groq:hover {
-    background: linear-gradient(135deg, #6d28d9, #9333ea);
-}
-.btn-groq:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.groq-badge {
-    display: inline-block;
-    background: linear-gradient(135deg, #7c3aed, #a855f7);
-    color: #fff;
-    font-size: 0.7rem;
-    padding: 0.15rem 0.5rem;
-    border-radius: 10px;
-    margin-left: 0.5rem;
-    vertical-align: middle;
-}
-
 /* GigaChat styles */
 .auto-gen-field.gigachat-mode {
     background: #e5f3e8;
@@ -826,48 +764,27 @@ function validateTemplate() {
     return errors.length === 0;
 }
 
-// Текущий режим автогенерации: 'none', 'template', 'groq', 'gigachat'
+// Текущий режим автогенерации: 'none' или 'gigachat'
 let currentAutoGenMode = 'none';
 
 // Функция для переключения режима автогенерации
 function toggleAutoGeneration() {
     try {
-        const useAutoGen = document.getElementById('use_auto_generation');
-        const useGroqAi = document.getElementById('use_groq_ai');
         const useGigaChatAi = document.getElementById('use_gigachat_ai');
         const manualFields = document.getElementById('manual_fields');
         const ideaField = document.getElementById('idea_field');
-        const btnTemplate = document.getElementById('btn_generate_template');
-        const btnGroq = document.getElementById('btn_generate_groq');
         const btnGigaChat = document.getElementById('btn_generate_gigachat');
 
-        if (!useAutoGen || !useGroqAi || !useGigaChatAi || !manualFields || !ideaField) {
+        if (!useGigaChatAi || !manualFields || !ideaField) {
             console.error('toggleAutoGeneration: required elements not found');
             return;
         }
 
-        const templateChecked = useAutoGen.checked;
-        const groqChecked = useGroqAi.checked;
-        const gigachatChecked = useGigaChatAi.checked;
-
-        // Определяем режим
-        if (gigachatChecked) {
-            currentAutoGenMode = 'gigachat';
-        } else if (groqChecked) {
-            currentAutoGenMode = 'groq';
-        } else if (templateChecked) {
-            currentAutoGenMode = 'template';
-        } else {
-            currentAutoGenMode = 'none';
-        }
-
+        currentAutoGenMode = useGigaChatAi.checked ? 'gigachat' : 'none';
         console.log('🔄 Auto-gen mode:', currentAutoGenMode);
 
-        // Скрываем все кнопки по умолчанию
-        if (btnTemplate) btnTemplate.style.display = 'none';
-        if (btnGroq) btnGroq.style.display = 'none';
         if (btnGigaChat) btnGigaChat.style.display = 'none';
-        ideaField.classList.remove('groq-mode', 'gigachat-mode');
+        ideaField.classList.remove('gigachat-mode');
 
         if (currentAutoGenMode === 'none') {
             manualFields.style.display = 'block';
@@ -877,56 +794,20 @@ function toggleAutoGeneration() {
             ideaField.style.display = 'block';
             ideaField.style.opacity = '1';
             ideaField.style.visibility = 'visible';
-
-            if (currentAutoGenMode === 'groq') {
-                ideaField.classList.add('groq-mode');
-                if (btnGroq) btnGroq.style.display = 'inline-block';
-            } else if (currentAutoGenMode === 'gigachat') {
-                ideaField.classList.add('gigachat-mode');
-                if (btnGigaChat) btnGigaChat.style.display = 'inline-block';
-            } else {
-                if (btnTemplate) btnTemplate.style.display = 'inline-block';
-            }
+            ideaField.classList.add('gigachat-mode');
+            if (btnGigaChat) btnGigaChat.style.display = 'inline-block';
         }
     } catch (error) {
         console.error('toggleAutoGeneration error:', error);
     }
 }
 
-// Сброс всех чекбоксов кроме указанного
-function uncheckOtherAiCheckboxes(exceptId) {
-    const ids = ['use_auto_generation', 'use_groq_ai', 'use_gigachat_ai'];
-    ids.forEach(function(id) {
-        if (id !== exceptId) {
-            const el = document.getElementById(id);
-            if (el) el.checked = false;
-        }
-    });
-}
-
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
-    const checkboxTemplate = document.getElementById('use_auto_generation');
-    const checkboxGroq = document.getElementById('use_groq_ai');
     const checkboxGigaChat = document.getElementById('use_gigachat_ai');
-
-    if (checkboxTemplate) {
-        checkboxTemplate.addEventListener('change', function() {
-            if (this.checked) uncheckOtherAiCheckboxes('use_auto_generation');
-            toggleAutoGeneration();
-        });
-    }
-
-    if (checkboxGroq) {
-        checkboxGroq.addEventListener('change', function() {
-            if (this.checked) uncheckOtherAiCheckboxes('use_groq_ai');
-            toggleAutoGeneration();
-        });
-    }
 
     if (checkboxGigaChat) {
         checkboxGigaChat.addEventListener('change', function() {
-            if (this.checked) uncheckOtherAiCheckboxes('use_gigachat_ai');
             toggleAutoGeneration();
         });
     }
@@ -934,156 +815,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Начальное состояние
     toggleAutoGeneration();
 });
-
-// Функция для генерации контента из идеи
-function generateFromIdea() {
-    const idea = document.getElementById('video_idea').value.trim();
-
-    if (!idea || idea.length < 3) {
-        alert('Пожалуйста, введите идею минимум 3 символа');
-        return;
-    }
-
-    console.log('Generating content for idea:', idea);
-
-    // Показываем загрузку
-    const button = event.target;
-    const originalText = button.innerHTML;
-    button.innerHTML = '⏳ Генерирую...';
-    button.disabled = true;
-
-    // Отправляем запрос
-    fetch('/content-groups/templates/suggest-content', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: 'idea=' + encodeURIComponent(idea) + '&csrf_token=' + document.querySelector('[name="csrf_token"]').value
-    })
-    .then(response => {
-        console.log('Response status:', response.status);
-        return response.json();
-    })
-    .then(data => {
-        console.log('Received data:', data);
-        if (data.success) {
-            // Показываем результат в консоли
-            console.log('🎯 Сгенерированный контент:');
-            console.log('- Название:', data.content.title_template);
-            console.log('- Описание:', data.content.description_template);
-            console.log('- Теги:', data.content.tags_template);
-            console.log('- Emoji:', data.content.emoji_list);
-            console.log('- Тип контента:', data.intent.content_type);
-            console.log('- Настроение:', data.intent.mood);
-
-            // Автозаполняем поля
-            fillFormWithSuggestion(data);
-
-            // Показываем уведомление с кратким результатом
-            const variantsCount = data.content.generated_variants || data.variants_count || 1;
-            const titlesCount = data.content.title_variants ? data.content.title_variants.length : 0;
-            const preview = `🎯 Сгенерировано ${variantsCount} вариантов контента!\n📝 Заголовков: ${titlesCount}, Описаний: ${data.content.unique_descriptions || 0}\n\nНазвание: "${data.content.title_template}"\nОписание: "${data.content.description_template}"\n\nПосмотрите в консоли (F12) для полного результата!`;
-            alert('✅ Контент успешно сгенерирован!\n\n' + preview);
-        } else {
-            console.error('Server returned error:', data.message);
-            alert('❌ Ошибка: ' + (data.message || 'Не удалось сгенерировать контент'));
-        }
-    })
-    .catch(error => {
-        console.error('Fetch error:', error);
-        alert('❌ Произошла ошибка при генерации контента: ' + error.message);
-    })
-    .finally(() => {
-        // Восстанавливаем кнопку
-        button.innerHTML = originalText;
-        button.disabled = false;
-    });
-}
-
-// Функция для генерации контента через Groq AI
-function generateFromGroq() {
-    const idea = document.getElementById('video_idea').value.trim();
-
-    if (!idea || idea.length < 3) {
-        alert('Пожалуйста, введите идею минимум 3 символа');
-        return;
-    }
-
-    console.log('🤖 Generating content via Groq AI for idea:', idea);
-
-    // Показываем загрузку
-    const button = document.getElementById('btn_generate_groq');
-    const originalText = button.innerHTML;
-    button.innerHTML = '⏳ AI генерирует...';
-    button.disabled = true;
-
-    // Создаем AbortController для таймаута
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-        controller.abort();
-        console.warn('⏰ Groq request timed out (60s)');
-    }, 60000);
-
-    // Отправляем запрос
-    fetch('/content-groups/templates/suggest-content', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: 'idea=' + encodeURIComponent(idea) +
-              '&csrf_token=' + document.querySelector('[name="csrf_token"]').value +
-              '&use_groq_ai=1',
-        signal: controller.signal
-    })
-    .then(response => {
-        clearTimeout(timeoutId);
-        console.log('📡 Groq response status:', response.status);
-        if (!response.ok) {
-            throw new Error('HTTP ' + response.status + ': ' + response.statusText);
-        }
-        return response.json();
-    })
-    .then(data => {
-        console.log('🤖 Groq AI response:', data);
-        if (data.success) {
-            // Переключаемся на ручной режим для отображения полей
-            const checkboxGroq = document.getElementById('use_groq_ai');
-            if (checkboxGroq) checkboxGroq.checked = false;
-            const checkboxTemplate = document.getElementById('use_auto_generation');
-            if (checkboxTemplate) checkboxTemplate.checked = false;
-            toggleAutoGeneration();
-
-            // Заполняем форму
-            fillFormWithSuggestion(data);
-
-            const variantsCount = data.content.generated_variants || data.variants_count || 1;
-            const titlesCount = data.content.title_variants ? data.content.title_variants.length : 0;
-            const descriptionsCount = data.content.unique_descriptions || 0;
-            alert('🤖 AI GROQ сгенерировал контент!\n' +
-                  '📝 Заголовков: ' + titlesCount + '\n' +
-                  '📋 Описаний: ' + descriptionsCount + '\n' +
-                  '🎯 Всего вариантов: ' + variantsCount + '\n\n' +
-                  'Форма заполнена. Проверьте и при необходимости отредактируйте.');
-        } else {
-            alert('❌ Ошибка Groq AI: ' + (data.message || 'Не удалось сгенерировать'));
-        }
-    })
-    .catch(error => {
-        clearTimeout(timeoutId);
-        console.error('Groq generation error:', error);
-        if (error.name === 'AbortError') {
-            alert('⏰ AI генерация заняла слишком долго (60 сек). Попробуйте ещё раз.');
-        } else {
-            alert('❌ Ошибка при обращении к Groq AI: ' + error.message);
-        }
-    })
-    .finally(() => {
-        button.innerHTML = originalText;
-        button.disabled = false;
-    });
-}
 
 // Функция для генерации контента через GigaChat AI (Сбер)
 function generateFromGigaChat() {
