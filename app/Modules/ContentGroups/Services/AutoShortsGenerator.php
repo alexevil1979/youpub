@@ -17,11 +17,17 @@ class AutoShortsGenerator
 {
     private AutoShortsIntentService $intentService;
     private AutoShortsTemplateService $templateService;
+    private bool $useGroq;
 
-    public function __construct()
+    /**
+     * @param bool $useGroq  Если true — генерирует через Groq AI (при наличии ключа).
+     *                        Если false (по умолчанию) — шаблонный движок.
+     */
+    public function __construct(bool $useGroq = false)
     {
         $this->intentService   = new AutoShortsIntentService();
         $this->templateService = new AutoShortsTemplateService();
+        $this->useGroq = $useGroq;
     }
 
     /**
@@ -72,6 +78,18 @@ class AutoShortsGenerator
     {
         if (empty($idea) || !is_string($idea)) {
             throw new \InvalidArgumentException('Идея должна быть непустой строкой');
+        }
+
+        // Если включён режим Groq — делегируем в GroqService
+        if ($this->useGroq && GroqService::isAvailable()) {
+            try {
+                error_log('AutoShortsGenerator: Delegating to Groq AI');
+                $groqService = new GroqService();
+                return $groqService->generateMultipleVariants($idea, $count);
+            } catch (\Throwable $e) {
+                error_log('AutoShortsGenerator: Groq AI failed (' . $e->getMessage() . '), falling back to templates');
+                // Продолжаем шаблонную генерацию как fallback
+            }
         }
         
         $originalIdea   = trim($idea);

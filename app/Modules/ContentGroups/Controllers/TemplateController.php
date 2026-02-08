@@ -5,6 +5,8 @@ namespace App\Modules\ContentGroups\Controllers;
 use Core\Controller;
 use App\Modules\ContentGroups\Services\TemplateService;
 use App\Modules\ContentGroups\Services\AutoShortsGenerator;
+use App\Modules\ContentGroups\Services\GroqService;
+use App\Modules\ContentGroups\Services\GigaChatService;
 
 /**
  * Контроллер для управления шаблонами
@@ -284,8 +286,10 @@ class TemplateController extends Controller
 
             // Проверяем, используется ли автогенерация
             $useAutoGeneration = $this->getParam('use_auto_generation', false);
+            $useGroqAi = !empty($this->getParam('use_groq_ai', false));
+            $useGigaChatAi = !empty($this->getParam('use_gigachat_ai', false));
 
-            if ($useAutoGeneration) {
+            if ($useAutoGeneration || $useGroqAi || $useGigaChatAi) {
                 // Используем автогенерацию
                 $videoIdea = trim($this->getParam('video_idea', ''));
 
@@ -299,23 +303,59 @@ class TemplateController extends Controller
                     exit;
                 }
 
-                // Генерируем множественные варианты контента (как в suggestContent)
-                $variantCount = 25; // Генерируем 25 вариантов для богатого выбора
-                error_log('TemplateController::create: Generating ' . $variantCount . ' variants for idea: "' . $videoIdea . '"');
-                try {
-                    $variants = $this->getAutoGenerator()->generateMultipleVariants($videoIdea, $variantCount);
-                    error_log('TemplateController::create: Generated ' . count($variants) . ' variants');
-                } catch (\Throwable $genError) {
-                    error_log('TemplateController::create: Generation error: ' . $genError->getMessage());
-                    error_log('TemplateController::create: Stack trace: ' . $genError->getTraceAsString());
-                    error_log('TemplateController::create: File: ' . $genError->getFile() . ':' . $genError->getLine());
-                    // Убеждаемся, что сессия инициализирована перед сохранением ошибки
-                    if (session_status() === PHP_SESSION_NONE) {
-                        session_start();
+                // Генерируем множественные варианты контента
+                if ($useGigaChatAi) {
+                    // GigaChat AI — 10 качественных вариантов
+                    $variantCount = 10;
+                    error_log('TemplateController::create: Using GigaChat AI, generating ' . $variantCount . ' variants for idea: "' . $videoIdea . '"');
+                    try {
+                        $gigaChatService = new GigaChatService();
+                        $variants = $gigaChatService->generateMultipleVariants($videoIdea, $variantCount);
+                        error_log('TemplateController::create: GigaChat generated ' . count($variants) . ' variants');
+                    } catch (\Throwable $genError) {
+                        error_log('TemplateController::create: GigaChat error: ' . $genError->getMessage());
+                        if (session_status() === PHP_SESSION_NONE) {
+                            session_start();
+                        }
+                        $_SESSION['error'] = 'Ошибка GigaChat: ' . htmlspecialchars($genError->getMessage());
+                        header('Location: /content-groups/templates/create-shorts');
+                        exit;
                     }
-                    $_SESSION['error'] = 'Ошибка генерации контента: ' . htmlspecialchars($genError->getMessage());
-                    header('Location: /content-groups/templates/create-shorts');
-                    exit;
+                } elseif ($useGroqAi) {
+                    // Groq AI — 10 качественных вариантов
+                    $variantCount = 10;
+                    error_log('TemplateController::create: Using Groq AI, generating ' . $variantCount . ' variants for idea: "' . $videoIdea . '"');
+                    try {
+                        $groqService = new GroqService();
+                        $variants = $groqService->generateMultipleVariants($videoIdea, $variantCount);
+                        error_log('TemplateController::create: Groq AI generated ' . count($variants) . ' variants');
+                    } catch (\Throwable $genError) {
+                        error_log('TemplateController::create: Groq AI error: ' . $genError->getMessage());
+                        if (session_status() === PHP_SESSION_NONE) {
+                            session_start();
+                        }
+                        $_SESSION['error'] = 'Ошибка Groq AI: ' . htmlspecialchars($genError->getMessage());
+                        header('Location: /content-groups/templates/create-shorts');
+                        exit;
+                    }
+                } else {
+                    // Шаблонная генерация — 25 вариантов
+                    $variantCount = 25;
+                    error_log('TemplateController::create: Using template generator, generating ' . $variantCount . ' variants for idea: "' . $videoIdea . '"');
+                    try {
+                        $variants = $this->getAutoGenerator()->generateMultipleVariants($videoIdea, $variantCount);
+                        error_log('TemplateController::create: Generated ' . count($variants) . ' variants');
+                    } catch (\Throwable $genError) {
+                        error_log('TemplateController::create: Generation error: ' . $genError->getMessage());
+                        error_log('TemplateController::create: Stack trace: ' . $genError->getTraceAsString());
+                        error_log('TemplateController::create: File: ' . $genError->getFile() . ':' . $genError->getLine());
+                        if (session_status() === PHP_SESSION_NONE) {
+                            session_start();
+                        }
+                        $_SESSION['error'] = 'Ошибка генерации контента: ' . htmlspecialchars($genError->getMessage());
+                        header('Location: /content-groups/templates/create-shorts');
+                        exit;
+                    }
                 }
 
                 if (empty($variants)) {
@@ -582,7 +622,7 @@ class TemplateController extends Controller
             $emojiArray = [];
             $variants = [];
 
-            if (!$useAutoGeneration) {
+            if (!$useAutoGeneration && !$useGroqAi && !$useGigaChatAi) {
                 $emojiList = $this->getParam('emoji_list', '');
                 $emojiArray = !empty($emojiList) ? array_filter(array_map('trim', explode(',', $emojiList))) : [];
 
@@ -941,18 +981,50 @@ class TemplateController extends Controller
                 exit;
             }
 
-            // Проверяем, что autoGenerator инициализирован
-            // Генерируем контент (20-30 вариантов)
-            $variantCount = 25; // Генерируем 25 вариантов для богатого выбора
-            error_log('TemplateController::suggestContent: Calling autoGenerator->generateMultipleVariants with ' . $variantCount . ' variants');
-            try {
-                $variants = $this->getAutoGenerator()->generateMultipleVariants($idea, $variantCount);
-                error_log('TemplateController::suggestContent: Generation completed successfully, got ' . count($variants) . ' variants');
-            } catch (\Throwable $genError) {
-                error_log('TemplateController::suggestContent: Generation error: ' . $genError->getMessage());
-                error_log('TemplateController::suggestContent: Stack trace: ' . $genError->getTraceAsString());
-                error_log('TemplateController::suggestContent: File: ' . $genError->getFile() . ':' . $genError->getLine());
-                throw $genError;
+            // Определяем, какой AI использовать
+            $useGroqAi = !empty($this->getParam('use_groq_ai', false));
+            $useGigaChatAi = !empty($this->getParam('use_gigachat_ai', false));
+            error_log('TemplateController::suggestContent: use_groq_ai = ' . ($useGroqAi ? 'true' : 'false') . ', use_gigachat_ai = ' . ($useGigaChatAi ? 'true' : 'false'));
+
+            if ($useGigaChatAi) {
+                // Генерация через GigaChat (Сбер)
+                $variantCount = 10;
+                error_log('TemplateController::suggestContent: Using GigaChat AI, requesting ' . $variantCount . ' variants');
+                try {
+                    $gigaChatService = new GigaChatService();
+                    $variants = $gigaChatService->generateMultipleVariants($idea, $variantCount);
+                    error_log('TemplateController::suggestContent: GigaChat generated ' . count($variants) . ' variants');
+                } catch (\Throwable $genError) {
+                    error_log('TemplateController::suggestContent: GigaChat error: ' . $genError->getMessage());
+                    error_log('TemplateController::suggestContent: Stack trace: ' . $genError->getTraceAsString());
+                    throw $genError;
+                }
+            } elseif ($useGroqAi) {
+                // Генерация через Groq AI
+                $variantCount = 10;
+                error_log('TemplateController::suggestContent: Using Groq AI, requesting ' . $variantCount . ' variants');
+                try {
+                    $groqService = new GroqService();
+                    $variants = $groqService->generateMultipleVariants($idea, $variantCount);
+                    error_log('TemplateController::suggestContent: Groq AI generated ' . count($variants) . ' variants');
+                } catch (\Throwable $genError) {
+                    error_log('TemplateController::suggestContent: Groq AI error: ' . $genError->getMessage());
+                    error_log('TemplateController::suggestContent: Stack trace: ' . $genError->getTraceAsString());
+                    throw $genError;
+                }
+            } else {
+                // Стандартная шаблонная генерация
+                $variantCount = 25;
+                error_log('TemplateController::suggestContent: Using template generator, requesting ' . $variantCount . ' variants');
+                try {
+                    $variants = $this->getAutoGenerator()->generateMultipleVariants($idea, $variantCount);
+                    error_log('TemplateController::suggestContent: Template generation completed, got ' . count($variants) . ' variants');
+                } catch (\Throwable $genError) {
+                    error_log('TemplateController::suggestContent: Generation error: ' . $genError->getMessage());
+                    error_log('TemplateController::suggestContent: Stack trace: ' . $genError->getTraceAsString());
+                    error_log('TemplateController::suggestContent: File: ' . $genError->getFile() . ':' . $genError->getLine());
+                    throw $genError;
+                }
             }
 
             if (empty($variants)) {

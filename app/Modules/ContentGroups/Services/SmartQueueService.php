@@ -193,7 +193,7 @@ class SmartQueueService extends Service
             return ['success' => false, 'message' => 'Video not found'];
         }
 
-        // Проверяем тип автогенерации: 0 = шаблон, 1 = имя файла, 2 = название группы, 3 = описание группы
+        // Проверяем тип автогенерации: 0 = шаблон, 1 = имя файла, 2 = название группы, 3 = описание группы, 4 = Groq AI, 5 = GigaChat AI
         $autoGenType = (int)($group['use_auto_generation'] ?? 0);
         
         // ВАЖНО: Проверяем video['title'] - если "unknown", используем file_name
@@ -212,11 +212,27 @@ class SmartQueueService extends Service
             'platform' => $firstPlatform,
         ];
 
-        // Если включена автогенерация, используем AutoShortsGenerator
+        // Если включена автогенерация, используем AutoShortsGenerator, GroqService или GigaChatService
         if ($autoGenType > 0) {
             $idea = '';
             
-            if ($autoGenType === 1) {
+            if ($autoGenType === 5) {
+                // GigaChat AI — идея из имени файла или названия группы
+                error_log("SmartQueueService::processGroupSchedule: GigaChat AI auto-generation enabled (type=5)");
+                $idea = $this->extractIdeaFromFileName($video['file_name'] ?? $videoTitle);
+                if (empty($idea) || mb_strlen($idea) < 3) {
+                    $idea = trim($group['name'] ?? '');
+                }
+                error_log("SmartQueueService::processGroupSchedule: GigaChat idea: '{$idea}'");
+            } elseif ($autoGenType === 4) {
+                // Groq AI — идея из имени файла или названия группы
+                error_log("SmartQueueService::processGroupSchedule: Groq AI auto-generation enabled (type=4)");
+                $idea = $this->extractIdeaFromFileName($video['file_name'] ?? $videoTitle);
+                if (empty($idea) || mb_strlen($idea) < 3) {
+                    $idea = trim($group['name'] ?? '');
+                }
+                error_log("SmartQueueService::processGroupSchedule: Groq AI idea: '{$idea}'");
+            } elseif ($autoGenType === 1) {
                 // Автогенерация на основе имени файла
                 error_log("SmartQueueService::processGroupSchedule: Auto-generation from file name enabled");
                 $idea = $this->extractIdeaFromFileName($video['file_name'] ?? $videoTitle);
@@ -242,9 +258,27 @@ class SmartQueueService extends Service
                 $autoGenType = 0; // Fallback to template
             } else {
                 try {
-                    // Генерируем контент используя AutoShortsGenerator
-                    $autoGenerator = new \App\Modules\ContentGroups\Services\AutoShortsGenerator();
-                    $variants = $autoGenerator->generateMultipleVariants($idea, 1);
+                    // Выбираем генератор в зависимости от типа
+                    if ($autoGenType === 5 && \App\Modules\ContentGroups\Services\GigaChatService::isAvailable()) {
+                        // Генерация через GigaChat AI
+                        error_log("SmartQueueService::processGroupSchedule: Using GigaChat AI generator");
+                        $gigaChatService = new \App\Modules\ContentGroups\Services\GigaChatService();
+                        $variants = $gigaChatService->generateMultipleVariants($idea, 1);
+                    } elseif ($autoGenType === 4 && \App\Modules\ContentGroups\Services\GroqService::isAvailable()) {
+                        // Генерация через Groq AI
+                        error_log("SmartQueueService::processGroupSchedule: Using Groq AI generator");
+                        $groqService = new \App\Modules\ContentGroups\Services\GroqService();
+                        $variants = $groqService->generateMultipleVariants($idea, 1);
+                    } else {
+                        if ($autoGenType === 5) {
+                            error_log("SmartQueueService::processGroupSchedule: GigaChat AI not available, falling back to template generator");
+                        } elseif ($autoGenType === 4) {
+                            error_log("SmartQueueService::processGroupSchedule: Groq AI not available, falling back to template generator");
+                        }
+                        // Генерация через шаблонный движок
+                        $autoGenerator = new \App\Modules\ContentGroups\Services\AutoShortsGenerator();
+                        $variants = $autoGenerator->generateMultipleVariants($idea, 1);
+                    }
                     
                     if (!empty($variants) && isset($variants[0])) {
                         $generated = $variants[0];
@@ -265,8 +299,10 @@ class SmartQueueService extends Service
                             'hook_type' => $generated['intent']['content_type'] ?? 'emotional',
                         ];
                         
-                        error_log("SmartQueueService::processGroupSchedule: Auto-generated title: " . mb_substr($templated['title'] ?? 'N/A', 0, 100));
-                        error_log("SmartQueueService::processGroupSchedule: Auto-generated description: " . mb_substr($templated['description'] ?? 'N/A', 0, 100));
+                        $genSources = [4 => 'Groq AI', 5 => 'GigaChat AI'];
+                        $genSource = $genSources[$autoGenType] ?? 'Template';
+                        error_log("SmartQueueService::processGroupSchedule: [{$genSource}] Auto-generated title: " . mb_substr($templated['title'] ?? 'N/A', 0, 100));
+                        error_log("SmartQueueService::processGroupSchedule: [{$genSource}] Auto-generated description: " . mb_substr($templated['description'] ?? 'N/A', 0, 100));
                     } else {
                         error_log("SmartQueueService::processGroupSchedule: Auto-generation failed, falling back to template");
                         $autoGenType = 0; // Fallback to template
@@ -717,7 +753,7 @@ class SmartQueueService extends Service
             
             // Генерируем оформление один раз для всех интеграций (если не было сохранено)
             if (!$templated) {
-                // Проверяем тип автогенерации: 0 = шаблон, 1 = имя файла, 2 = название группы, 3 = описание группы
+                // Проверяем тип автогенерации: 0 = шаблон, 1 = имя файла, 2 = название группы, 3 = описание группы, 4 = Groq AI, 5 = GigaChat AI
                 $autoGenType = (int)($group['use_auto_generation'] ?? 0);
                 
                 // ВАЖНО: Проверяем video['title'] - если "unknown", используем file_name
@@ -727,11 +763,27 @@ class SmartQueueService extends Service
                     error_log("SmartQueueService::publishGroupFileNow: Video title was empty/unknown, using file_name: {$videoTitle}");
                 }
 
-                // Если включена автогенерация, используем AutoShortsGenerator
+                // Если включена автогенерация, используем AutoShortsGenerator, GroqService или GigaChatService
                 if ($autoGenType > 0) {
                     $idea = '';
                     
-                    if ($autoGenType === 1) {
+                    if ($autoGenType === 5) {
+                        // GigaChat AI — идея из имени файла или названия группы
+                        error_log("SmartQueueService::publishGroupFileNow: GigaChat AI auto-generation enabled (type=5)");
+                        $idea = $this->extractIdeaFromFileName($video['file_name'] ?? $videoTitle);
+                        if (empty($idea) || mb_strlen($idea) < 3) {
+                            $idea = trim($group['name'] ?? '');
+                        }
+                        error_log("SmartQueueService::publishGroupFileNow: GigaChat idea: '{$idea}'");
+                    } elseif ($autoGenType === 4) {
+                        // Groq AI — идея из имени файла или названия группы
+                        error_log("SmartQueueService::publishGroupFileNow: Groq AI auto-generation enabled (type=4)");
+                        $idea = $this->extractIdeaFromFileName($video['file_name'] ?? $videoTitle);
+                        if (empty($idea) || mb_strlen($idea) < 3) {
+                            $idea = trim($group['name'] ?? '');
+                        }
+                        error_log("SmartQueueService::publishGroupFileNow: Groq AI idea: '{$idea}'");
+                    } elseif ($autoGenType === 1) {
                         // Автогенерация на основе имени файла
                         error_log("SmartQueueService::publishGroupFileNow: Auto-generation from file name enabled");
                         $idea = $this->extractIdeaFromFileName($video['file_name'] ?? $videoTitle);
@@ -757,9 +809,27 @@ class SmartQueueService extends Service
                         $autoGenType = 0; // Fallback to template
                     } else {
                         try {
-                            // Генерируем контент используя AutoShortsGenerator
-                            $autoGenerator = new \App\Modules\ContentGroups\Services\AutoShortsGenerator();
-                            $variants = $autoGenerator->generateMultipleVariants($idea, 1);
+                            // Выбираем генератор в зависимости от типа
+                            if ($autoGenType === 5 && \App\Modules\ContentGroups\Services\GigaChatService::isAvailable()) {
+                                // Генерация через GigaChat AI
+                                error_log("SmartQueueService::publishGroupFileNow: Using GigaChat AI generator");
+                                $gigaChatService = new \App\Modules\ContentGroups\Services\GigaChatService();
+                                $variants = $gigaChatService->generateMultipleVariants($idea, 1);
+                            } elseif ($autoGenType === 4 && \App\Modules\ContentGroups\Services\GroqService::isAvailable()) {
+                                // Генерация через Groq AI
+                                error_log("SmartQueueService::publishGroupFileNow: Using Groq AI generator");
+                                $groqService = new \App\Modules\ContentGroups\Services\GroqService();
+                                $variants = $groqService->generateMultipleVariants($idea, 1);
+                            } else {
+                                if ($autoGenType === 5) {
+                                    error_log("SmartQueueService::publishGroupFileNow: GigaChat AI not available, falling back to template generator");
+                                } elseif ($autoGenType === 4) {
+                                    error_log("SmartQueueService::publishGroupFileNow: Groq AI not available, falling back to template generator");
+                                }
+                                // Генерация через шаблонный движок
+                                $autoGenerator = new \App\Modules\ContentGroups\Services\AutoShortsGenerator();
+                                $variants = $autoGenerator->generateMultipleVariants($idea, 1);
+                            }
                             
                             if (!empty($variants) && isset($variants[0])) {
                                 $generated = $variants[0];
@@ -779,8 +849,10 @@ class SmartQueueService extends Service
                                     'hook_type' => $generated['intent']['content_type'] ?? 'emotional',
                                 ];
                                 
-                                error_log("SmartQueueService::publishGroupFileNow: Auto-generated title: " . ($templated['title'] ?? 'N/A'));
-                                error_log("SmartQueueService::publishGroupFileNow: Auto-generated description: " . mb_substr($templated['description'] ?? 'N/A', 0, 100));
+                                $genSources = [4 => 'Groq AI', 5 => 'GigaChat AI'];
+                                $genSource = $genSources[$autoGenType] ?? 'Template';
+                                error_log("SmartQueueService::publishGroupFileNow: [{$genSource}] Auto-generated title: " . ($templated['title'] ?? 'N/A'));
+                                error_log("SmartQueueService::publishGroupFileNow: [{$genSource}] Auto-generated description: " . mb_substr($templated['description'] ?? 'N/A', 0, 100));
                             } else {
                                 error_log("SmartQueueService::publishGroupFileNow: Auto-generation failed, falling back to template");
                                 $autoGenType = 0; // Fallback to template

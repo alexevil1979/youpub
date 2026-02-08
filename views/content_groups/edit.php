@@ -44,6 +44,14 @@ ob_start();
                 <input type="radio" name="use_auto_generation" value="3" <?= !empty($group['use_auto_generation']) && $group['use_auto_generation'] == '3' ? 'checked' : '' ?> style="margin-right: 0.5rem;">
                 <span>📄 Автогенерация на основе описания группы<?= !empty($group['description']) ? ' ("' . htmlspecialchars(mb_substr($group['description'], 0, 50)) . (mb_strlen($group['description']) > 50 ? '...' : '') . '")' : ' (описание не задано)' ?></span>
             </label>
+            <label style="display: flex; align-items: center; cursor: pointer;">
+                <input type="radio" name="use_auto_generation" value="4" <?= !empty($group['use_auto_generation']) && $group['use_auto_generation'] == '4' ? 'checked' : '' ?> style="margin-right: 0.5rem;">
+                <span>🤖 Автогенерация через ИИ GROQ (нейросеть LLaMA 3.3 — креативные уникальные тексты)</span>
+            </label>
+            <label style="display: flex; align-items: center; cursor: pointer;">
+                <input type="radio" name="use_auto_generation" value="5" <?= !empty($group['use_auto_generation']) && $group['use_auto_generation'] == '5' ? 'checked' : '' ?> style="margin-right: 0.5rem;">
+                <span>🧠 Автогенерация через ИИ GigaChat (Сбер — отлично понимает русский контекст)</span>
+            </label>
         </div>
         <small>Выберите способ автоматического оформления контента для публикаций из этой группы</small>
     </div>

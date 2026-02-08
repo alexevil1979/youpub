@@ -46,6 +46,8 @@
 - **Your Client ID**: `123456789-abcdefg.apps.googleusercontent.com`
 - **Your Client Secret**: `GOCSPX-abcdefghijklmnop`
 
+⚠️ **Ваши реальные Client ID и Secret** вставляйте в `config/env.php`, а не сюда!
+
 ⚠️ **Сохраните Client Secret** - он показывается только один раз!
 
 ### Шаг 4: Настройте на сервере

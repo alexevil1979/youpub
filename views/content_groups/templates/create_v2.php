@@ -152,13 +152,31 @@ ob_start();
             <textarea id="description" name="description" rows="2" placeholder="Для чего используется этот шаблон"><?= htmlspecialchars($descriptionValue) ?></textarea>
         </div>
 
-        <!-- Переключатель автогенерации -->
+        <!-- Переключатель автогенерации (шаблонная) -->
         <div class="form-group">
             <label class="checkbox-label">
                 <input type="checkbox" id="use_auto_generation" name="use_auto_generation">
-                🚀 Использовать автогенерацию контента
+                🚀 Использовать автогенерацию контента (шаблонная)
             </label>
-            <small>Автоматически сгенерировать контент из одной идеи вместо ручного заполнения</small>
+            <small>Автоматически сгенерировать контент из одной идеи (шаблонный движок, без AI)</small>
+        </div>
+
+        <!-- Переключатель автогенерации через AI GROQ -->
+        <div class="form-group">
+            <label class="checkbox-label checkbox-label-groq">
+                <input type="checkbox" id="use_groq_ai" name="use_groq_ai">
+                🤖 Использовать автогенерацию контента ИИ GROQ
+            </label>
+            <small>Генерация через нейросеть Groq AI (LLaMA 3.3 70B) — более креативные и уникальные результаты</small>
+        </div>
+
+        <!-- Переключатель автогенерации через GigaChat -->
+        <div class="form-group">
+            <label class="checkbox-label checkbox-label-gigachat">
+                <input type="checkbox" id="use_gigachat_ai" name="use_gigachat_ai">
+                🧠 Использовать автогенерацию контента ИИ GigaChat (Сбер)
+            </label>
+            <small>Генерация через GigaChat (Сбер) — русскоязычная нейросеть, отлично понимает русский контекст</small>
         </div>
 
         <!-- Поле для идеи (скрыто по умолчанию) -->
@@ -166,9 +184,17 @@ ob_start();
             <label for="video_idea">💡 Базовая идея видео *</label>
             <input type="text" id="video_idea" name="video_idea" placeholder="Например: Девушка поёт под неоном" maxlength="100">
             <small>Опишите суть видео в 3-7 словах</small>
-            <button type="button" class="btn btn-secondary" onclick="generateFromIdea()" style="margin-top: 0.5rem;">
-                🎯 Сгенерировать контент
-            </button>
+            <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
+                <button type="button" class="btn btn-secondary" id="btn_generate_template" onclick="generateFromIdea()" style="display:none;">
+                    🎯 Сгенерировать (шаблон)
+                </button>
+                <button type="button" class="btn btn-primary" id="btn_generate_groq" onclick="generateFromGroq()" style="display:none;">
+                    🤖 Сгенерировать (AI GROQ)
+                </button>
+                <button type="button" class="btn btn-gigachat" id="btn_generate_gigachat" onclick="generateFromGigaChat()" style="display:none;">
+                    🧠 Сгенерировать (GigaChat)
+                </button>
+            </div>
         </div>
     </div>
 
@@ -525,6 +551,72 @@ ob_start();
     padding: 1rem;
     margin-top: 1rem;
 }
+
+.auto-gen-field.groq-mode {
+    background: #e8e5f5;
+    border-color: #7c3aed;
+}
+
+.checkbox-label-groq {
+    color: #7c3aed;
+    font-weight: bold;
+}
+
+.btn-groq {
+    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    color: #fff;
+    border: none;
+    padding: 0.5rem 1.2rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+}
+.btn-groq:hover {
+    background: linear-gradient(135deg, #6d28d9, #9333ea);
+}
+.btn-groq:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.groq-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    color: #fff;
+    font-size: 0.7rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 10px;
+    margin-left: 0.5rem;
+    vertical-align: middle;
+}
+
+/* GigaChat styles */
+.auto-gen-field.gigachat-mode {
+    background: #e5f3e8;
+    border-color: #21a038;
+}
+
+.checkbox-label-gigachat {
+    color: #21a038;
+    font-weight: bold;
+}
+
+.btn-gigachat {
+    background: linear-gradient(135deg, #21a038, #4eca68);
+    color: #fff;
+    border: none;
+    padding: 0.5rem 1.2rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+}
+.btn-gigachat:hover {
+    background: linear-gradient(135deg, #1a8030, #3db858);
+}
+.btn-gigachat:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
 </style>
 
 <script>
@@ -734,107 +826,113 @@ function validateTemplate() {
     return errors.length === 0;
 }
 
+// Текущий режим автогенерации: 'none', 'template', 'groq', 'gigachat'
+let currentAutoGenMode = 'none';
+
 // Функция для переключения режима автогенерации
 function toggleAutoGeneration() {
     try {
-        console.log('🔄 toggleAutoGeneration called');
         const useAutoGen = document.getElementById('use_auto_generation');
+        const useGroqAi = document.getElementById('use_groq_ai');
+        const useGigaChatAi = document.getElementById('use_gigachat_ai');
         const manualFields = document.getElementById('manual_fields');
         const ideaField = document.getElementById('idea_field');
+        const btnTemplate = document.getElementById('btn_generate_template');
+        const btnGroq = document.getElementById('btn_generate_groq');
+        const btnGigaChat = document.getElementById('btn_generate_gigachat');
 
-        if (!useAutoGen) {
-            console.error('❌ Element use_auto_generation not found');
-            return;
-        }
-        if (!manualFields) {
-            console.error('❌ Element manual_fields not found');
-            return;
-        }
-        if (!ideaField) {
-            console.error('❌ Element idea_field not found');
+        if (!useAutoGen || !useGroqAi || !useGigaChatAi || !manualFields || !ideaField) {
+            console.error('toggleAutoGeneration: required elements not found');
             return;
         }
 
-        const checked = useAutoGen.checked;
-        console.log('📋 Auto generation checked:', checked);
-        console.log('📋 Current displays before change:', {
-            manualFields: manualFields.style.display,
-            ideaField: ideaField.style.display
-        });
+        const templateChecked = useAutoGen.checked;
+        const groqChecked = useGroqAi.checked;
+        const gigachatChecked = useGigaChatAi.checked;
 
-        if (checked) {
+        // Определяем режим
+        if (gigachatChecked) {
+            currentAutoGenMode = 'gigachat';
+        } else if (groqChecked) {
+            currentAutoGenMode = 'groq';
+        } else if (templateChecked) {
+            currentAutoGenMode = 'template';
+        } else {
+            currentAutoGenMode = 'none';
+        }
+
+        console.log('🔄 Auto-gen mode:', currentAutoGenMode);
+
+        // Скрываем все кнопки по умолчанию
+        if (btnTemplate) btnTemplate.style.display = 'none';
+        if (btnGroq) btnGroq.style.display = 'none';
+        if (btnGigaChat) btnGigaChat.style.display = 'none';
+        ideaField.classList.remove('groq-mode', 'gigachat-mode');
+
+        if (currentAutoGenMode === 'none') {
+            manualFields.style.display = 'block';
+            ideaField.style.display = 'none';
+        } else {
             manualFields.style.display = 'none';
             ideaField.style.display = 'block';
             ideaField.style.opacity = '1';
             ideaField.style.visibility = 'visible';
-            console.log('✅ Switched to auto-generation mode');
-            console.log('📋 New displays:', {
-                manualFields: manualFields.style.display,
-                ideaField: ideaField.style.display,
-                ideaFieldOpacity: ideaField.style.opacity,
-                ideaFieldVisibility: ideaField.style.visibility
-            });
-            // Добавим визуальную индикацию
-            ideaField.style.border = '2px solid #007bff';
-            setTimeout(() => { ideaField.style.border = ''; }, 1000);
-        } else {
-            manualFields.style.display = 'block';
-            manualFields.style.opacity = '1';
-            manualFields.style.visibility = 'visible';
-            ideaField.style.display = 'none';
-            console.log('✅ Switched to manual mode');
-            console.log('📋 New displays:', {
-                manualFields: manualFields.style.display,
-                ideaField: ideaField.style.display,
-                manualFieldsOpacity: manualFields.style.opacity,
-                manualFieldsVisibility: manualFields.style.visibility
-            });
-            // Добавим визуальную индикацию
-            manualFields.style.border = '2px solid #28a745';
-            setTimeout(() => { manualFields.style.border = ''; }, 1000);
+
+            if (currentAutoGenMode === 'groq') {
+                ideaField.classList.add('groq-mode');
+                if (btnGroq) btnGroq.style.display = 'inline-block';
+            } else if (currentAutoGenMode === 'gigachat') {
+                ideaField.classList.add('gigachat-mode');
+                if (btnGigaChat) btnGigaChat.style.display = 'inline-block';
+            } else {
+                if (btnTemplate) btnTemplate.style.display = 'inline-block';
+            }
         }
     } catch (error) {
-        console.error('💥 Error in toggleAutoGeneration:', error);
+        console.error('toggleAutoGeneration error:', error);
     }
+}
+
+// Сброс всех чекбоксов кроме указанного
+function uncheckOtherAiCheckboxes(exceptId) {
+    const ids = ['use_auto_generation', 'use_groq_ai', 'use_gigachat_ai'];
+    ids.forEach(function(id) {
+        if (id !== exceptId) {
+            const el = document.getElementById(id);
+            if (el) el.checked = false;
+        }
+    });
 }
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Page loaded, initializing toggleAutoGeneration');
-    console.log('📋 Current URL:', window.location.href);
+    const checkboxTemplate = document.getElementById('use_auto_generation');
+    const checkboxGroq = document.getElementById('use_groq_ai');
+    const checkboxGigaChat = document.getElementById('use_gigachat_ai');
 
-    const checkbox = document.getElementById('use_auto_generation');
-    const manualFields = document.getElementById('manual_fields');
-    const ideaField = document.getElementById('idea_field');
-
-    console.log('🔍 Elements found:', {
-        checkbox: !!checkbox,
-        manualFields: !!manualFields,
-        ideaField: !!ideaField
-    });
-
-    if (checkbox) {
-        // Добавляем обработчик события
-        checkbox.addEventListener('change', function() {
-            console.log('📝 Checkbox changed, checked:', checkbox.checked, 'calling toggleAutoGeneration');
+    if (checkboxTemplate) {
+        checkboxTemplate.addEventListener('change', function() {
+            if (this.checked) uncheckOtherAiCheckboxes('use_auto_generation');
             toggleAutoGeneration();
         });
-
-        // Также добавим обработчик клика для надежности
-        checkbox.addEventListener('click', function() {
-            console.log('🖱️ Checkbox clicked, checked:', checkbox.checked);
-            // Небольшая задержка чтобы дать браузеру обновить состояние
-            setTimeout(() => {
-                console.log('🖱️ After timeout, checked:', checkbox.checked);
-                toggleAutoGeneration();
-            }, 10);
-        });
-        // Вызываем функцию один раз при загрузке для корректного начального состояния
-        toggleAutoGeneration();
-        console.log('✅ toggleAutoGeneration initialized');
-    } else {
-        console.error('❌ use_auto_generation checkbox not found');
     }
+
+    if (checkboxGroq) {
+        checkboxGroq.addEventListener('change', function() {
+            if (this.checked) uncheckOtherAiCheckboxes('use_groq_ai');
+            toggleAutoGeneration();
+        });
+    }
+
+    if (checkboxGigaChat) {
+        checkboxGigaChat.addEventListener('change', function() {
+            if (this.checked) uncheckOtherAiCheckboxes('use_gigachat_ai');
+            toggleAutoGeneration();
+        });
+    }
+
+    // Начальное состояние
+    toggleAutoGeneration();
 });
 
 // Функция для генерации контента из идеи
@@ -898,6 +996,170 @@ function generateFromIdea() {
     })
     .finally(() => {
         // Восстанавливаем кнопку
+        button.innerHTML = originalText;
+        button.disabled = false;
+    });
+}
+
+// Функция для генерации контента через Groq AI
+function generateFromGroq() {
+    const idea = document.getElementById('video_idea').value.trim();
+
+    if (!idea || idea.length < 3) {
+        alert('Пожалуйста, введите идею минимум 3 символа');
+        return;
+    }
+
+    console.log('🤖 Generating content via Groq AI for idea:', idea);
+
+    // Показываем загрузку
+    const button = document.getElementById('btn_generate_groq');
+    const originalText = button.innerHTML;
+    button.innerHTML = '⏳ AI генерирует...';
+    button.disabled = true;
+
+    // Создаем AbortController для таймаута
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+        controller.abort();
+        console.warn('⏰ Groq request timed out (60s)');
+    }, 60000);
+
+    // Отправляем запрос
+    fetch('/content-groups/templates/suggest-content', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: 'idea=' + encodeURIComponent(idea) +
+              '&csrf_token=' + document.querySelector('[name="csrf_token"]').value +
+              '&use_groq_ai=1',
+        signal: controller.signal
+    })
+    .then(response => {
+        clearTimeout(timeoutId);
+        console.log('📡 Groq response status:', response.status);
+        if (!response.ok) {
+            throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('🤖 Groq AI response:', data);
+        if (data.success) {
+            // Переключаемся на ручной режим для отображения полей
+            const checkboxGroq = document.getElementById('use_groq_ai');
+            if (checkboxGroq) checkboxGroq.checked = false;
+            const checkboxTemplate = document.getElementById('use_auto_generation');
+            if (checkboxTemplate) checkboxTemplate.checked = false;
+            toggleAutoGeneration();
+
+            // Заполняем форму
+            fillFormWithSuggestion(data);
+
+            const variantsCount = data.content.generated_variants || data.variants_count || 1;
+            const titlesCount = data.content.title_variants ? data.content.title_variants.length : 0;
+            const descriptionsCount = data.content.unique_descriptions || 0;
+            alert('🤖 AI GROQ сгенерировал контент!\n' +
+                  '📝 Заголовков: ' + titlesCount + '\n' +
+                  '📋 Описаний: ' + descriptionsCount + '\n' +
+                  '🎯 Всего вариантов: ' + variantsCount + '\n\n' +
+                  'Форма заполнена. Проверьте и при необходимости отредактируйте.');
+        } else {
+            alert('❌ Ошибка Groq AI: ' + (data.message || 'Не удалось сгенерировать'));
+        }
+    })
+    .catch(error => {
+        clearTimeout(timeoutId);
+        console.error('Groq generation error:', error);
+        if (error.name === 'AbortError') {
+            alert('⏰ AI генерация заняла слишком долго (60 сек). Попробуйте ещё раз.');
+        } else {
+            alert('❌ Ошибка при обращении к Groq AI: ' + error.message);
+        }
+    })
+    .finally(() => {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    });
+}
+
+// Функция для генерации контента через GigaChat AI (Сбер)
+function generateFromGigaChat() {
+    const idea = document.getElementById('video_idea').value.trim();
+
+    if (!idea || idea.length < 3) {
+        alert('Пожалуйста, введите идею минимум 3 символа');
+        return;
+    }
+
+    console.log('🧠 Generating content via GigaChat for idea:', idea);
+
+    const button = document.getElementById('btn_generate_gigachat');
+    const originalText = button.innerHTML;
+    button.innerHTML = '⏳ GigaChat генерирует...';
+    button.disabled = true;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+        controller.abort();
+    }, 90000); // 90 сек — GigaChat может быть медленнее
+
+    fetch('/content-groups/templates/suggest-content', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: 'idea=' + encodeURIComponent(idea) +
+              '&csrf_token=' + document.querySelector('[name="csrf_token"]').value +
+              '&use_gigachat_ai=1',
+        signal: controller.signal
+    })
+    .then(response => {
+        clearTimeout(timeoutId);
+        if (!response.ok) {
+            throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('🧠 GigaChat response:', data);
+        if (data.success) {
+            // Переключаемся на ручной режим
+            const checkboxGigaChat = document.getElementById('use_gigachat_ai');
+            if (checkboxGigaChat) checkboxGigaChat.checked = false;
+            const checkboxGroq = document.getElementById('use_groq_ai');
+            if (checkboxGroq) checkboxGroq.checked = false;
+            const checkboxTemplate = document.getElementById('use_auto_generation');
+            if (checkboxTemplate) checkboxTemplate.checked = false;
+            toggleAutoGeneration();
+
+            fillFormWithSuggestion(data);
+
+            const variantsCount = data.content.generated_variants || data.variants_count || 1;
+            const titlesCount = data.content.title_variants ? data.content.title_variants.length : 0;
+            const descriptionsCount = data.content.unique_descriptions || 0;
+            alert('🧠 GigaChat (Сбер) сгенерировал контент!\n' +
+                  '📝 Заголовков: ' + titlesCount + '\n' +
+                  '📋 Описаний: ' + descriptionsCount + '\n' +
+                  '🎯 Всего вариантов: ' + variantsCount + '\n\n' +
+                  'Форма заполнена. Проверьте и при необходимости отредактируйте.');
+        } else {
+            alert('❌ Ошибка GigaChat: ' + (data.message || 'Не удалось сгенерировать'));
+        }
+    })
+    .catch(error => {
+        clearTimeout(timeoutId);
+        console.error('GigaChat generation error:', error);
+        if (error.name === 'AbortError') {
+            alert('⏰ GigaChat генерация заняла слишком долго (90 сек). Попробуйте ещё раз.');
+        } else {
+            alert('❌ Ошибка при обращении к GigaChat: ' + error.message);
+        }
+    })
+    .finally(() => {
         button.innerHTML = originalText;
         button.disabled = false;
     });
