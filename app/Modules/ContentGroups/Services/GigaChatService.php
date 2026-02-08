@@ -16,16 +16,19 @@ class GigaChatService
     private const OAUTH_URL = 'https://ngw.devices.sberbank.ru:9443/api/v2/oauth';
     private const API_URL   = 'https://gigachat.devices.sberbank.ru/api/v1/chat/completions';
     private const SCOPE     = 'GIGACHAT_API_PERS';
-    private const MODEL     = 'GigaChat-Plus';
-    private const KEY_FILE  = 'gigachat.key';
+    private const MODEL_PRO  = 'GigaChat-Pro';  // → GigaChat-2-Pro (лучше следует инструкциям)
+    private const MODEL_LITE = 'GigaChat';      // → GigaChat-2 Lite (больше бесплатных токенов)
+    private const KEY_FILE   = 'gigachat.key';
 
     private string $authCredentials;
     private ?string $accessToken = null;
     private ?int $tokenExpiresAt = null;
+    private string $currentModel;
 
     public function __construct()
     {
         $this->authCredentials = $this->loadAuthKey();
+        $this->currentModel = self::MODEL_PRO; // Начинаем с Pro
     }
 
     /**
@@ -62,8 +65,10 @@ class GigaChatService
 
         $allVariants = [];
         $usedTitles = [];
-        $maxAttempts = 4; // Максимум 4 запроса к API
-        $batchSize = min($count, 5); // Просим по 5 за раз — модели проще
+        $maxAttempts = 5; // Максимум 5 запросов к API
+        $batchSize = 3;   // По 3 за раз — GigaChat лучше справляется с малыми запросами
+
+        error_log("GigaChatService::generateMultipleVariants: Starting, need {$count} variants, batchSize={$batchSize}, maxAttempts={$maxAttempts}");
 
         for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
             $remaining = $count - count($allVariants);
@@ -72,14 +77,16 @@ class GigaChatService
             }
 
             $requestCount = min($batchSize, $remaining);
-            error_log("GigaChatService: Attempt " . ($attempt + 1) . ", requesting {$requestCount} variants (have " . count($allVariants) . "/{$count})");
+            error_log("GigaChatService: >>> Attempt " . ($attempt + 1) . "/{$maxAttempts}, requesting {$requestCount} variants (have " . count($allVariants) . "/{$count})");
 
             try {
                 $prompt = $this->buildPrompt($idea, $requestCount, $language, $usedTitles);
                 $rawResponse = $this->callApi($prompt);
                 $parsed = $this->parseResponse($rawResponse, $idea, $language);
 
+                $addedThisRound = 0;
                 if (!empty($parsed)) {
+                    error_log("GigaChatService: Attempt " . ($attempt + 1) . " parsed " . count($parsed) . " variants from response");
                     foreach ($parsed as $variant) {
                         $title = $variant['content']['title'] ?? '';
                         // Пропускаем дубликаты заголовков
@@ -90,23 +97,28 @@ class GigaChatService
                         $usedTitles[] = $title;
                         $variant['variant_number'] = count($allVariants) + 1;
                         $allVariants[] = $variant;
+                        $addedThisRound++;
 
                         if (count($allVariants) >= $count) {
                             break;
                         }
                     }
+                } else {
+                    error_log("GigaChatService: Attempt " . ($attempt + 1) . " returned EMPTY parsed result");
                 }
+                error_log("GigaChatService: Attempt " . ($attempt + 1) . " added {$addedThisRound} new variants, total now: " . count($allVariants));
             } catch (\Throwable $e) {
-                error_log("GigaChatService: Attempt " . ($attempt + 1) . " failed: " . $e->getMessage());
+                error_log("GigaChatService: Attempt " . ($attempt + 1) . " FAILED: " . $e->getMessage());
                 // Если первая попытка — пробрасываем ошибку, иначе возвращаем что есть
                 if ($attempt === 0 && empty($allVariants)) {
                     throw $e;
                 }
-                break;
+                // Не break — пробуем ещё
+                continue;
             }
         }
 
-        error_log("GigaChatService: Total variants collected: " . count($allVariants) . "/{$count}");
+        error_log("GigaChatService::generateMultipleVariants: DONE. Total variants: " . count($allVariants) . "/{$count}");
 
         if (empty($allVariants)) {
             throw new \RuntimeException('GigaChat не вернул валидные варианты контента');
@@ -235,7 +247,7 @@ PROMPT;
         $token = $this->getAccessToken();
 
         $payload = json_encode([
-            'model' => self::MODEL,
+            'model' => $this->currentModel,
             'messages' => [
                 [
                     'role' => 'system',
@@ -246,13 +258,12 @@ PROMPT;
                     'content' => $prompt
                 ]
             ],
-            'temperature' => 0.9,
-            'max_tokens' => 4096,
-            'top_p' => 0.9,
-            'repetition_penalty' => 1.1,
+            'temperature' => 1.0,
+            'max_tokens' => 8192,
+            'top_p' => 0.95,
         ], JSON_UNESCAPED_UNICODE);
 
-        error_log('GigaChatService::callApi: Sending request to GigaChat, model: ' . self::MODEL);
+        error_log('GigaChatService::callApi: Sending request, model: ' . $this->currentModel);
 
         $ch = curl_init(self::API_URL);
         curl_setopt_array($ch, [
@@ -289,8 +300,16 @@ PROMPT;
         }
 
         if ($httpCode !== 200) {
-            error_log("GigaChatService::callApi: HTTP {$httpCode}, response: " . mb_substr($response, 0, 500));
-            $errorMsg = 'GigaChat API вернул ошибку (HTTP ' . $httpCode . ')';
+            error_log("GigaChatService::callApi: HTTP {$httpCode}, model={$this->currentModel}, response: " . mb_substr($response, 0, 500));
+
+            // При 404 (модель недоступна) или 429 (лимит токенов) — переключаемся на Lite
+            if (in_array($httpCode, [404, 429, 402]) && $this->currentModel !== self::MODEL_LITE) {
+                error_log("GigaChatService::callApi: Switching from {$this->currentModel} to " . self::MODEL_LITE . " (fallback)");
+                $this->currentModel = self::MODEL_LITE;
+                return $this->callApi($prompt); // Retry с Lite моделью
+            }
+
+            $errorMsg = 'GigaChat API вернул ошибку (HTTP ' . $httpCode . ', model=' . $this->currentModel . ')';
             $decoded = json_decode($response, true);
             if (isset($decoded['message'])) {
                 $errorMsg .= ': ' . $decoded['message'];
