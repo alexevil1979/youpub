@@ -589,6 +589,24 @@ class YoutubeService extends Service
 
         error_log("YoutubeService::uploadVideoToYouTube: Starting upload. File: {$videoPath}, Size: {$fileSize} bytes");
 
+        // Добавляем хештеги из тегов в конец описания
+        if (!empty($tags)) {
+            $tagList = array_map('trim', explode(',', $tags));
+            $tagList = array_filter($tagList, fn($t) => $t !== '');
+            if (!empty($tagList)) {
+                $hashtags = array_map(function ($tag) {
+                    $tag = str_replace(' ', '', $tag); // убираем пробелы внутри тега
+                    $tag = ltrim($tag, '#'); // убираем # если уже есть
+                    return '#' . $tag;
+                }, $tagList);
+                $hashtagLine = "\n\n" . implode(' ', $hashtags);
+                // YouTube ограничивает описание в 5000 символов
+                if (mb_strlen($description . $hashtagLine) <= 5000) {
+                    $description .= $hashtagLine;
+                }
+            }
+        }
+
         // Создаем метаданные видео
         $categoryId = (string)($this->config['YOUTUBE_CATEGORY_ID'] ?? '22');
         if (!preg_match('/^\d+$/', $categoryId)) {
@@ -597,7 +615,7 @@ class YoutubeService extends Service
         $snippet = [
             'title' => $title,
             'description' => $description,
-            'tags' => !empty($tags) ? explode(',', $tags) : [],
+            'tags' => !empty($tags) ? array_map('trim', explode(',', $tags)) : [],
             'categoryId' => $categoryId,
         ];
 
@@ -746,6 +764,23 @@ class YoutubeService extends Service
         string $description,
         string $tags
     ): array {
+        // Добавляем хештеги из тегов в конец описания
+        if (!empty($tags)) {
+            $tagList = array_map('trim', explode(',', $tags));
+            $tagList = array_filter($tagList, fn($t) => $t !== '');
+            if (!empty($tagList)) {
+                $hashtags = array_map(function ($tag) {
+                    $tag = str_replace(' ', '', $tag);
+                    $tag = ltrim($tag, '#');
+                    return '#' . $tag;
+                }, $tagList);
+                $hashtagLine = "\n\n" . implode(' ', $hashtags);
+                if (mb_strlen($description . $hashtagLine) <= 5000) {
+                    $description .= $hashtagLine;
+                }
+            }
+        }
+
         // Создаем multipart/form-data запрос
         $boundary = uniqid();
         $delimiter = '-------------' . $boundary;
@@ -753,7 +788,7 @@ class YoutubeService extends Service
         $snippet = [
             'title' => $title,
             'description' => $description,
-            'tags' => !empty($tags) ? explode(',', $tags) : [],
+            'tags' => !empty($tags) ? array_map('trim', explode(',', $tags)) : [],
             'categoryId' => '22',
         ];
 
