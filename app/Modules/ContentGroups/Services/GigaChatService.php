@@ -16,7 +16,7 @@ class GigaChatService
     private const OAUTH_URL = 'https://ngw.devices.sberbank.ru:9443/api/v2/oauth';
     private const API_URL   = 'https://gigachat.devices.sberbank.ru/api/v1/chat/completions';
     private const SCOPE     = 'GIGACHAT_API_PERS';
-    private const MODEL     = 'GigaChat';
+    private const MODEL     = 'GigaChat-Plus';
     private const KEY_FILE  = 'gigachat.key';
 
     private string $authCredentials;
@@ -60,15 +60,59 @@ class GigaChatService
         $count = max(1, min($count, 10));
         $language = $language ?: $this->detectLanguage($idea);
 
-        $prompt = $this->buildPrompt($idea, $count, $language);
-        $rawResponse = $this->callApi($prompt);
-        $parsed = $this->parseResponse($rawResponse, $idea, $language);
+        $allVariants = [];
+        $usedTitles = [];
+        $maxAttempts = 4; // Максимум 4 запроса к API
+        $batchSize = min($count, 5); // Просим по 5 за раз — модели проще
 
-        if (empty($parsed)) {
+        for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
+            $remaining = $count - count($allVariants);
+            if ($remaining <= 0) {
+                break;
+            }
+
+            $requestCount = min($batchSize, $remaining);
+            error_log("GigaChatService: Attempt " . ($attempt + 1) . ", requesting {$requestCount} variants (have " . count($allVariants) . "/{$count})");
+
+            try {
+                $prompt = $this->buildPrompt($idea, $requestCount, $language, $usedTitles);
+                $rawResponse = $this->callApi($prompt);
+                $parsed = $this->parseResponse($rawResponse, $idea, $language);
+
+                if (!empty($parsed)) {
+                    foreach ($parsed as $variant) {
+                        $title = $variant['content']['title'] ?? '';
+                        // Пропускаем дубликаты заголовков
+                        if (!empty($title) && in_array($title, $usedTitles, true)) {
+                            error_log("GigaChatService: Skipping duplicate title: {$title}");
+                            continue;
+                        }
+                        $usedTitles[] = $title;
+                        $variant['variant_number'] = count($allVariants) + 1;
+                        $allVariants[] = $variant;
+
+                        if (count($allVariants) >= $count) {
+                            break;
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                error_log("GigaChatService: Attempt " . ($attempt + 1) . " failed: " . $e->getMessage());
+                // Если первая попытка — пробрасываем ошибку, иначе возвращаем что есть
+                if ($attempt === 0 && empty($allVariants)) {
+                    throw $e;
+                }
+                break;
+            }
+        }
+
+        error_log("GigaChatService: Total variants collected: " . count($allVariants) . "/{$count}");
+
+        if (empty($allVariants)) {
             throw new \RuntimeException('GigaChat не вернул валидные варианты контента');
         }
 
-        return $parsed;
+        return $allVariants;
     }
 
     /**
@@ -149,44 +193,40 @@ class GigaChatService
 
     // ─── Вызов API ───────────────────────────────────────────────────
 
-    private function buildPrompt(string $idea, int $count, string $language): string
+    private function buildPrompt(string $idea, int $count, string $language, array $usedTitles = []): string
     {
         $langInstructions = $language === 'en'
             ? 'Generate ALL content in English.'
             : 'Генерируй ВЕСЬ контент на русском языке.';
 
+        $avoidSection = '';
+        if (!empty($usedTitles)) {
+            $titlesList = implode("\n", array_map(fn($t) => "- \"{$t}\"", $usedTitles));
+            $avoidSection = "\n\nСледующие заголовки УЖЕ ИСПОЛЬЗОВАНЫ, НЕ повторяй их и не создавай похожие:\n{$titlesList}\n";
+        }
+
         return <<<PROMPT
 Ты — профессиональный SMM-менеджер и копирайтер для YouTube Shorts.
 
-Задача: сгенерировать {$count} уникальных вариантов оформления для YouTube Shorts видео.
+Задача: сгенерировать РОВНО {$count} уникальных вариантов оформления для YouTube Shorts видео.
 
 Базовая идея видео: "{$idea}"
 
 {$langInstructions}
+{$avoidSection}
+Для КАЖДОГО из {$count} вариантов сгенерируй:
+1. "title" — цепляющий заголовок (до 95 символов). Должен вызывать желание кликнуть. БЕЗ нумерации.
+2. "description" — описание видео (2-4 предложения, до 500 символов). Включи CTA.
+3. "tags" — массив из 8-12 тегов (без #).
+4. "emoji" — 2-3 подходящих emoji.
+5. "pinned_comment" — вовлекающий комментарий (вопрос к аудитории).
+6. "content_type" — одно из: dance, comedy, aesthetic, emotional, educational, motivation, music, cooking, fitness, beauty, gaming, travel, generic.
+7. "mood" — одно из: calm, emotional, neutral, romantic, mysterious, energetic.
 
-Для КАЖДОГО варианта сгенерируй:
-1. **title** — цепляющий заголовок (до 95 символов). Должен вызывать желание кликнуть. БЕЗ нумерации, БЕЗ слов "Часть", "Серия", "Эпизод".
-2. **description** — описание видео (2-4 предложения, до 500 символов). Включи CTA (призыв к действию).
-3. **tags** — массив из 8-12 релевантных тегов/хештегов (без #).
-4. **emoji** — строка из 2-3 подходящих emoji.
-5. **pinned_comment** — вовлекающий закреплённый комментарий (вопрос к аудитории).
-6. **content_type** — тип контента: одно из [dance, comedy, aesthetic, emotional, educational, motivation, music, cooking, fitness, beauty, gaming, travel, generic].
-7. **mood** — настроение: одно из [calm, emotional, neutral, romantic, mysterious, energetic].
+ВАЖНО: верни РОВНО {$count} вариантов! Каждый с уникальным стилем и подачей.
 
-Каждый вариант должен быть УНИКАЛЬНЫМ по стилю и подаче. Не повторяй заголовки и описания.
-
-Верни ТОЛЬКО валидный JSON массив (без markdown-обёрток, без ```json):
-[
-  {
-    "title": "...",
-    "description": "...",
-    "tags": ["tag1", "tag2"],
-    "emoji": "🎵✨",
-    "pinned_comment": "...",
-    "content_type": "...",
-    "mood": "..."
-  }
-]
+Ответь ТОЛЬКО валидным JSON массивом, без пояснений, без markdown:
+[{"title":"...","description":"...","tags":["tag1","tag2"],"emoji":"🎵✨","pinned_comment":"...","content_type":"...","mood":"..."}]
 PROMPT;
     }
 
