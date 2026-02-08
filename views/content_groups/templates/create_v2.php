@@ -318,19 +318,6 @@ ob_start();
             <small>Эти теги будут в каждом видео</small>
         </div>
 
-        <div class="form-group">
-            <label>Вариативные теги (ротация)</label>
-            <div id="tagVariants">
-                <?php foreach ($tagVariants as $value): ?>
-                <div class="variant-item">
-                    <input type="text" name="tag_variants[]" value="<?= htmlspecialchars($value) ?>" required>
-                    <button type="button" class="btn btn-sm btn-danger remove-variant" style="display: none;">❌</button>
-                </div>
-                <?php endforeach; ?>
-            </div>
-            <button type="button" id="addTagVariant" class="btn btn-sm btn-secondary">➕ Добавить вариант тегов</button>
-            <small>Из этих наборов выбирается 3-5 тегов для каждого видео</small>
-        </div>
     </div>
 
     <!-- ВОВЛЕЧЁННОСТЬ -->
@@ -643,14 +630,6 @@ document.getElementById('addDescriptionVariant').addEventListener('click', funct
     );
 });
 
-// Добавление вариантов тегов
-document.getElementById('addTagVariant').addEventListener('click', function() {
-    addVariant('tagVariants',
-        '<input type="text" name="tag_variants[]" placeholder="Новый набор тегов" required>' +
-        '<button type="button" class="btn btn-sm btn-danger remove-variant" onclick="removeVariant(this)">❌</button>',
-        3
-    );
-});
 
 // Добавление вопросов
 document.getElementById('addQuestionVariant').addEventListener('click', function() {
