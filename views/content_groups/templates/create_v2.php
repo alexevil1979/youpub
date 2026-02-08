@@ -152,8 +152,17 @@ ob_start();
             <textarea id="description" name="description" rows="2" placeholder="Для чего используется этот шаблон"><?= htmlspecialchars($descriptionValue) ?></textarea>
         </div>
 
-        <!-- Переключатель автогенерации через GigaChat -->
+        <!-- Переключатель: генерировать при публикации из имени файла -->
         <div class="form-group">
+            <label class="checkbox-label checkbox-label-publish-gen">
+                <input type="checkbox" id="generate_on_publish" name="generate_on_publish" value="1" <?= ($isEdit && !empty($template['generate_on_publish'])) ? 'checked' : '' ?>>
+                🚀 Генерировать контент при публикации (из имени файла через ИИ)
+            </label>
+            <small>Шаблон без предзаполненного контента. Заголовок, описание и теги будут генерироваться автоматически при каждой публикации из имени видеофайла через GigaChat AI.</small>
+        </div>
+
+        <!-- Переключатель автогенерации через GigaChat (для генерации СЕЙЧАС) -->
+        <div class="form-group" id="gigachat_checkbox_group">
             <label class="checkbox-label checkbox-label-gigachat">
                 <input type="checkbox" id="use_gigachat_ai" name="use_gigachat_ai">
                 🧠 Использовать автогенерацию контента ИИ GigaChat (Сбер)
@@ -170,6 +179,21 @@ ob_start();
                 <button type="button" class="btn btn-gigachat" id="btn_generate_gigachat" onclick="generateFromGigaChat()" style="display:none;">
                     🧠 Сгенерировать (GigaChat)
                 </button>
+            </div>
+        </div>
+
+        <!-- Информация о режиме "генерация при публикации" -->
+        <div class="form-group auto-gen-field publish-gen-info" id="publish_gen_info" style="display: none;">
+            <div style="padding: 1rem; background: #e8f4fd; border: 2px solid #0d6efd; border-radius: 8px;">
+                <h4 style="margin: 0 0 0.5rem 0; color: #0d6efd;">🚀 Режим: Генерация при публикации</h4>
+                <p style="margin: 0 0 0.5rem 0;">При публикации видео система автоматически:</p>
+                <ul style="margin: 0; padding-left: 1.5rem;">
+                    <li>Извлечёт идею из <strong>имени видеофайла</strong></li>
+                    <li>Сгенерирует <strong>заголовок</strong> через GigaChat AI</li>
+                    <li>Сгенерирует <strong>описание</strong> с emoji и CTA</li>
+                    <li>Сгенерирует <strong>теги</strong> для SEO</li>
+                </ul>
+                <p style="margin: 0.5rem 0 0 0; color: #666;"><em>Для этого режима не нужно заполнять контент-поля ниже. Достаточно указать название шаблона.</em></p>
             </div>
         </div>
     </div>
@@ -542,6 +566,16 @@ ob_start();
     opacity: 0.6;
     cursor: not-allowed;
 }
+
+/* Генерация при публикации */
+.checkbox-label-publish-gen {
+    color: #0d6efd;
+    font-weight: bold;
+}
+.checkbox-label-publish-gen input:checked + span,
+.checkbox-label-publish-gen:has(input:checked) {
+    color: #0d6efd;
+}
 </style>
 
 <script>
@@ -551,6 +585,16 @@ document.getElementById('validateTemplate').addEventListener('click', function()
 });
 
 document.getElementById('templateForm').addEventListener('submit', function(e) {
+    // Если режим "генерация при публикации" — валидация не нужна
+    const generateOnPublish = document.getElementById('generate_on_publish');
+    if (generateOnPublish && generateOnPublish.checked) {
+        return; // Пропускаем валидацию
+    }
+    // Если GigaChat автогенерация — валидация тоже не нужна (контент сгенерируется)
+    const useGigaChatAi = document.getElementById('use_gigachat_ai');
+    if (useGigaChatAi && useGigaChatAi.checked) {
+        return;
+    }
     if (!validateTemplate()) {
         e.preventDefault();
         alert('Исправьте ошибки валидации перед сохранением');
@@ -743,38 +787,63 @@ function validateTemplate() {
     return errors.length === 0;
 }
 
-// Текущий режим автогенерации: 'none' или 'gigachat'
+// Текущий режим: 'none', 'gigachat' или 'publish_gen'
 let currentAutoGenMode = 'none';
 
-// Функция для переключения режима автогенерации
+// Функция для переключения режима
 function toggleAutoGeneration() {
     try {
         const useGigaChatAi = document.getElementById('use_gigachat_ai');
+        const generateOnPublish = document.getElementById('generate_on_publish');
         const manualFields = document.getElementById('manual_fields');
         const ideaField = document.getElementById('idea_field');
+        const publishGenInfo = document.getElementById('publish_gen_info');
         const btnGigaChat = document.getElementById('btn_generate_gigachat');
+        const gigachatCheckboxGroup = document.getElementById('gigachat_checkbox_group');
 
-        if (!useGigaChatAi || !manualFields || !ideaField) {
+        if (!manualFields || !ideaField) {
             console.error('toggleAutoGeneration: required elements not found');
             return;
         }
 
-        currentAutoGenMode = useGigaChatAi.checked ? 'gigachat' : 'none';
+        // Определяем текущий режим
+        if (generateOnPublish && generateOnPublish.checked) {
+            currentAutoGenMode = 'publish_gen';
+        } else if (useGigaChatAi && useGigaChatAi.checked) {
+            currentAutoGenMode = 'gigachat';
+        } else {
+            currentAutoGenMode = 'none';
+        }
+
         console.log('🔄 Auto-gen mode:', currentAutoGenMode);
 
+        // Сбрасываем все
         if (btnGigaChat) btnGigaChat.style.display = 'none';
         ideaField.classList.remove('gigachat-mode');
+        if (publishGenInfo) publishGenInfo.style.display = 'none';
 
-        if (currentAutoGenMode === 'none') {
-            manualFields.style.display = 'block';
+        if (currentAutoGenMode === 'publish_gen') {
+            // Режим "генерация при публикации" — скрываем всё кроме названия и описания шаблона
+            manualFields.style.display = 'none';
             ideaField.style.display = 'none';
-        } else {
+            if (publishGenInfo) publishGenInfo.style.display = 'block';
+            // Снимаем GigaChat чекбокс
+            if (useGigaChatAi) useGigaChatAi.checked = false;
+            // Скрываем GigaChat чекбокс
+            if (gigachatCheckboxGroup) gigachatCheckboxGroup.style.display = 'none';
+        } else if (currentAutoGenMode === 'gigachat') {
             manualFields.style.display = 'none';
             ideaField.style.display = 'block';
             ideaField.style.opacity = '1';
             ideaField.style.visibility = 'visible';
             ideaField.classList.add('gigachat-mode');
             if (btnGigaChat) btnGigaChat.style.display = 'inline-block';
+            if (gigachatCheckboxGroup) gigachatCheckboxGroup.style.display = 'block';
+        } else {
+            // Обычный режим
+            manualFields.style.display = 'block';
+            ideaField.style.display = 'none';
+            if (gigachatCheckboxGroup) gigachatCheckboxGroup.style.display = 'block';
         }
     } catch (error) {
         console.error('toggleAutoGeneration error:', error);
@@ -784,9 +853,16 @@ function toggleAutoGeneration() {
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
     const checkboxGigaChat = document.getElementById('use_gigachat_ai');
+    const checkboxPublishGen = document.getElementById('generate_on_publish');
 
     if (checkboxGigaChat) {
         checkboxGigaChat.addEventListener('change', function() {
+            toggleAutoGeneration();
+        });
+    }
+
+    if (checkboxPublishGen) {
+        checkboxPublishGen.addEventListener('change', function() {
             toggleAutoGeneration();
         });
     }

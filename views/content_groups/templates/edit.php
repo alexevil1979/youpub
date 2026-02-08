@@ -74,6 +74,14 @@ ob_start();
     </div>
 
     <div class="form-group">
+        <label style="color: #0d6efd; font-weight: bold;">
+            <input type="checkbox" name="generate_on_publish" value="1" <?= !empty($template['generate_on_publish']) ? 'checked' : '' ?>>
+            🚀 Генерировать контент при публикации (из имени файла через ИИ)
+        </label>
+        <small>Если включено — заголовок, описание и теги будут генерироваться при каждой публикации из имени видеофайла через GigaChat AI. Поля шаблона выше будут игнорироваться.</small>
+    </div>
+
+    <div class="form-group">
         <label>
             <input type="checkbox" name="is_active" value="1" <?= ($template['is_active'] ?? 1) ? 'checked' : '' ?>>
             Активен

@@ -202,7 +202,12 @@ try {
                 <?php foreach ($filteredTemplates as $template): ?>
                     <?php if (!is_array($template)) continue; ?>
                     <tr>
-                        <td><?= htmlspecialchars($template['name'] ?? 'Без названия') ?></td>
+                        <td>
+                            <?= htmlspecialchars($template['name'] ?? 'Без названия') ?>
+                            <?php if (!empty($template['generate_on_publish'])): ?>
+                                <span style="display: inline-block; font-size: 0.75em; background: #0d6efd; color: #fff; padding: 2px 6px; border-radius: 4px; margin-left: 4px; vertical-align: middle;">AI при публикации</span>
+                            <?php endif; ?>
+                        </td>
                         <td><?= htmlspecialchars($template['description'] ?? '') ?></td>
                         <td>
                             <?php 

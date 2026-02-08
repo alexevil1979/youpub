@@ -324,6 +324,7 @@ class SmartQueueService extends Service
                 'title' => $videoTitle,
                 'description' => $video['description'] ?? '',
                 'tags' => $video['tags'] ?? '',
+                'file_name' => $video['file_name'] ?? $videoTitle,
             ], $context);
             if (!empty($templated['title'] ?? null)) {
                 $templated['title'] = $this->makeTitleUniqueWithinGroup($templated['title'], (int)$group['id'], (int)$video['id']);
@@ -881,6 +882,7 @@ class SmartQueueService extends Service
                         'title' => $videoTitle,
                         'description' => $video['description'] ?? '',
                         'tags' => $video['tags'] ?? '',
+                        'file_name' => $video['file_name'] ?? $videoTitle,
                     ], $context);
                     if (!empty($templated['title'] ?? null)) {
                         $templated['title'] = $this->makeTitleUniqueWithinGroup($templated['title'], (int)$groupId, (int)$video['id']);

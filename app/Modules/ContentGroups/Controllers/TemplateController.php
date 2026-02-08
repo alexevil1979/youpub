@@ -284,12 +284,52 @@ class TemplateController extends Controller
                 exit;
             }
 
+            // Проверяем, используется ли режим "генерировать при публикации"
+            $generateOnPublish = !empty($this->getParam('generate_on_publish', false));
+
             // Проверяем, используется ли автогенерация
             $useAutoGeneration = $this->getParam('use_auto_generation', false);
             $useGroqAi = !empty($this->getParam('use_groq_ai', false));
             $useGigaChatAi = !empty($this->getParam('use_gigachat_ai', false));
 
-            if ($useAutoGeneration || $useGroqAi || $useGigaChatAi) {
+            if ($generateOnPublish) {
+                // Режим "Генерация при публикации" — создаём шаблон-заглушку
+                // Контент будет сгенерирован при публикации из имени файла через GigaChat AI
+                $data = [
+                    'name' => trim($this->getParam('name', '')),
+                    'description' => trim($this->getParam('description', '')) ?: null,
+                    'hook_type' => $this->getParam('hook_type', 'emotional'),
+                    'generate_on_publish' => true,
+                    'enable_ab_testing' => false,
+                    'is_active' => true,
+                ];
+
+                if (empty($data['name'])) {
+                    if (session_status() === PHP_SESSION_NONE) {
+                        session_start();
+                    }
+                    $_SESSION['error'] = 'Необходимо указать название шаблона';
+                    header('Location: /content-groups/templates/create-shorts');
+                    exit;
+                }
+
+                $result = $this->templateService->createTemplate($userId, $data);
+
+                if ($result['success']) {
+                    if (session_status() === PHP_SESSION_NONE) {
+                        session_start();
+                    }
+                    $_SESSION['success'] = 'Шаблон «Генерация при публикации» успешно создан';
+                    header('Location: /content-groups/templates');
+                } else {
+                    if (session_status() === PHP_SESSION_NONE) {
+                        session_start();
+                    }
+                    $_SESSION['error'] = $result['message'] ?? 'Ошибка при создании шаблона';
+                    header('Location: /content-groups/templates/create-shorts');
+                }
+                exit;
+            } elseif ($useAutoGeneration || $useGroqAi || $useGigaChatAi) {
                 // Используем автогенерацию
                 $videoIdea = trim($this->getParam('video_idea', ''));
 
@@ -687,6 +727,7 @@ class TemplateController extends Controller
                 'pinned_comments' => $pinnedComments,
                 'cta_types' => $this->getParam('cta_types', []),
                 'enable_ab_testing' => $this->getParam('enable_ab_testing', '1') === '1',
+                'generate_on_publish' => false,
                 'is_active' => $this->getParam('is_active', '1') === '1',
             ];
 
@@ -766,7 +807,8 @@ class TemplateController extends Controller
         $isShortsTemplate = !empty($template['hook_type'])
             || !empty($template['title_variants'])
             || !empty($template['description_variants'])
-            || !empty($template['emoji_groups']);
+            || !empty($template['emoji_groups'])
+            || !empty($template['generate_on_publish']);
 
         if ($isShortsTemplate) {
             include __DIR__ . '/../../../../views/content_groups/templates/create_v2.php';
@@ -924,6 +966,7 @@ class TemplateController extends Controller
                 'pinned_comments' => !empty($pinnedComments) && is_array($pinnedComments) ? json_encode($pinnedComments, JSON_UNESCAPED_UNICODE) : null,
                 'cta_types' => !empty($this->getParam('cta_types', [])) && is_array($this->getParam('cta_types', [])) ? json_encode($this->getParam('cta_types', []), JSON_UNESCAPED_UNICODE) : null,
                 'enable_ab_testing' => (int)($this->getParam('enable_ab_testing', '1') === '1'),
+                'generate_on_publish' => (int)(!empty($this->getParam('generate_on_publish', false))),
                 'is_active' => (int)($this->getParam('is_active', '1') === '1'),
             ];
 

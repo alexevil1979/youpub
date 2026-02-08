@@ -320,6 +320,7 @@ CREATE TABLE IF NOT EXISTS `publication_templates` (
   `pinned_comments` text COMMENT 'JSON: массив вариантов закрепленных комментариев',
   `cta_types` text COMMENT 'JSON: массив типов CTA (call to action)',
   `enable_ab_testing` tinyint(1) DEFAULT 1 COMMENT 'Включить A/B тестирование названий',
+  `generate_on_publish` tinyint(1) DEFAULT 0 COMMENT 'Генерировать контент при публикации из имени файла (через GigaChat AI)',
 
   `is_active` tinyint(1) DEFAULT 1,
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,

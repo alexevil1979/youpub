@@ -66,6 +66,7 @@ class TemplateService extends Service
                 'pinned_comments' => !empty($data['pinned_comments']) && is_array($data['pinned_comments']) ? json_encode($data['pinned_comments'], JSON_UNESCAPED_UNICODE) : null,
                 'cta_types' => !empty($data['cta_types']) && is_array($data['cta_types']) ? json_encode($data['cta_types'], JSON_UNESCAPED_UNICODE) : null,
                 'enable_ab_testing' => isset($data['enable_ab_testing']) ? (int)(bool)$data['enable_ab_testing'] : 1,
+                'generate_on_publish' => isset($data['generate_on_publish']) ? (int)(bool)$data['generate_on_publish'] : 0,
                 'is_active' => isset($data['is_active']) ? (int)(bool)$data['is_active'] : 1,
             ]);
 
@@ -118,6 +119,11 @@ class TemplateService extends Service
                 'pinned_comment' => '',
                 'hook_type' => 'emotional',
             ];
+        }
+
+        // === ГЕНЕРАЦИЯ ПРИ ПУБЛИКАЦИИ (из имени файла через GigaChat AI) ===
+        if (!empty($template['generate_on_publish'])) {
+            return $this->generateOnPublish($video, $context);
         }
 
         // Подготовка контекста для переменных
@@ -578,6 +584,113 @@ class TemplateService extends Service
         }
 
         return $result;
+    }
+
+    /**
+     * Генерация контента при публикации из имени файла через GigaChat AI.
+     * Используется для шаблонов с generate_on_publish = 1.
+     */
+    private function generateOnPublish(array $video, array $context = []): array
+    {
+        // Извлекаем идею из имени файла
+        $fileName = $video['file_name'] ?? $video['title'] ?? '';
+        $idea = $this->extractIdeaFromFileName($fileName);
+
+        if (empty($idea) || mb_strlen($idea) < 3) {
+            // Если имя файла слишком короткое, пробуем название группы
+            $idea = trim($context['group_name'] ?? '');
+        }
+
+        error_log("TemplateService::generateOnPublish: idea='{$idea}' from file='{$fileName}'");
+
+        if (empty($idea) || mb_strlen($idea) < 3) {
+            error_log("TemplateService::generateOnPublish: idea too short, using filename as-is");
+            return [
+                'title' => $fileName ?: 'Untitled Video',
+                'description' => 'Посмотрите это видео! 🎬',
+                'tags' => '',
+                'question' => '',
+                'pinned_comment' => '',
+                'hook_type' => 'emotional',
+            ];
+        }
+
+        // Пробуем GigaChat
+        try {
+            if (GigaChatService::isAvailable()) {
+                error_log("TemplateService::generateOnPublish: Using GigaChat AI");
+                $gigaChat = new GigaChatService();
+                $variants = $gigaChat->generateMultipleVariants($idea, 1);
+
+                if (!empty($variants[0])) {
+                    $v = $variants[0];
+                    $content = $v['content'] ?? [];
+                    $intent = $v['intent'] ?? [];
+                    $result = [
+                        'title' => $content['title'] ?? $idea,
+                        'description' => $content['description'] ?? 'Посмотрите это видео! 🎬',
+                        'tags' => is_array($content['tags'] ?? null) ? implode(', ', $content['tags']) : ($content['tags'] ?? ''),
+                        'question' => $content['pinned_comment'] ?? '',
+                        'pinned_comment' => $content['pinned_comment'] ?? '',
+                        'hook_type' => $intent['content_type'] ?? 'emotional',
+                    ];
+                    error_log("TemplateService::generateOnPublish: GigaChat generated title='" . mb_substr($result['title'], 0, 80) . "'");
+                    return $result;
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log("TemplateService::generateOnPublish: GigaChat failed: " . $e->getMessage());
+        }
+
+        // Fallback: шаблонный движок
+        try {
+            error_log("TemplateService::generateOnPublish: Falling back to template generator");
+            $autoGenerator = new AutoShortsGenerator();
+            $variants = $autoGenerator->generateMultipleVariants($idea, 1);
+
+            if (!empty($variants[0])) {
+                $v = $variants[0];
+                $content = $v['content'] ?? [];
+                $intent = $v['intent'] ?? [];
+                return [
+                    'title' => $content['title'] ?? $idea,
+                    'description' => $content['description'] ?? 'Посмотрите это видео! 🎬',
+                    'tags' => is_array($content['tags'] ?? null) ? implode(', ', $content['tags']) : ($content['tags'] ?? ''),
+                    'question' => $content['pinned_comment'] ?? '',
+                    'pinned_comment' => $content['pinned_comment'] ?? '',
+                    'hook_type' => $intent['content_type'] ?? 'emotional',
+                ];
+            }
+        } catch (\Throwable $e) {
+            error_log("TemplateService::generateOnPublish: Template generator failed: " . $e->getMessage());
+        }
+
+        // Крайний fallback
+        return [
+            'title' => $idea,
+            'description' => 'Посмотрите это видео! 🎬',
+            'tags' => '',
+            'question' => '',
+            'pinned_comment' => '',
+            'hook_type' => 'emotional',
+        ];
+    }
+
+    /**
+     * Извлечь идею из имени файла (убрать расширение, подчёркивания, лишние символы).
+     */
+    private function extractIdeaFromFileName(string $fileName): string
+    {
+        if (empty($fileName)) {
+            return '';
+        }
+        // Убираем расширение файла
+        $idea = pathinfo($fileName, PATHINFO_FILENAME);
+        // Заменяем подчёркивания, дефисы, точки на пробелы
+        $idea = str_replace(['_', '-', '.'], ' ', $idea);
+        // Убираем лишние пробелы
+        $idea = preg_replace('/\s+/', ' ', $idea);
+        return trim($idea);
     }
 
     /**
